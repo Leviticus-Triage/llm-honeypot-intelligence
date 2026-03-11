@@ -3,7 +3,6 @@ Hybrid cache: exact hash lookup + semantic similarity fallback.
 """
 
 import hashlib
-import json
 import logging
 import random
 import struct

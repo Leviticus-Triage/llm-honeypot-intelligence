@@ -7,7 +7,6 @@ Sits between honeypots and Ollama, providing:
 - Exploration vs exploitation balance
 """
 
-import json
 import logging
 import os
 import time

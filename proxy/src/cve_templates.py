@@ -7,7 +7,6 @@ enable automatic CVE detection when an attacker targets a specific vulnerability
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass

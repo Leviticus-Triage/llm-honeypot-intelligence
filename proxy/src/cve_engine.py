@@ -17,7 +17,6 @@ from .cve_templates import (
     SSH_PROFILES,
     HTTP_PROFILES,
     CVEProfile,
-    get_profile_by_id,
 )
 
 logger = logging.getLogger("ollama-proxy.cve-engine")

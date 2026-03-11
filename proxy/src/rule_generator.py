@@ -25,7 +25,6 @@ import json
 import logging
 import os
 import re
-import sqlite3
 import uuid
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -770,7 +769,6 @@ def generate_yara_rules(data: dict) -> list[str]:
 
     for atom in atoms:
         cmd = atom["cmd"]
-        cl = cmd.lower()
         mitre_ids = {m["id"] for m in atom.get("mitre", [])}
 
         if "T1496" in mitre_ids:
@@ -1006,17 +1004,17 @@ def generate_firewall_rules(data: dict) -> dict:
 
     # iptables
     lines = [
-        f"#!/bin/bash",
-        f"# LLM Honeypot Intelligence - Firewall Blocklist",
+        "#!/bin/bash",
+        "# LLM Honeypot Intelligence - Firewall Blocklist",
         f"# Generated: {timestamp}",
         f"# Total: {len(all_attackers)} IPs | Blocked: "
         f"{len(mass_scanners)} scanners + {len(repeat_offenders)} repeat + {len(active_attackers)} active",
-        f"",
-        f"# Mass Scanners (known infrastructure)",
+        "",
+        "# Mass Scanners (known infrastructure)",
     ]
     for ip, count in mass_scanners:
         lines.append(f"iptables -A INPUT -s {ip} -j DROP  # scanner, {count} hits")
-    lines.append(f"\n# Repeat Offenders (>= 10 hits)")
+    lines.append("\n# Repeat Offenders (>= 10 hits)")
     for ip, count in repeat_offenders:
         lines.append(f"iptables -A INPUT -s {ip} -j DROP  # {count} hits")
     lines.append(f"\n# Active Attackers (>= {MIN_HITS_FOR_BLOCKLIST} hits)")
@@ -1027,33 +1025,32 @@ def generate_firewall_rules(data: dict) -> dict:
     # nftables
     blocked_ips = [ip for ip, _ in mass_scanners + repeat_offenders + active_attackers]
     nft = [
-        f"#!/usr/sbin/nft -f",
-        f"# LLM Honeypot Intelligence - nftables Blocklist",
+        "#!/usr/sbin/nft -f",
+        "# LLM Honeypot Intelligence - nftables Blocklist",
         f"# Generated: {timestamp}",
-        f"",
-        f"table inet honeypot_filter {{",
-        f"    set blocklist {{",
-        f"        type ipv4_addr",
-        f"        flags interval",
+        "",
+        "table inet honeypot_filter {",
+        "    set blocklist {",
+        "        type ipv4_addr",
+        "        flags interval",
     ]
     if blocked_ips:
         nft.append(f"        elements = {{ {', '.join(blocked_ips)} }}")
     nft.extend([
-        f"    }}",
-        f"    chain input {{",
-        f"        type filter hook input priority 0; policy accept;",
-        f"        ip saddr @blocklist counter drop",
-        f"    }}",
-        f"}}",
+        "    }",
+        "    chain input {",
+        "        type filter hook input priority 0; policy accept;",
+        "        ip saddr @blocklist counter drop",
+        "    }",
+        "}",
     ])
     result["nftables"] = "\n".join(nft)
 
     # Plain blocklist
-    plain = [f"# LLM Honeypot Intelligence - IP Blocklist", f"# Generated: {timestamp}"]
+    plain = ["# LLM Honeypot Intelligence - IP Blocklist", f"# Generated: {timestamp}"]
     for ip, count in sorted(all_attackers, key=lambda x: -x[1]):
         if count >= MIN_HITS_FOR_BLOCKLIST:
-            cat = "scanner" if any(ip.startswith(p) for p in KNOWN_SCANNER_PREFIXES) else "attacker"
-            plain.append(f"{ip}")
+            plain.append(ip)
     result["plain_blocklist"] = "\n".join(plain)
 
     result["stats"] = {
@@ -1170,23 +1167,23 @@ def generate_threat_report(data: dict, iocs: dict, sigma_count: int,
 
     # Build report
     lines = [
-        f"# Threat Intelligence Report",
-        f"",
+        "# Threat Intelligence Report",
+        "",
         f"**Generated**: {now}  ",
-        f"**Source**: LLM Honeypot Intelligence Platform  ",
+        "**Source**: LLM Honeypot Intelligence Platform  ",
         f"**Window**: Last {SINCE_HOURS} hours  ",
-        f"**Classification**: TLP:AMBER",
-        f"",
-        f"---",
-        f"",
-        f"## Executive Summary",
-        f"",
+        "**Classification**: TLP:AMBER",
+        "",
+        "---",
+        "",
+        "## Executive Summary",
+        "",
         f"In the past {SINCE_HOURS} hours, the honeypot platform observed **{total_events:,} events** "
         f"from **{len(data['all_src_ips']):,} unique source IPs** across "
         f"**{len(data['geo_countries'])} countries** and **{len(data['geo_asns'])} autonomous systems**.",
-        f"",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| SSH Events (Beelzebub) | {len(data.get('beelzebub', [])):,} |",
         f"| HTTP Events (Galah) | {len(data.get('galah', [])):,} |",
         f"| Unique Attacker IPs | {len(data['all_src_ips']):,} |",
@@ -1196,61 +1193,61 @@ def generate_threat_report(data: dict, iocs: dict, sigma_count: int,
         f"| Generated YARA Rules | {yara_count} |",
         f"| Generated Suricata Rules | {suricata_count} |",
         f"| Blocked IPs (Firewall) | {fw_stats.get('blocked_total', 0)} |",
-        f"",
-        f"---",
-        f"",
-        f"## MITRE ATT&CK Mapping",
-        f"",
+        "",
+        "---",
+        "",
+        "## MITRE ATT&CK Mapping",
+        "",
     ]
 
     if technique_counter:
-        lines.append(f"| Technique | Name | Count |")
-        lines.append(f"|-----------|------|-------|")
+        lines.append("| Technique | Name | Count |")
+        lines.append("|-----------|------|-------|")
         for tech, count in technique_counter.most_common(20):
             lines.append(f"| {tech} | | {count} |")
-        lines.append(f"")
+        lines.append("")
 
     if tactic_counter:
-        lines.append(f"### Tactics Distribution")
-        lines.append(f"")
+        lines.append("### Tactics Distribution")
+        lines.append("")
         for tactic, count in tactic_counter.most_common():
             bar = "█" * min(40, count // 2)
             lines.append(f"- **{tactic}**: {count} events {bar}")
-        lines.append(f"")
+        lines.append("")
 
     # Geographic Distribution
     lines.extend([
-        f"---",
-        f"",
-        f"## Geographic Distribution",
-        f"",
-        f"### Top Source Countries",
-        f"",
-        f"| Country | Events |",
-        f"|---------|--------|",
+        "---",
+        "",
+        "## Geographic Distribution",
+        "",
+        "### Top Source Countries",
+        "",
+        "| Country | Events |",
+        "|---------|--------|",
     ])
     for country, count in data["geo_countries"].most_common(15):
         lines.append(f"| {country} | {count:,} |")
 
     lines.extend([
-        f"",
-        f"### Top ASNs (Autonomous Systems)",
-        f"",
-        f"| ASN | Events |",
-        f"|-----|--------|",
+        "",
+        "### Top ASNs (Autonomous Systems)",
+        "",
+        "| ASN | Events |",
+        "|-----|--------|",
     ])
     for asn, count in data["geo_asns"].most_common(15):
         lines.append(f"| {asn} | {count:,} |")
 
     # Top Attacker IPs
     lines.extend([
-        f"",
-        f"---",
-        f"",
-        f"## Top Attacker IPs",
-        f"",
-        f"| IP | Hits | Category |",
-        f"|----|----- |----------|",
+        "",
+        "---",
+        "",
+        "## Top Attacker IPs",
+        "",
+        "| IP | Hits | Category |",
+        "|----|----- |----------|",
     ])
     for ip, count in data["all_src_ips"].most_common(20):
         if ip.startswith("192.168.") or ip.startswith("10."):
@@ -1260,13 +1257,13 @@ def generate_threat_report(data: dict, iocs: dict, sigma_count: int,
 
     # IOC Summary
     lines.extend([
-        f"",
-        f"---",
-        f"",
-        f"## Indicators of Compromise (IOCs)",
-        f"",
-        f"| Type | Count |",
-        f"|------|-------|",
+        "",
+        "---",
+        "",
+        "## Indicators of Compromise (IOCs)",
+        "",
+        "| Type | Count |",
+        "|------|-------|",
         f"| IPv4 Addresses | {len(iocs['ipv4'])} |",
         f"| URLs | {len(iocs['urls'])} |",
         f"| Domains | {len(iocs['domains'])} |",
@@ -1275,22 +1272,22 @@ def generate_threat_report(data: dict, iocs: dict, sigma_count: int,
     ])
 
     if iocs["file_paths"]:
-        lines.extend([f"", f"### Targeted File Paths", f""])
+        lines.extend(["", "### Targeted File Paths", ""])
         for p in sorted(iocs["file_paths"])[:20]:
             lines.append(f"- `{p}`")
 
     if iocs["urls"]:
-        lines.extend([f"", f"### Extracted URLs", f""])
+        lines.extend(["", "### Extracted URLs", ""])
         for u in sorted(iocs["urls"])[:10]:
             lines.append(f"- `{u}`")
 
     # Top Attack Patterns
     lines.extend([
-        f"",
-        f"---",
-        f"",
-        f"## Top Attack Patterns (SSH)",
-        f"",
+        "",
+        "---",
+        "",
+        "## Top Attack Patterns (SSH)",
+        "",
     ])
     cmd_counter = Counter(a["cmd"] for a in atoms)
     for cmd, count in cmd_counter.most_common(15):
@@ -1300,11 +1297,11 @@ def generate_threat_report(data: dict, iocs: dict, sigma_count: int,
     http_requests = data.get("http_requests", [])
     if http_requests:
         lines.extend([
-            f"",
-            f"## Top Attack Patterns (HTTP)",
-            f"",
-            f"| URI | Hits | Category |",
-            f"|-----|------|----------|",
+            "",
+            "## Top Attack Patterns (HTTP)",
+            "",
+            "| URI | Hits | Category |",
+            "|-----|------|----------|",
         ])
         for entry in sorted(http_requests, key=lambda x: -x.get("count", 1))[:25]:
             uri = entry.get("uri", "")
@@ -1327,30 +1324,30 @@ def generate_threat_report(data: dict, iocs: dict, sigma_count: int,
         # HTTP Methods breakdown
         methods = data.get("http_methods", {})
         if methods:
-            lines.extend([f"", f"### HTTP Methods", f""])
+            lines.extend(["", "### HTTP Methods", ""])
             for method, count in sorted(methods.items(), key=lambda x: -x[1]):
                 lines.append(f"- **{method}**: {count:,}")
 
     lines.extend([
-        f"",
-        f"---",
-        f"",
-        f"## Generated Rules Summary",
-        f"",
-        f"All rules are stored in: `/data/ollama-proxy/generated-rules/`",
-        f"",
-        f"| Format | Count | Path |",
-        f"|--------|-------|------|",
+        "",
+        "---",
+        "",
+        "## Generated Rules Summary",
+        "",
+        "All rules are stored in: `/data/ollama-proxy/generated-rules/`",
+        "",
+        "| Format | Count | Path |",
+        "|--------|-------|------|",
         f"| Sigma (SIEM) | {sigma_count} | `sigma/*.yml` |",
         f"| YARA (Payload) | {yara_count} | `yara/*.yar` |",
         f"| Suricata (IDS/IPS) | {suricata_count} | `suricata/honeypot.rules` |",
         f"| Firewall (iptables) | {fw_stats.get('blocked_total', 0)} IPs | `firewall/blocklist_*.sh` |",
-        f"| STIX 2.1 Bundle | 1 | `stix/bundle.json` |",
-        f"| IOC List | 1 | `iocs/ioc_list.json` |",
-        f"",
-        f"---",
-        f"",
-        f"*Report generated automatically by LLM Honeypot Intelligence Platform*",
+        "| STIX 2.1 Bundle | 1 | `stix/bundle.json` |",
+        "| IOC List | 1 | `iocs/ioc_list.json` |",
+        "",
+        "---",
+        "",
+        "*Report generated automatically by LLM Honeypot Intelligence Platform*",
     ])
 
     return "\n".join(lines)
@@ -1387,9 +1384,9 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
 
     # YARA Rules
     if yara_rules:
-        path = RULES_DIR / "yara" / f"honeypot_rules.yar"
+        path = RULES_DIR / "yara" / "honeypot_rules.yar"
         with open(path, "w") as f:
-            f.write(f"// LLM Honeypot Intelligence Platform - YARA Rules\n")
+            f.write("// LLM Honeypot Intelligence Platform - YARA Rules\n")
             f.write(f"// Generated: {timestamp}\n")
             f.write(f"// Source: Elasticsearch honeypot data ({SINCE_HOURS}h window)\n\n")
             f.write("\n\n".join(yara_rules))
@@ -1399,9 +1396,9 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
 
     # Suricata Rules
     if suricata_rules:
-        path = RULES_DIR / "suricata" / f"honeypot.rules"
+        path = RULES_DIR / "suricata" / "honeypot.rules"
         with open(path, "w") as f:
-            f.write(f"# LLM Honeypot Intelligence Platform - Suricata Rules\n")
+            f.write("# LLM Honeypot Intelligence Platform - Suricata Rules\n")
             f.write(f"# Generated: {timestamp}\n")
             f.write(f"# {len(suricata_rules)} rules from honeypot data\n\n")
             f.write("\n".join(suricata_rules))

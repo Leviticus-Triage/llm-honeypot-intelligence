@@ -10,7 +10,6 @@ import asyncio
 import json
 import logging
 import os
-import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,10 +21,10 @@ logging.basicConfig(
 logger = logging.getLogger("rule-gen")
 
 # Initialize DB (needed for shared volume access)
-from src.models import init_db
+from src.models import init_db  # noqa: E402
 init_db()
 
-from src.rule_generator import run_rule_generation
+from src.rule_generator import run_rule_generation  # noqa: E402
 
 INTERVAL = int(os.environ.get("RULEGEN_INTERVAL", "21600"))  # 6 hours default
 NOTIFY_NOTION = os.environ.get("NOTIFY_NOTION", "false").lower() == "true"
@@ -42,7 +41,6 @@ async def notify_notion(summary: dict):
         return
 
     try:
-        import httpx
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         counts = summary.get("counts", {})
         text = (
