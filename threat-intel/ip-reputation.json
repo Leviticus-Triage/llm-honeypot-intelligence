@@ -1,0 +1,88 @@
+{
+  "165.245.189.191": {
+    "score": 50,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "Singapore",
+    "asn": "DigitalOcean, LLC",
+    "fingerprint": "e3b0c44298fc1c14",
+    "campaign_id": -1,
+    "events": 12,
+    "honeypot": "beelzebub"
+  },
+  "204.76.203.206": {
+    "score": 75,
+    "action": "alert",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "The Netherlands",
+    "asn": "Pfcloud UG (haftungsbeschrankt)",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": -1,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "142.93.213.36": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "India",
+    "asn": "DigitalOcean, LLC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "64.227.139.104": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "India",
+    "asn": "DigitalOcean, LLC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "85.11.183.27": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "United Kingdom",
+    "asn": "PebbleHost Ltd",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "85.217.140.4": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "France",
+    "asn": "Modat B.V.",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "87.121.84.76": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "United States",
+    "asn": "Vpsvault.host Ltd",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  }
+}

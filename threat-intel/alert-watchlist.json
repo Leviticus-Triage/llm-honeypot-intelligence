@@ -1,0 +1,17 @@
+[
+  {
+    "ip": "204.76.203.206",
+    "score": 75,
+    "action": "alert",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "The Netherlands",
+    "asn": "Pfcloud UG (haftungsbeschrankt)",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": -1,
+    "events": 2,
+    "honeypot": "galah"
+  }
+]

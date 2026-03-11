@@ -1,0 +1,26 @@
+title: Honeypot - HTTP Proxy Abuse / SSRF
+id: 33203daf-6b57-a5d7-166e-8721e708141b
+status: experimental
+level: high
+description: Attempts to abuse the server as open proxy or for SSRF. 5 events, 5 patterns.
+author: LLM Honeypot Intelligence Platform (automated)
+date: 2026/02/15
+references:
+- https://attack.mitre.org/
+tags:
+- attack.command_and_control
+- attack.t1090
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-uri|contains:
+    - https://kuailian.cn.com/
+    - 185.65.245.10:7227
+    - google.com:443
+    - http://api.julidns.org/validate?proxy=87.147.22.117&port=8080
+    - http://httpbin.org/ip
+  condition: selection
+falsepositives:
+- Authorized penetration testing
+- Vulnerability scanners
