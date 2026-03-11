@@ -1,0 +1,58 @@
+# Credentials & Secrets
+*.env
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+nginxpasswd
+lswebpasswd
+secrets/
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# T-Pot data (never commit raw data)
+data/
+*.ndjson.bak
+
+# Sync temp files
+.sync-lock
+.sync-tmp/

@@ -1,0 +1,219 @@
+# ============================================================================
+# Custom C2 & Covert Channel Detection Rules for T-Pot Honeypot
+# ============================================================================
+# Based on research from:
+#   - cyber.wtf: "Detection of C2 Traffic Using Suricata" (Dec 2024)
+#   - GDATA Advanced Analytics: Suricata-C2 rules
+#   - MITRE ATT&CK: T1071 (Application Layer Protocol),
+#     T1572 (Protocol Tunneling), T1573 (Encrypted Channel)
+#
+# Optimized for honeypot context: all inbound traffic is suspicious,
+# so thresholds can be more aggressive than corporate environments.
+# ============================================================================
+
+
+# ============================================================================
+# DNS Tunneling Detection (T1071.004 - DNS)
+# ============================================================================
+
+# [DNS-C2-001] High volume of DNS queries from single source
+# C2 DNS tunneling generates 2-8 queries/second vs normal <0.1/sec
+alert dns any any -> any 53 (msg:"C2-DNS: High query volume - possible DNS tunnel or exfiltration"; \
+    dns.opcode:0; \
+    threshold:type both, track by_src, count 20, seconds 60; \
+    classtype:command-and-control; sid:9000001; rev:1; \
+    metadata:mitre_technique T1071.004, mitre_technique T1572, severity high;)
+
+# [DNS-C2-002] Long DNS query name (subdomain > 30 chars = tunneling indicator)
+# Normal subdomains: 5-20 chars. DNS tunneling: 30-63 chars (hex-encoded data)
+alert dns any any -> any 53 (msg:"C2-DNS: Unusually long query name - possible DNS tunnel"; \
+    dns.opcode:0; dns.query; bsize:>30; \
+    threshold:type both, track by_src, count 5, seconds 60; \
+    classtype:command-and-control; sid:9000002; rev:1; \
+    metadata:mitre_technique T1071.004, severity high;)
+
+# [DNS-C2-003] Large DNS answer payload (>100 bytes = data exfil via answers)
+alert dns any 53 -> any any (msg:"C2-DNS: Large DNS response - possible C2 data channel"; \
+    dsize:>=100; \
+    threshold:type both, track by_dst, count 5, seconds 60; \
+    classtype:command-and-control; sid:9000003; rev:1; \
+    metadata:mitre_technique T1071.004, severity medium;)
+
+# [DNS-C2-004] Unusual DNS record types (TXT/NULL/CNAME abuse for tunneling)
+# Normal traffic: mostly A/AAAA. Tunneling: TXT, NULL, CNAME, MX
+alert dns any any -> any 53 (msg:"C2-DNS: TXT record query - possible DNS tunnel data channel"; \
+    dns.opcode:0; content:"|00 10|"; offset:2; \
+    threshold:type both, track by_src, count 10, seconds 120; \
+    classtype:command-and-control; sid:9000004; rev:1; \
+    metadata:mitre_technique T1071.004, severity medium;)
+
+# [DNS-C2-005] DNS NULL record query (commonly used by dns2tcp, iodine)
+alert dns any any -> any 53 (msg:"C2-DNS: NULL record query - DNS tunnel indicator"; \
+    dns.opcode:0; content:"|00 0a|"; offset:2; \
+    threshold:type both, track by_src, count 3, seconds 60; \
+    classtype:command-and-control; sid:9000005; rev:1; \
+    metadata:mitre_technique T1071.004, severity high;)
+
+
+# ============================================================================
+# HTTP C2 Detection (T1071.001 - Web Protocols)
+# ============================================================================
+
+# [HTTP-C2-001] HTTP POST-only flow detection (Havoc C2 default pattern)
+# Phase 1: Mark flows with POST requests
+alert http any any -> any any (msg:"C2-HTTP: POST flow marker"; \
+    flow:to_server,established; \
+    http.method; content:"POST"; \
+    flowbits:set,c2_http_post; flowbits:noalert; \
+    sid:9000010; rev:1;)
+
+# Phase 2: Unset marker if GET observed (normal browsing has GETs)
+alert http any any -> any any (msg:"C2-HTTP: GET in flow - clearing POST-only marker"; \
+    flow:to_server,established; \
+    http.method; content:"GET"; \
+    flowbits:set,c2_not_post_only; flowbits:unset,c2_http_post; flowbits:noalert; \
+    sid:9000011; rev:1;)
+
+# Phase 3: Alert on POST-only flows (C2 beacon pattern)
+alert ip any any -> any any (msg:"C2-HTTP: POST-only flow detected - possible C2 beacon"; \
+    flow:to_server,established; \
+    flowbits:isset,c2_http_post; flowbits:isnotset,c2_not_post_only; \
+    threshold:type both, track by_src, count 5, seconds 120; \
+    classtype:command-and-control; sid:9000012; rev:1; \
+    metadata:mitre_technique T1071.001, severity high;)
+
+# [HTTP-C2-004] Suspicious Content-Type wildcard (Havoc default: */*)
+alert http any any -> any any (msg:"C2-HTTP: Wildcard Content-Type in POST - Havoc C2 indicator"; \
+    flow:to_server,established; \
+    http.method; content:"POST"; \
+    http.content_type; content:"*/*"; \
+    threshold:type both, track by_src, count 3, seconds 60; \
+    classtype:command-and-control; sid:9000013; rev:1; \
+    metadata:mitre_technique T1071.001, severity high;)
+
+# [HTTP-C2-005] Known C2 framework headers
+alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"C2-HTTP: Havoc framework header detected"; \
+    flow:established,to_client; \
+    http.header_names; to_lowercase; content:"x-havoc"; fast_pattern; \
+    classtype:trojan-activity; sid:9000014; rev:1; \
+    metadata:mitre_technique T1071.001, severity critical;)
+
+# [HTTP-C2-006] Sliver C2 English word encoding in POST body
+# Sliver encodes large payloads as English words from a dictionary
+alert http any any -> any 80 (msg:"C2-HTTP: Sliver word-encoded payload in POST body"; \
+    http.method; content:"POST"; \
+    http.uri; content:"php"; nocase; \
+    file.data; pcre:"/ICTERICAL|STARFISH|GUESTING|OVERORGANIZE|CONFERMENTS/"; \
+    classtype:trojan-activity; sid:9000015; rev:1; \
+    metadata:mitre_technique T1071.001, severity critical;)
+
+# [HTTP-C2-007] Cobalt Strike default URI patterns
+alert http any any -> any any (msg:"C2-HTTP: Cobalt Strike default beacon URI pattern"; \
+    flow:to_server,established; \
+    http.method; content:"GET"; \
+    http.uri; pcre:"/^\/(pixel|visit|load|submit|push)\.(gif|js|html|php)\?/"; \
+    threshold:type both, track by_src, count 3, seconds 300; \
+    classtype:command-and-control; sid:9000016; rev:1; \
+    metadata:mitre_technique T1071.001, severity high;)
+
+
+# ============================================================================
+# ICMP Tunneling Detection (T1095 - Non-Application Layer Protocol)
+# ============================================================================
+
+# [ICMP-C2-001] Large ICMP echo payloads (>64 bytes = data tunneling)
+# Normal ping: 32-56 bytes payload. Tunneling: >64 bytes
+alert icmp any any -> any any (msg:"C2-ICMP: Large ICMP payload - possible ICMP tunnel"; \
+    itype:8; dsize:>64; \
+    threshold:type both, track by_src, count 5, seconds 60; \
+    classtype:command-and-control; sid:9000020; rev:1; \
+    metadata:mitre_technique T1095, severity high;)
+
+# [ICMP-C2-002] High frequency ICMP (>10 per minute from same source)
+alert icmp any any -> any any (msg:"C2-ICMP: High frequency ICMP traffic - possible tunnel"; \
+    itype:8; \
+    threshold:type both, track by_src, count 10, seconds 60; \
+    classtype:command-and-control; sid:9000021; rev:1; \
+    metadata:mitre_technique T1095, severity medium;)
+
+# [ICMP-C2-003] ICMP echo reply with payload mismatch (data in replies)
+alert icmp any any -> any any (msg:"C2-ICMP: ICMP reply with large payload - data exfiltration"; \
+    itype:0; dsize:>100; \
+    threshold:type both, track by_src, count 5, seconds 60; \
+    classtype:command-and-control; sid:9000022; rev:1; \
+    metadata:mitre_technique T1095, severity high;)
+
+
+# ============================================================================
+# WireGuard / VPN Tunneling Detection (T1572 - Protocol Tunneling)
+# ============================================================================
+
+# [VPN-C2-001] Sliver WireGuard: Malformed DNS queries on port 53
+# Sliver WireGuard C2 generates traffic that looks like DNS but has
+# suspicious Query IDs (0x0100, 0x0200, 0x0400) and ridiculous QDCOUNT
+alert udp any any -> any 53 (msg:"C2-VPN: Sliver WireGuard - suspicious DNS ID 0x0400"; \
+    content:"|04 00|"; offset:0; depth:2; \
+    threshold:type both, track by_src, count 5, seconds 60; \
+    classtype:command-and-control; sid:9000030; rev:1; \
+    metadata:mitre_technique T1572, severity critical;)
+
+alert udp any any -> any 53 (msg:"C2-VPN: Sliver WireGuard - suspicious DNS ID 0x0100"; \
+    content:"|01 00|"; offset:0; depth:2; \
+    threshold:type both, track by_src, count 10, seconds 60; \
+    classtype:command-and-control; sid:9000031; rev:1; \
+    metadata:mitre_technique T1572, severity high;)
+
+# [VPN-C2-003] Empty QNAME in DNS query (WireGuard tunnel indicator)
+alert udp any any -> any 53 (msg:"C2-VPN: Empty DNS QNAME - possible WireGuard tunnel"; \
+    content:"|00 00|"; offset:12; depth:2; \
+    threshold:type both, track by_src, count 3, seconds 60; \
+    classtype:command-and-control; sid:9000032; rev:1; \
+    metadata:mitre_technique T1572, severity critical;)
+
+
+# ============================================================================
+# SMB C2 Detection (T1021.002 - SMB/Windows Admin Shares)
+# ============================================================================
+
+# [SMB-C2-001] IPC$ connection (named pipe C2 relay - Sliver/Cobalt Strike)
+alert smb any any -> any 445 (msg:"C2-SMB: IPC$ tree connect - possible C2 named pipe relay"; \
+    smb.named_pipe; content:"IPC"; nocase; \
+    classtype:command-and-control; sid:9000040; rev:1; \
+    metadata:mitre_technique T1021.002, severity high;)
+
+# [SMB-C2-002] Suspicious named pipe names (psexec, cobaltstrike defaults)
+alert smb any any -> any 445 (msg:"C2-SMB: Suspicious named pipe - possible C2 lateral movement"; \
+    smb.named_pipe; pcre:"/(?i)(psexec|msagent|msse-|postex_|status_|mojo\.|chrome\.|win_svc)/"; \
+    classtype:command-and-control; sid:9000041; rev:1; \
+    metadata:mitre_technique T1021.002, severity critical;)
+
+
+# ============================================================================
+# TLS/Encrypted C2 Indicators (T1573 - Encrypted Channel)
+# ============================================================================
+
+# [TLS-C2-001] TLS with short-lived or suspicious certificate (common in C2)
+alert tls any any -> any any (msg:"C2-TLS: Certificate with suspicious issuer CN"; \
+    tls.cert_issuer; content:"localhost"; nocase; \
+    threshold:type both, track by_src, count 3, seconds 300; \
+    classtype:command-and-control; sid:9000050; rev:2; \
+    metadata:mitre_technique T1573, severity medium;)
+
+
+# ============================================================================
+# Generic Beaconing Patterns (T1571 - Non-Standard Port)
+# ============================================================================
+
+# [BEACON-001] Rapid reconnection to same destination (beaconing)
+alert tcp any any -> any any (msg:"C2-BEACON: Rapid TCP reconnections - possible beaconing"; \
+    flow:to_server; flags:S; \
+    threshold:type both, track by_src, count 15, seconds 60; \
+    classtype:command-and-control; sid:9000060; rev:1; \
+    metadata:mitre_technique T1571, severity medium;)
+
+# [BEACON-002] Connection to non-standard high port with regular interval
+alert tcp any any -> any 1024: (msg:"C2-BEACON: Repeated high-port connections - possible C2 callback"; \
+    flow:to_server; flags:S; \
+    threshold:type both, track by_src, count 8, seconds 300; \
+    classtype:command-and-control; sid:9000061; rev:1; \
+    metadata:mitre_technique T1571, severity medium;)

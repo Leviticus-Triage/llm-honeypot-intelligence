@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this project in your research, please cite it as below."
+type: software
+title: "LLM Honeypot Intelligence Platform"
+authors:
+  - family-names: "Hensen"
+    given-names: "Daniel Ferdinand"
+    orcid: ""
+repository-code: "https://github.com/Leviticus-Triage/llm-honeypot-intelligence"
+license: MIT
+version: "1.0.0"
+date-released: "2026-03-09"
+keywords:
+  - honeypot
+  - threat-intelligence
+  - llm
+  - reinforcement-learning
+  - suricata
+  - sigma
+  - yara
+  - mitre-attack
+  - c2-detection
+  - incident-response
+abstract: >-
+  A distributed honeypot intelligence platform that combines LLM-powered
+  adaptive honeypots with reinforcement learning, automated SIEM rule
+  generation (Suricata, Sigma, YARA), ML-based anomaly detection, and
+  C2/covert channel detection. Processes 55M+ attack events from 22K+
+  unique attacker IPs across 122 countries.
