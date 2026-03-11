@@ -12,8 +12,8 @@ LLM Honeypot Intelligence platform deployment.
 | Deployment start | Early 2025 |
 | Sensor servers | 4 (distributed) |
 | Sensor types | 25+ per server |
-| Total events processed | 55,000,000+ |
-| Unique attacker IPs | 22,000+ |
+| Total events processed | 55,500,000+ |
+| Unique attacker IPs | 22,281 |
 | Countries of origin | 122 |
 | Uptime target | 24/7 continuous |
 
@@ -45,13 +45,11 @@ The T-Pot deployment runs 25+ sensor types. The highest-volume sensors:
 The reinforcement learning scorer continuously optimizes which LLM responses
 keep attackers engaged. Key findings:
 
-- **Average session duration increased** after RL optimization compared to
-  random cache selection
-- **Command diversity** (unique commands per session) is higher when the RL
-  scorer selects responses, indicating attackers believe the system is real
-  and attempt more complex exploitation
-- **Return rate** of attacker IPs is higher for LLM-powered honeypots vs.
-  static-response sensors
+- **88,176 total responses** scored by the RL system with an average engagement score of 0.488
+- **82 distinct score values** (range: 0.2739 to 0.8720) demonstrate genuine behavioral differentiation
+- **Score distribution:** 28.5% low-engagement (automated scanners), 4.8% moderate engagement, 66.7% not yet scored
+- **Cache performance:** 85.2% hit rate with 11,048 cached prompts and 576,356 serve-log entries
+- **GPU savings:** ~2,000 hours of GPU time saved through exact + semantic caching (~7x effective speedup)
 
 ### CVE honeypot effectiveness
 
@@ -72,13 +70,14 @@ The 15 CVE profiles attract targeted exploitation attempts:
 
 ### Generated rules by format
 
-| Format | Count (approx.) | Update frequency | Quality control |
-|--------|----------------:|-----------------|-----------------|
-| Suricata | Varies per cycle | Every 6 hours | Automated dedup + SID management |
-| Sigma | Varies per cycle | Every 6 hours | Logsource validation |
-| YARA | Varies per cycle | Every 6 hours | String extraction + condition logic |
-| Firewall blocklists | All observed IPs | Every 6 hours | Private IP filtering |
-| STIX 2.1 bundles | Per cycle | Every 6 hours | ATT&CK technique mapping |
+| Format | Count (peak) | Update frequency | Details |
+|--------|-------------:|-----------------|---------|
+| Sigma | 10 (5 SSH + 5 HTTP) | Every 6 hours | Critical to medium severity, MITRE-mapped |
+| YARA | 7 | Every 6 hours | Payload detection across HTTP and SSH |
+| Suricata | 48 auto-generated + 23 C2 handcrafted | Every 6 hours | Priority 1-3, classified by attack type |
+| Firewall blocklists | 503 IPs (peak) | Every 6 hours | iptables, nftables, plain text formats |
+| IOCs | 261 indicators | Every 6 hours | URLs, domains, IPs, file paths |
+| STIX 2.1 | 60 objects | Every 6 hours | Identity, attack patterns, indicators |
 
 ### Handcrafted C2 detection rules
 
@@ -140,6 +139,50 @@ known attack patterns. These anomalies often represent:
 - **C2 check-in patterns** from compromised infrastructure used as proxies
 - **Targeted attacks** (vs. opportunistic scanning) that focus on specific
   sensor configurations
+
+---
+
+## C2 & Covert Channel Detection
+
+The behavioral C2 detection engine runs every 5 minutes and has accumulated
+significant detection results:
+
+| Metric | Value |
+|--------|------:|
+| Total C2 indicators | 48,609 |
+| Critical threats | 182+ |
+| High threats | 966+ |
+| Beaconing detections | 1,769 |
+| Multi-layer detections | 344 |
+| Alert correlations | 395 |
+| MITRE techniques detected | 7 |
+| Top composite score | 46.0 |
+
+The engine uses a 4-layer detection approach:
+1. **Beaconing detection:** Inter-arrival time analysis (CV < 0.3 = suspected beacon)
+2. **DNS anomaly detection:** Query frequency, subdomain entropy, unusual record types
+3. **Protocol anomaly detection:** ICMP tunneling, non-standard ports, asymmetric byte ratios
+4. **Alert correlation:** Cross-layer Suricata alert correlation with weighted scoring
+
+## ML Heuristic Threat Detection
+
+The Isolation Forest + DBSCAN pipeline identifies behavioral outliers:
+
+| Metric | Value |
+|--------|------:|
+| Sessions analyzed | 105 (reference run) |
+| ML features extracted | 26 |
+| Anomalies detected | 16 (15.2%) |
+| Campaigns identified | 4 |
+| Predictive alerts | 17 |
+| IPs recommended for blocking | 34 |
+| Processing time | 4.2 seconds |
+
+**Identified campaigns:**
+1. **FiberState Botnet** (3 IPs, 1.37M events, USA) -- HIGH threat
+2. **Distributed Scanner** (27 IPs, 5,000 events, USA/NL/RO) -- MEDIUM threat
+3. **Recon Cluster** (13 IPs, 146 events, SI/USA/NL) -- HIGH threat
+4. **Global Scan** (47 IPs, 55 events, multi-country) -- HIGH threat
 
 ---
 

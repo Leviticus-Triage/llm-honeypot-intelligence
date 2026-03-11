@@ -125,6 +125,14 @@ flowchart TB
 
 **Total custom code:** ~5,800 lines of Python across 12 modules.
 
+### Operational highlights
+
+- **Cache hit rate: 85.2%** -- exact + semantic caching saves ~2,000 hours of GPU time (~7x effective speedup)
+- **RL optimization:** 88,176 responses scored, average engagement score 0.488, 82 distinct score values showing real behavioral differentiation
+- **C2 detection:** 48,609 indicators detected, 182 critical threats, 1,769 beaconing detections, 7 MITRE techniques
+- **ML pipeline:** 16 anomalies detected via Isolation Forest, 4 attack campaigns clustered via DBSCAN, 17 predictive alerts generated
+- **Peak day:** 19.8M events in a single day (February 14, 2026)
+
 ---
 
 ## Live metrics
@@ -133,12 +141,27 @@ flowchart TB
 
 | Metric | Value |
 |--------|------:|
-| Total attack events processed | 55,000,000+ |
-| Unique attacker IPs observed | 22,000+ |
+| Total attack events processed | 55,500,000+ |
+| Unique attacker IPs observed | 22,281 |
 | Countries of origin | 122 |
 | Sensor servers (distributed) | 4 |
 | Sensor types per server | 25+ |
-| Handcrafted C2 Suricata rules | 23 |
+| Generated Sigma rules | 10 (5 SSH + 5 HTTP) |
+| Generated YARA rules | 7 |
+| Generated Suricata rules | 48 + 23 handcrafted C2 |
+| Firewall-blocked IPs (peak) | 503 |
+| IOCs extracted | 261 |
+| STIX 2.1 objects | 60 |
+| C2 indicators detected | 48,609 |
+| CVE honeypot sessions | 516,000+ |
+| RL-scored responses | 88,176 |
+| Cached prompts | 11,048 |
+| Cache hit rate | 85.2% |
+| GPU time saved | ~2,000 hours |
+| ML anomalies detected | 16 |
+| Attack campaigns identified | 4 |
+| Predictive alerts generated | 17 |
+| Beaconing detections | 1,769 |
 | CVE honeypot profiles | 15 |
 | Kibana dashboards | 7 |
 
@@ -207,6 +230,8 @@ The rule generator analyzes Elasticsearch data and produces rules in multiple fo
 | **IOC lists** | `rules/iocs/` | Machine-readable indicators of compromise |
 
 Additionally, `rules/suricata/c2-detection.rules` contains **23 handcrafted Suricata rules** for C2 protocol detection (DNS tunneling, HTTP beaconing, encoded payloads, protocol anomalies).
+
+**Cumulative output (peak):** 10 Sigma rules, 7 YARA rules, 48 Suricata rules, 503 firewall-blocked IPs, 261 IOCs, and 60 STIX 2.1 objects. Rules are regenerated every 6 hours from the latest 24-hour attack window.
 
 ---
 
