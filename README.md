@@ -71,7 +71,7 @@ flowchart TB
         RULES[Rule Generator]
         ML[Heuristic Detector · ML]
         C2[C2 Detection Engine]
-        CVE[CVE Prompt Engine · 30 Profiles]
+        CVE[CVE Prompt Engine · 34 Profiles]
     end
 
     subgraph OUTPUT["Generated Output"]
@@ -121,7 +121,7 @@ flowchart TB
 | **ML Detector** | `proxy/src/heuristic_detector.py` | 775 | Isolation Forest anomaly detection, DBSCAN campaign clustering, IP reputation scoring |
 | **C2 Detector** | `proxy/src/c2_detection/engine.py` | 773 | Behavioral C2 detection: DNS tunneling, HTTP beaconing, protocol anomalies |
 | **CVE Engine** | `proxy/src/cve_engine.py` | 274 | Injects CVE-specific system prompts so the LLM role-plays as a vulnerable service |
-| **CVE Templates** | `proxy/src/cve_templates.py` | 1,170+ | 30 CVE profiles covering Fortinet, PAN-OS, Ivanti, Cisco, PHP, SAP, Cleo, and more |
+| **CVE Templates** | `proxy/src/cve_templates.py` | 1,370+ | 34 CVE profiles (2023-2026) covering Fortinet, PAN-OS, Ivanti, Cisco, PHP, SAP, VMware, and more |
 
 **Total custom code:** ~5,800 lines of Python across 12 modules.
 
@@ -162,7 +162,7 @@ flowchart TB
 | Attack campaigns identified | 4 |
 | Predictive alerts generated | 17 |
 | Beaconing detections | 1,769 |
-| CVE honeypot profiles | 30 |
+| CVE honeypot profiles | 34 |
 | Kibana dashboards | 7 |
 
 ---
@@ -201,7 +201,7 @@ The platform observes and generates detections for the following techniques:
 
 | Technique ID | Technique | Detection source | Output |
 |-------------|-----------|-----------------|--------|
-| [T1190](https://attack.mitre.org/techniques/T1190/) | Exploit Public-Facing Application | 30 CVE honeypot profiles (FortiOS, PAN-OS, Ivanti, PHP-CGI, SAP, ...) | Suricata + YARA |
+| [T1190](https://attack.mitre.org/techniques/T1190/) | Exploit Public-Facing Application | 34 CVE honeypot profiles (FortiOS, PAN-OS, Ivanti, PHP-CGI, SAP, VMware, ...) | Suricata + YARA |
 | [T1110](https://attack.mitre.org/techniques/T1110/) | Brute Force | SSH/Telnet credential stuffing via Cowrie/Beelzebub | Sigma + IP blocklist |
 | [T1059](https://attack.mitre.org/techniques/T1059/) | Command and Scripting Interpreter | Post-exploitation commands in SSH sessions | Sigma + YARA |
 | [T1071](https://attack.mitre.org/techniques/T1071/) | Application Layer Protocol | HTTP/DNS C2 beaconing patterns | Suricata + C2 engine |
@@ -237,9 +237,9 @@ Additionally, `rules/suricata/c2-detection.rules` contains **23 handcrafted Suri
 
 ## CVE honeypot profiles
 
-The CVE engine injects vulnerability-specific system prompts into the LLM, making honeypots respond as if they are running unpatched software. This attracts targeted exploitation attempts and captures attacker TTPs for specific CVEs. All 30 profiles are based on real-world PoC data and CISA KEV-listed vulnerabilities.
+The CVE engine injects vulnerability-specific system prompts into the LLM, making honeypots respond as if they are running unpatched software. This attracts targeted exploitation attempts and captures attacker TTPs for specific CVEs. All 34 profiles are based on real-world PoC data and CISA KEV-listed vulnerabilities, spanning 2023-2026.
 
-### SSH / CLI profiles (12)
+### SSH / CLI profiles (13)
 
 | CVE | CVSS | Target | Attack vector |
 |-----|------|--------|--------------|
@@ -255,8 +255,9 @@ The CVE engine injects vulnerability-specific system prompts into the LLM, makin
 | CVE-2025-24472 | 9.8 | FortiOS/FortiProxy | Auth bypass via crafted CSF proxy requests |
 | CVE-2024-3094 | 10.0 | XZ Utils/liblzma | Supply chain SSH backdoor |
 | CVE-2024-47176 | 9.8 | CUPS cups-browsed | RCE chain via malicious IPP printer |
+| CVE-2026-24858 | 9.8 | Fortinet FortiCloud SSO | Cross-account device takeover (CISA KEV Jan 2026) |
 
-### HTTP / Web profiles (18)
+### HTTP / Web profiles (21)
 
 | CVE | CVSS | Target | Attack vector |
 |-----|------|--------|--------------|
@@ -278,6 +279,9 @@ The CVE engine injects vulnerability-specific system prompts into the LLM, makin
 | CVE-2024-28995 | 8.6 | SolarWinds Serv-U | Path traversal (unauthenticated file read) |
 | CVE-2025-23006 | 9.8 | SonicWall SMA1000 | Deserialization RCE |
 | CVE-2024-9474 | 7.2 | PAN-OS management web | OS command injection as root |
+| CVE-2026-22719 | 8.1 | VMware Aria Operations | Command injection RCE (CISA KEV Mar 2026) |
+| CVE-2026-28289 | 10.0 | FreeScout Help Desk (Mail2Shell) | Zero-click RCE via .htaccess TOCTOU bypass |
+| CVE-2026-27971 | 9.8 | Qwik Framework | server$ deserialization RCE |
 
 ---
 
@@ -353,7 +357,7 @@ llm-honeypot-intelligence/
 │   │   ├── heuristic_detector.py   # ML anomaly detection (Isolation Forest + DBSCAN)
 │   │   ├── c2_detection/           # C2 & covert channel detection engine
 │   │   ├── cve_engine.py           # CVE-specific prompt injection
-│   │   └── cve_templates.py        # 30 CVE vulnerability profiles (CISA KEV)
+│   │   └── cve_templates.py        # 34 CVE vulnerability profiles (2023-2026, CISA KEV)
 │   ├── run_scorer.py               # RL scorer entry point
 │   ├── run_rule_generator.py       # Rule generator entry point
 │   ├── run_heuristic_detector.py   # ML detector entry point

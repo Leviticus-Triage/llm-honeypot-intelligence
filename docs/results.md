@@ -53,7 +53,7 @@ keep attackers engaged. Key findings:
 
 ### CVE honeypot effectiveness
 
-The 30 CVE profiles (12 SSH/CLI, 18 HTTP/Web) attract targeted exploitation attempts across diverse vendor ecosystems:
+The 34 CVE profiles (13 SSH/CLI, 21 HTTP/Web) attract targeted exploitation attempts across diverse vendor ecosystems:
 
 - **Fortinet (FortiOS/FortiManager):** 4 profiles covering auth bypass,
   OOB write RCE, CSF proxy abuse, and FortiJump -- attracting nation-state
