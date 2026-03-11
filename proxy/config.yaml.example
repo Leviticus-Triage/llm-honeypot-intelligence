@@ -1,0 +1,28 @@
+# Ollama Proxy Configuration
+# --------------------------
+# Transparent caching proxy for Ollama with RL-based response selection.
+
+# Upstream Ollama server (the real LLM backend)
+ollama_upstream: "http://localhost:11434"
+
+# Port for the proxy to listen on
+listen_port: 11435
+
+# Path to SQLite cache database
+cache_db: "/data/ollama-proxy/cache.db"
+
+# Embedding model for semantic similarity (pulled via Ollama)
+embedding_model: "nomic-embed-text"
+
+# Minimum cosine similarity for semantic cache hits (0.0 - 1.0)
+semantic_threshold: 0.85
+
+# Exploration rate: probability of bypassing cache for fresh LLM generation
+# This ensures diversity and allows the RL scorer to evaluate new responses
+exploration_rate: 0.15
+
+# Log level: DEBUG, INFO, WARNING, ERROR
+log_level: "INFO"
+
+# CVE Honeypot Engine: enhance LLM prompts with CVE-specific system context
+cve_engine_enabled: true

@@ -1,0 +1,108 @@
+# Ollama Proxy Stack - Caching proxy with RL for LLM honeypots
+#
+# Prerequisites:
+#   - Ollama running on the host (port 11434)
+#   - T-Pot VM with Elasticsearch accessible
+#   - Copy .env.example to .env and fill in credentials
+#
+# Usage:
+#   docker compose up -d
+
+services:
+  ollama-proxy:
+    container_name: ollama-proxy
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+      - CACHE_DB=/data/ollama-proxy/cache.db
+      - ES_URL=${ES_URL}
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - rules_output:/data/ollama-proxy/generated-rules:ro
+      - threat_output:/data/ollama-proxy/threat-intel:ro
+      - ./config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:11435/proxy/health'); exit(0 if r.status_code==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rl-scorer:
+    container_name: ollama-rl-scorer
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - CACHE_DB=/data/ollama-proxy/cache.db
+      - ES_URL=${ES_URL}
+      - ES_USER=${ES_USER}
+      - ES_PASS=${ES_PASS}
+      - TPOT_VM_IP=${TPOT_VM_IP}
+      - SCORER_INTERVAL=300
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - ./run_scorer.py:/app/run_scorer.py:ro
+    entrypoint: ["python", "/app/run_scorer.py"]
+
+  rule-generator:
+    container_name: ollama-rule-generator
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - CACHE_DB=/data/ollama-proxy/cache.db
+      - ES_URL=${ES_URL}
+      - ES_USER=${ES_USER}
+      - ES_PASS=${ES_PASS}
+      - RULES_DIR=/data/ollama-proxy/generated-rules
+      - RULEGEN_INTERVAL=21600
+      - RULEGEN_SINCE_HOURS=24
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - ./run_rule_generator.py:/app/run_rule_generator.py:ro
+      - rules_output:/data/ollama-proxy/generated-rules
+    entrypoint: ["python", "/app/run_rule_generator.py"]
+
+  heuristic-detector:
+    container_name: ollama-heuristic-detector
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - CACHE_DB=/data/ollama-proxy/cache.db
+      - ES_URL=${ES_URL}
+      - ES_USER=${ES_USER}
+      - ES_PASS=${ES_PASS}
+      - THREAT_DIR=/data/ollama-proxy/threat-intel
+      - HEURISTIC_INTERVAL=1800
+      - HEURISTIC_SINCE_HOURS=24
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - ./run_heuristic_detector.py:/app/run_heuristic_detector.py:ro
+      - threat_output:/data/ollama-proxy/threat-intel
+    entrypoint: ["python", "/app/run_heuristic_detector.py"]
+
+  c2-detector:
+    container_name: ollama-c2-detector
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - ES_URL=${ES_URL}
+      - ES_USER=${ES_USER}
+      - ES_PASS=${ES_PASS}
+      - C2_INTERVAL=300
+      - C2_WINDOW=60
+    volumes:
+      - ./run_c2_detector.py:/app/run_c2_detector.py:ro
+    entrypoint: ["python", "/app/run_c2_detector.py"]
+
+volumes:
+  proxy_data:
+    name: ollama-proxy-data
+  rules_output:
+    name: ollama-rules-output
+  threat_output:
+    name: ollama-threat-output
