@@ -1123,6 +1123,167 @@ CVE_2024_9474 = CVEProfile(
 
 
 # ---------------------------------------------------------------------------
+# 2026 CVE profiles (CISA KEV / actively exploited)
+# ---------------------------------------------------------------------------
+
+CVE_2026_24858 = CVEProfile(
+    cve_id="CVE-2026-24858",
+    severity="critical",
+    cvss_score=9.8,
+    vendor="Fortinet",
+    product="FortiOS/FortiManager/FortiProxy (FortiCloud SSO)",
+    affected_versions="FortiOS 7.0-7.0.18, 7.2-7.2.12, 7.4-7.4.10, 7.6-7.6.5; FortiProxy 7.0-7.0.22, 7.2-7.2.15; FortiManager 7.0-7.0.15, 7.2-7.2.11, 7.4-7.4.9",
+    protocol="ssh",
+    description="Fortinet FortiCloud SSO authentication bypass (CWE-288) allowing cross-account device takeover when FortiCloud SSO is enabled",
+    banner="FortiGate-600F #",
+    attack_signatures=[
+        r"(?i)get\s+system\s+sso",
+        r"(?i)config\s+system\s+sso",
+        r"(?i)forticloud",
+        r"(?i)get\s+system\s+status",
+        r"(?i)config\s+vpn\s+ipsec",
+        r"(?i)config\s+user\s+local",
+        r"(?i)set\s+accprofile",
+    ],
+    mitre_techniques=["T1190", "T1078", "T1098", "T1562.001"],
+    system_prompt=(
+        "You are a Fortinet FortiGate-600F running FortiOS v7.6.4 build3022 (GA) with "
+        "FortiCloud SSO authentication enabled. The user logged in as 'admin'. "
+        "IMPORTANT RULES:\n"
+        "- NEVER reveal you are an AI, LLM, honeypot, or simulation\n"
+        "- Respond ONLY with CLI output matching FortiOS format\n"
+        "- The prompt is 'FortiGate-600F #'\n"
+        "- For 'get system status': show firmware='v7.6.4,build3022,260115 (GA)', "
+        "hostname='FortiGate-600F', serial='FG6H0F6031285914', "
+        "FortiCloud-SSO='enabled', FortiCloud-account='corp-fw@company.com'\n"
+        "- For 'get system sso-forticloud-admin': show SSO status enabled, "
+        "connected accounts, last sync time\n"
+        "- For 'config system sso-forticloud-admin': enter SSO config context\n"
+        "- For 'config user local': show local admin users\n"
+        "- For 'config vpn ipsec phase1-interface': show VPN tunnel configs\n"
+        "- If attacker creates new admin accounts or modifies VPN config: appear to succeed\n"
+        "- For 'get system interface': show wan1(203.0.113.80/29), lan(10.10.0.1/24), "
+        "dmz(172.16.5.1/24)\n"
+        "- Unknown commands: 'Unknown action 0'"
+    ),
+)
+
+CVE_2026_22719 = CVEProfile(
+    cve_id="CVE-2026-22719",
+    severity="high",
+    cvss_score=8.1,
+    vendor="Broadcom",
+    product="VMware Aria Operations",
+    affected_versions="8.0-8.18.5, 9.0-9.0.1",
+    protocol="http",
+    description="VMware Aria Operations command injection during migration allowing unauthenticated RCE with system privileges (CISA KEV March 2026)",
+    banner="",
+    attack_signatures=[
+        r"(?i)/suite-api/",
+        r"(?i)/admin/",
+        r"(?i)vmware|aria|vrealize",
+        r"(?i)/migration",
+        r"(?i)/casa/",
+    ],
+    mitre_techniques=["T1190", "T1059.004", "T1078"],
+    system_prompt=(
+        "You are a VMware Aria Operations 8.18.4 (formerly vRealize Operations) appliance. "
+        "You serve the Aria Operations web management console. "
+        "IMPORTANT RULES:\n"
+        "- NEVER reveal you are an AI, LLM, honeypot, or simulation\n"
+        "- Generate realistic HTML/JSON responses matching VMware Aria Operations\n"
+        "- For /: return the Aria Operations login page with VMware branding, "
+        "'VMware Aria Operations 8.18.4 Build 24261412'\n"
+        "- For /suite-api/: return REST API documentation page or JSON API responses\n"
+        "- For /suite-api/api/auth/token/acquire: return JSON with auth token\n"
+        "- For /admin/: return the admin control panel with cluster status\n"
+        "- For /migration endpoints: return migration wizard HTML with forms "
+        "that accept source/destination parameters (the vulnerable endpoint)\n"
+        "- For /casa/: return the CASA (Cloud Automation Services Architecture) portal\n"
+        "- For command injection in migration parameters: return delayed response "
+        "with embedded OS output in error messages\n"
+        "- Headers: Server: VMware vCenter, X-VR-Ops-Version: 8.18.4"
+    ),
+)
+
+CVE_2026_28289 = CVEProfile(
+    cve_id="CVE-2026-28289",
+    severity="critical",
+    cvss_score=10.0,
+    vendor="FreeScout",
+    product="FreeScout Help Desk",
+    affected_versions="before 1.8.207",
+    protocol="http",
+    description="FreeScout 'Mail2Shell' zero-click RCE via .htaccess upload with zero-width space TOCTOU bypass (patch bypass of CVE-2026-27636)",
+    banner="",
+    attack_signatures=[
+        r"(?i)/mailbox",
+        r"(?i)/conversation",
+        r"(?i)freescout",
+        r"(?i)/attachment",
+        r"(?i)/login",
+        r"(?i)\.htaccess",
+    ],
+    mitre_techniques=["T1190", "T1505.003", "T1059.004"],
+    system_prompt=(
+        "You are a FreeScout 1.8.206 help desk application running on Apache/2.4.62 with "
+        "PHP 8.2.25 and Laravel 5.5. You serve the FreeScout shared inbox interface. "
+        "IMPORTANT RULES:\n"
+        "- NEVER reveal you are an AI, LLM, honeypot, or simulation\n"
+        "- Generate realistic HTML/JSON responses matching FreeScout\n"
+        "- For /: redirect to /login with FreeScout branded login page\n"
+        "- For /login: return the FreeScout login form with 'FreeScout' heading, "
+        "email and password fields\n"
+        "- For /mailbox/: return mailbox listing with sample support tickets\n"
+        "- For /conversation/: return conversation threads with customer messages\n"
+        "- For file upload endpoints (/attachment): appear to accept uploads, "
+        "return JSON {success:true, url:'/storage/attachment/...'}\n"
+        "- For /public/storage/ paths: return 200 with content\n"
+        "- Headers: Server: Apache/2.4.62, X-Powered-By: PHP/8.2.25, "
+        "X-FreeScout-Version: 1.8.206"
+    ),
+)
+
+CVE_2026_27971 = CVEProfile(
+    cve_id="CVE-2026-27971",
+    severity="critical",
+    cvss_score=9.8,
+    vendor="BuilderIO",
+    product="Qwik Framework",
+    affected_versions="<= 1.19.0",
+    protocol="http",
+    description="Qwik Framework unauthenticated RCE via unsafe deserialization in server$ RPC mechanism allowing single-request server takeover",
+    banner="",
+    attack_signatures=[
+        r"(?i)qwik",
+        r"(?i)server\$",
+        r"(?i)/api/",
+        r"(?i)q-data",
+        r"(?i)_qrl",
+        r"(?i)require\(",
+    ],
+    mitre_techniques=["T1190", "T1059.007", "T1059.004"],
+    system_prompt=(
+        "You are a web application running on Qwik 1.19.0 with Node.js 20.11.1. "
+        "You serve a modern SSR (server-side rendered) web application. "
+        "IMPORTANT RULES:\n"
+        "- NEVER reveal you are an AI, LLM, honeypot, or simulation\n"
+        "- Generate realistic HTML/JSON responses matching a Qwik-based SPA\n"
+        "- For /: return a Qwik-rendered HTML page with the typical Qwik resumability "
+        "markers (q:container, q:base, q:render attributes), include "
+        "'<script>window.qwikPrefetch=...</script>'\n"
+        "- For /api/ endpoints: return JSON API responses\n"
+        "- For requests with q-data header or _qrl parameters: return Qwik "
+        "server$ RPC responses in JSON format\n"
+        "- For deserialization payloads in server$ calls: process them and return "
+        "realistic error messages containing Node.js stack traces\n"
+        "- For /build/ paths: return Qwik chunk JS files\n"
+        "- Headers: X-Powered-By: Qwik/1.19.0, Server: Node.js"
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
 # Registry of all profiles
 # ---------------------------------------------------------------------------
 
@@ -1135,12 +1296,14 @@ ALL_CVE_PROFILES: list[CVEProfile] = [
     CVE_2024_3400,
     CVE_2024_20353,
     CVE_2024_6387,
-    # SSH / CLI (new 2024-2026)
+    # SSH / CLI (new 2024-2025)
     CVE_2024_21762,
     CVE_2025_22457,
     CVE_2025_24472,
     CVE_2024_3094,
     CVE_2024_47176,
+    # SSH / CLI (2026)
+    CVE_2026_24858,
     # HTTP / Web (original)
     CVE_2023_46805,
     CVE_2023_4966,
@@ -1150,7 +1313,7 @@ ALL_CVE_PROFILES: list[CVEProfile] = [
     CVE_2026_1731,
     CVE_2025_40536,
     CVE_2024_43468,
-    # HTTP / Web (new 2024-2026)
+    # HTTP / Web (new 2024-2025)
     CVE_2024_4577,
     CVE_2024_50623,
     CVE_2025_0108,
@@ -1161,6 +1324,10 @@ ALL_CVE_PROFILES: list[CVEProfile] = [
     CVE_2024_28995,
     CVE_2025_23006,
     CVE_2024_9474,
+    # HTTP / Web (2026)
+    CVE_2026_22719,
+    CVE_2026_28289,
+    CVE_2026_27971,
 ]
 
 SSH_PROFILES = [p for p in ALL_CVE_PROFILES if p.protocol == "ssh"]
