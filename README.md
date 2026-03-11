@@ -71,7 +71,7 @@ flowchart TB
         RULES[Rule Generator]
         ML[Heuristic Detector · ML]
         C2[C2 Detection Engine]
-        CVE[CVE Prompt Engine · 15 Profiles]
+        CVE[CVE Prompt Engine · 30 Profiles]
     end
 
     subgraph OUTPUT["Generated Output"]
@@ -121,7 +121,7 @@ flowchart TB
 | **ML Detector** | `proxy/src/heuristic_detector.py` | 775 | Isolation Forest anomaly detection, DBSCAN campaign clustering, IP reputation scoring |
 | **C2 Detector** | `proxy/src/c2_detection/engine.py` | 773 | Behavioral C2 detection: DNS tunneling, HTTP beaconing, protocol anomalies |
 | **CVE Engine** | `proxy/src/cve_engine.py` | 274 | Injects CVE-specific system prompts so the LLM role-plays as a vulnerable service |
-| **CVE Templates** | `proxy/src/cve_templates.py` | 613 | 15 CVE profiles (Log4Shell, Spring4Shell, ProxyShell, MOVEit, and more) |
+| **CVE Templates** | `proxy/src/cve_templates.py` | 1,170+ | 30 CVE profiles covering Fortinet, PAN-OS, Ivanti, Cisco, PHP, SAP, Cleo, and more |
 
 **Total custom code:** ~5,800 lines of Python across 12 modules.
 
@@ -162,7 +162,7 @@ flowchart TB
 | Attack campaigns identified | 4 |
 | Predictive alerts generated | 17 |
 | Beaconing detections | 1,769 |
-| CVE honeypot profiles | 15 |
+| CVE honeypot profiles | 30 |
 | Kibana dashboards | 7 |
 
 ---
@@ -201,7 +201,7 @@ The platform observes and generates detections for the following techniques:
 
 | Technique ID | Technique | Detection source | Output |
 |-------------|-----------|-----------------|--------|
-| [T1190](https://attack.mitre.org/techniques/T1190/) | Exploit Public-Facing Application | CVE honeypot profiles (Log4Shell, ProxyShell, MOVEit, ...) | Suricata + YARA |
+| [T1190](https://attack.mitre.org/techniques/T1190/) | Exploit Public-Facing Application | 30 CVE honeypot profiles (FortiOS, PAN-OS, Ivanti, PHP-CGI, SAP, ...) | Suricata + YARA |
 | [T1110](https://attack.mitre.org/techniques/T1110/) | Brute Force | SSH/Telnet credential stuffing via Cowrie/Beelzebub | Sigma + IP blocklist |
 | [T1059](https://attack.mitre.org/techniques/T1059/) | Command and Scripting Interpreter | Post-exploitation commands in SSH sessions | Sigma + YARA |
 | [T1071](https://attack.mitre.org/techniques/T1071/) | Application Layer Protocol | HTTP/DNS C2 beaconing patterns | Suricata + C2 engine |
@@ -237,25 +237,47 @@ Additionally, `rules/suricata/c2-detection.rules` contains **23 handcrafted Suri
 
 ## CVE honeypot profiles
 
-The CVE engine injects vulnerability-specific system prompts into the LLM, making honeypots respond as if they are running unpatched software. This attracts targeted exploitation attempts and captures attacker TTPs for specific CVEs:
+The CVE engine injects vulnerability-specific system prompts into the LLM, making honeypots respond as if they are running unpatched software. This attracts targeted exploitation attempts and captures attacker TTPs for specific CVEs. All 30 profiles are based on real-world PoC data and CISA KEV-listed vulnerabilities.
 
-| CVE | Target | Attack vector |
-|-----|--------|--------------|
-| CVE-2021-44228 | Apache Log4j (Log4Shell) | JNDI injection via HTTP headers |
-| CVE-2022-22965 | Spring Framework (Spring4Shell) | Class loader manipulation |
-| CVE-2021-34473 | Microsoft Exchange (ProxyShell) | SSRF + privilege escalation |
-| CVE-2023-34362 | MOVEit Transfer | SQL injection → RCE |
-| CVE-2023-46604 | Apache ActiveMQ | Deserialization RCE |
-| CVE-2024-1709 | ConnectWise ScreenConnect | Auth bypass |
-| CVE-2023-22527 | Atlassian Confluence | Template injection RCE |
-| CVE-2021-26855 | Exchange (ProxyLogon) | SSRF pre-auth |
-| CVE-2023-0669 | GoAnywhere MFT | Deserialization RCE |
-| CVE-2021-27065 | Exchange (ProxyLogon chain) | Arbitrary file write |
-| CVE-2023-20198 | Cisco IOS XE | Web UI privilege escalation |
-| CVE-2024-3400 | Palo Alto PAN-OS | Command injection |
-| CVE-2023-42793 | JetBrains TeamCity | Auth bypass RCE |
-| CVE-2022-1388 | F5 BIG-IP | iControl REST auth bypass |
-| CVE-2021-21972 | VMware vCenter | RCE via vSphere Client |
+### SSH / CLI profiles (12)
+
+| CVE | CVSS | Target | Attack vector |
+|-----|------|--------|--------------|
+| CVE-2024-55591 | 9.8 | Fortinet FortiOS | Auth bypass via Node.js websocket |
+| CVE-2024-47575 | 9.8 | Fortinet FortiManager (FortiJump) | Missing auth for FGFM protocol |
+| CVE-2025-0282 | 9.0 | Ivanti Connect Secure | Stack buffer overflow (unauthenticated RCE) |
+| CVE-2024-21887 | 9.1 | Ivanti Connect Secure | Command injection in web components |
+| CVE-2024-3400 | 10.0 | Palo Alto PAN-OS GlobalProtect | OS command injection (zero-day) |
+| CVE-2024-20353 | 8.6 | Cisco ASA/FTD (ArcaneDoor) | Denial of service + persistent backdoor |
+| CVE-2024-6387 | 8.1 | OpenSSH (regreSSHion) | Signal handler race condition RCE |
+| CVE-2024-21762 | 9.6 | FortiOS SSL VPN | OOB write allowing unauthenticated RCE |
+| CVE-2025-22457 | 9.0 | Ivanti Connect Secure | Stack overflow via HTTP headers (UNC5221) |
+| CVE-2025-24472 | 9.8 | FortiOS/FortiProxy | Auth bypass via crafted CSF proxy requests |
+| CVE-2024-3094 | 10.0 | XZ Utils/liblzma | Supply chain SSH backdoor |
+| CVE-2024-47176 | 9.8 | CUPS cups-browsed | RCE chain via malicious IPP printer |
+
+### HTTP / Web profiles (18)
+
+| CVE | CVSS | Target | Attack vector |
+|-----|------|--------|--------------|
+| CVE-2023-46805 | 8.2 | Ivanti Connect Secure (Web) | Auth bypass in web component |
+| CVE-2023-4966 | 9.4 | Citrix NetScaler (Citrix Bleed) | Session token leak via buffer overread |
+| CVE-2024-1709 | 10.0 | ConnectWise ScreenConnect | Setup wizard auth bypass |
+| CVE-2024-23897 | 9.8 | Jenkins CI/CD | Arbitrary file read via args4j CLI parser |
+| CVE-2024-24919 | 8.6 | Check Point Security Gateway | Path traversal info disclosure |
+| CVE-2026-1731 | 9.8 | BeyondTrust PRA/Remote Support | OS command injection |
+| CVE-2025-40536 | 8.4 | SolarWinds Web Help Desk | Security control bypass |
+| CVE-2024-43468 | 9.8 | Microsoft SCCM | SQL injection in management point |
+| CVE-2024-4577 | 9.8 | PHP-CGI (Windows) | Argument injection RCE via Best-Fit mapping |
+| CVE-2024-50623 | 10.0 | Cleo Harmony/VLTrader/LexiCom | Unrestricted file upload RCE (Cl0p) |
+| CVE-2025-0108 | 9.1 | PAN-OS management web | Auth bypass via Nginx/Apache path confusion |
+| CVE-2024-27198 | 9.8 | JetBrains TeamCity | Auth bypass via path traversal |
+| CVE-2024-0012 | 9.3 | PAN-OS management interface | Auth bypass (chained with CVE-2024-9474) |
+| CVE-2025-31324 | 10.0 | SAP NetWeaver AS Java | Unrestricted file upload for web shell |
+| CVE-2024-55956 | 9.8 | Cleo VLTrader/LexiCom | Autorun directory RCE (Cl0p) |
+| CVE-2024-28995 | 8.6 | SolarWinds Serv-U | Path traversal (unauthenticated file read) |
+| CVE-2025-23006 | 9.8 | SonicWall SMA1000 | Deserialization RCE |
+| CVE-2024-9474 | 7.2 | PAN-OS management web | OS command injection as root |
 
 ---
 
@@ -331,7 +353,7 @@ llm-honeypot-intelligence/
 │   │   ├── heuristic_detector.py   # ML anomaly detection (Isolation Forest + DBSCAN)
 │   │   ├── c2_detection/           # C2 & covert channel detection engine
 │   │   ├── cve_engine.py           # CVE-specific prompt injection
-│   │   └── cve_templates.py        # 15 CVE vulnerability profiles
+│   │   └── cve_templates.py        # 30 CVE vulnerability profiles (CISA KEV)
 │   ├── run_scorer.py               # RL scorer entry point
 │   ├── run_rule_generator.py       # Rule generator entry point
 │   ├── run_heuristic_detector.py   # ML detector entry point

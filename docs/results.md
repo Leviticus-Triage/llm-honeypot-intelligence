@@ -53,16 +53,24 @@ keep attackers engaged. Key findings:
 
 ### CVE honeypot effectiveness
 
-The 15 CVE profiles attract targeted exploitation attempts:
+The 30 CVE profiles (12 SSH/CLI, 18 HTTP/Web) attract targeted exploitation attempts across diverse vendor ecosystems:
 
-- **Log4Shell (CVE-2021-44228):** Highest volume -- automated scanners
-  constantly probe for JNDI injection points
-- **Spring4Shell (CVE-2022-22965):** Targeted by more sophisticated actors
-  who check response headers for Spring framework indicators
-- **ProxyShell/ProxyLogon:** Exchange-themed honeypots attract credential
-  harvesting and mailbox access attempts
-- **MOVEit (CVE-2023-34362):** Attracts SQL injection chains targeting file
-  transfer infrastructure
+- **Fortinet (FortiOS/FortiManager):** 4 profiles covering auth bypass,
+  OOB write RCE, CSF proxy abuse, and FortiJump -- attracting nation-state
+  and ransomware operators
+- **Palo Alto PAN-OS:** 4 profiles (CVE-2024-3400, 2025-0108, 2024-0012,
+  2024-9474) covering the full exploit chain from auth bypass to root command
+  injection
+- **Ivanti Connect Secure:** 4 profiles spanning auth bypass, command
+  injection, and stack buffer overflows (including UNC5221/China-nexus activity)
+- **Cleo MFT (Harmony/VLTrader):** 2 profiles targeting the Cl0p ransomware
+  campaign's file upload and autorun exploitation
+- **Supply chain (XZ Utils):** CVE-2024-3094 SSH backdoor attracts probing
+  from researchers and threat actors checking for compromised liblzma
+- **PHP-CGI (CVE-2024-4577):** Massively exploited argument injection with
+  150+ public PoCs -- high-volume scanner magnet
+- **SAP NetWeaver (CVE-2025-31324):** CVSS 10.0 file upload attracting
+  targeted enterprise exploitation attempts
 
 ---
 
