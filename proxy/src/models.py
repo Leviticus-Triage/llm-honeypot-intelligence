@@ -6,7 +6,6 @@ import sqlite3
 import os
 import threading
 from contextlib import contextmanager
-from datetime import datetime
 
 DB_PATH = os.environ.get("CACHE_DB", "/data/ollama-proxy/cache.db")
 

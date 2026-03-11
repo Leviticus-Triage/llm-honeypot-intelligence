@@ -12,15 +12,12 @@ v3 fixes:
 - Better text matching using HTTP request patterns from prompts
 """
 
-import hashlib
 import json
 import logging
 import math
 import os
 import sqlite3
-import time
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 import httpx
 
@@ -284,8 +281,6 @@ def correlate_galah_ips(llm_events: list[dict]):
     for event in llm_events:
         real_ip = event.get("src_ip", "")
         resp_body = event.get("response.body", "")
-        es_ts = event.get("@timestamp", "")
-
         if not real_ip or not resp_body or real_ip == VM_IP:
             continue
 
@@ -577,9 +572,6 @@ async def _resolve_real_ip_from_es(es_url: str, prompt_text: str, served_at: str
     if not prompt_text or len(prompt_text) < 5:
         return ""
 
-    # Extract a meaningful snippet for matching
-    snippet = prompt_text.strip()[:80]
-
     # Build query for Beelzebub (SSH) or Galah (HTTP)
     if protocol == "ssh":
         query = {
@@ -650,7 +642,6 @@ async def push_cve_sessions_to_es(es_url: str, since_minutes: int = 60):
         return 0
 
     from .cve_templates import CVE_BY_ID
-    import json
 
     auth = (ES_USER, ES_PASS) if ES_USER else None
     bulk_body = ""

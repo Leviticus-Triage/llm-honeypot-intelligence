@@ -14,10 +14,10 @@ logging.basicConfig(
 logger = logging.getLogger("rl-scorer")
 
 # Initialize DB
-from src.models import init_db
+from src.models import init_db  # noqa: E402
 init_db()
 
-from src.rl_scorer import run_scoring_cycle
+from src.rl_scorer import run_scoring_cycle  # noqa: E402
 
 INTERVAL = int(os.environ.get("SCORER_INTERVAL", "300"))
 

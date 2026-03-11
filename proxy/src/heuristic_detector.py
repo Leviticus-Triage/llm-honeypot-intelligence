@@ -16,13 +16,10 @@ import hashlib
 import json
 import logging
 import os
-import re
-import sqlite3
 import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import httpx
 import numpy as np
@@ -394,7 +391,7 @@ def run_campaign_clustering(features: list[dict], matrix: np.ndarray) -> list[di
             campaigns[cluster_id].append(feat["ip"])
 
     n_campaigns = len(campaigns)
-    n_clustered = sum(1 for l in labels if l >= 0)
+    n_clustered = sum(1 for label in labels if label >= 0)
     logger.info("Campaign clustering: %d campaigns, %d/%d IPs clustered (%.1f%%)",
                 n_campaigns, n_clustered, len(features), 100 * n_clustered / len(features))
 
@@ -684,7 +681,7 @@ def write_results(features: list, reputation: dict, campaigns: list,
     block_ips = sorted([ip for ip, v in reputation.items() if v["action"] == "block"],
                        key=lambda ip: reputation[ip]["score"], reverse=True)
     with open(OUTPUT_DIR / "dynamic_blocklist.txt", "w") as f:
-        f.write(f"# ML-generated dynamic blocklist\n")
+        f.write("# ML-generated dynamic blocklist\n")
         f.write(f"# Generated: {ts_str}\n")
         f.write(f"# Total: {len(block_ips)} IPs\n")
         for ip in block_ips:

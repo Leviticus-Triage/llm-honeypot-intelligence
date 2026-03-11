@@ -12,13 +12,9 @@ Performs:
 Outputs to: /data/ollama-proxy/threat-intel/
 """
 import asyncio
-import json
 import logging
 import os
-import sys
 import time
-from datetime import datetime, timezone
-from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,10 +23,10 @@ logging.basicConfig(
 logger = logging.getLogger("heuristic")
 
 # Initialize DB (needed for shared volume access)
-from src.models import init_db
+from src.models import init_db  # noqa: E402
 init_db()
 
-from src.heuristic_detector import run_heuristic_detection
+from src.heuristic_detector import run_heuristic_detection  # noqa: E402
 
 INTERVAL = int(os.environ.get("HEURISTIC_INTERVAL", "1800"))  # 30 min default
 
