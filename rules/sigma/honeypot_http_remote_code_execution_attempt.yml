@@ -1,0 +1,28 @@
+title: Honeypot - HTTP Remote Code Execution Attempt
+id: 6010caf4-2c18-445b-cf10-bf6951596ad7
+status: experimental
+level: critical
+description: Remote code execution attempts via web vulnerabilities. 6 events, 6 patterns.
+author: LLM Honeypot Intelligence Platform (automated)
+date: 2026/02/15
+references:
+- https://attack.mitre.org/
+tags:
+- attack.execution
+- attack.t1059
+- attack.t1190
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-uri|contains:
+    - /cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh
+    - /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+    - /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+    - /cgi-bin/luci/
+    - /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+    - /phpunit/src/Util/PHP/eval-stdin.php
+  condition: selection
+falsepositives:
+- Authorized penetration testing
+- Vulnerability scanners

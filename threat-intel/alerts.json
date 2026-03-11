@@ -1,0 +1,15 @@
+[
+  {
+    "id": "91d91c758cfc",
+    "timestamp": "2026-03-11T14:44:17.202171+00:00",
+    "severity": "low",
+    "type": "coordinated_campaign",
+    "ip": "5 IPs",
+    "country": "United Kingdom, France, United States",
+    "description": "Coordinated attack campaign (5 IPs, 5 events)",
+    "reasons": [
+      "Behavioural similarity"
+    ],
+    "recommended_action": "alert"
+  }
+]

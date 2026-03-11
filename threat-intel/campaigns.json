@@ -1,0 +1,32 @@
+[
+  {
+    "campaign_id": 0,
+    "ip_count": 5,
+    "ips": [
+      "142.93.213.36",
+      "64.227.139.104",
+      "85.11.183.27",
+      "85.217.140.4",
+      "87.121.84.76"
+    ],
+    "countries": [
+      "United Kingdom",
+      "France",
+      "United States",
+      "India"
+    ],
+    "asns": [
+      "Vpsvault.host Ltd",
+      "DigitalOcean, LLC",
+      "Modat B.V.",
+      "PebbleHost Ltd"
+    ],
+    "fingerprints": [
+      "8a5edab282632443"
+    ],
+    "max_threat_level": "low",
+    "toolkits": [],
+    "total_events": 5,
+    "avg_anomaly_score": 0.0
+  }
+]
