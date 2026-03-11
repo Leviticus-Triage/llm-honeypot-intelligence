@@ -344,7 +344,7 @@ def run_anomaly_detection(features: list[dict], matrix: np.ndarray) -> list[dict
     from sklearn.preprocessing import StandardScaler
 
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(matrix)
+    x_scaled = scaler.fit_transform(matrix)
 
     clf = IsolationForest(
         n_estimators=200,
@@ -352,8 +352,8 @@ def run_anomaly_detection(features: list[dict], matrix: np.ndarray) -> list[dict
         random_state=42,
         n_jobs=-1,
     )
-    predictions = clf.fit_predict(X_scaled)
-    scores = clf.decision_function(X_scaled)
+    predictions = clf.fit_predict(x_scaled)
+    scores = clf.decision_function(x_scaled)
 
     for i, feat in enumerate(features):
         feat["anomaly_label"] = "anomaly" if predictions[i] == -1 else "normal"
@@ -378,10 +378,10 @@ def run_campaign_clustering(features: list[dict], matrix: np.ndarray) -> list[di
     from sklearn.preprocessing import StandardScaler
 
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(matrix)
+    x_scaled = scaler.fit_transform(matrix)
 
     clusterer = DBSCAN(eps=1.2, min_samples=3, metric="euclidean")
-    labels = clusterer.fit_predict(X_scaled)
+    labels = clusterer.fit_predict(x_scaled)
 
     campaigns = defaultdict(list)
     for i, feat in enumerate(features):

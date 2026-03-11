@@ -3,10 +3,10 @@ name: Lint
 on:
   push:
     branches: [main]
-    paths: ["proxy/**/*.py"]
+    paths: ["proxy/**/*.py", "pyproject.toml", ".github/workflows/lint.yml"]
   pull_request:
     branches: [main]
-    paths: ["proxy/**/*.py"]
+    paths: ["proxy/**/*.py", "pyproject.toml", ".github/workflows/lint.yml"]
 
 jobs:
   lint:
@@ -19,7 +19,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install ruff
-        run: pip install ruff
+        run: pip install "ruff>=0.15.0,<0.16"
 
       - name: Run ruff
-        run: ruff check proxy/src/ proxy/run_*.py
+        run: ruff check proxy/

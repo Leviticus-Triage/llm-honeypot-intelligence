@@ -201,11 +201,11 @@ def _make_atom(cmd: str, ip: str) -> Optional[dict]:
         return None
 
     # Skip noise: text processors, shell fragments, redirections
-    NOISE_PREFIXES = ("awk ", "sed ", "tr ", "cut ", "head ", "tail ", "sort ",
+    noise_prefixes = ("awk ", "sed ", "tr ", "cut ", "head ", "tail ", "sort ",
                       "wc ", "print ", "exit", "gsub", "NF{", "2>/dev/null",
                       "done", "fi", "then", "else", "for ", "do ", "while ",
                       "s/", "//", "}", "{", "||", "&&")
-    if any(cmd.startswith(p) for p in NOISE_PREFIXES):
+    if any(cmd.startswith(p) for p in noise_prefixes):
         return None
 
     # Skip pure regex/awk fragments, variable assignments, or punctuation
