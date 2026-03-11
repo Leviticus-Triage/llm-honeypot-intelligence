@@ -55,7 +55,7 @@ copy_from_volume() {
 
     tmpdir=$(mktemp -d)
     docker run --rm -v "${volume}:/source:ro" -v "${tmpdir}:/dest" \
-        alpine:3.19 sh -c 'cp -r /source/* /dest/ 2>/dev/null || true'
+        alpine:3.19 sh -c 'cp -r /source/* /dest/ && chmod -R a+rw /dest/ 2>/dev/null || true'
 
     if [ -z "$(ls -A "$tmpdir" 2>/dev/null)" ]; then
         log "Volume $volume is empty, skipping."

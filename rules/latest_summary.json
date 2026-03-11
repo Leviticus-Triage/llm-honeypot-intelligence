@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-03-02T07:40:34.738597+00:00",
+  "counts": {
+    "sigma": 5,
+    "yara": 4,
+    "suricata": 30,
+    "firewall_ips": 214,
+    "stix_objects": 58,
+    "iocs": 237,
+    "report": 1
+  },
+  "files": [
+    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_tool_download_c2.yml",
+    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_system_reconnaissance.yml",
+    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_command_execution.yml",
+    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_persistence_mechanism.yml",
+    "/data/ollama-proxy/generated-rules/sigma/honeypot_http_configuration_credential_theft.yml",
+    "/data/ollama-proxy/generated-rules/yara/honeypot_rules.yar",
+    "/data/ollama-proxy/generated-rules/suricata/honeypot.rules",
+    "/data/ollama-proxy/generated-rules/firewall/blocklist_iptables.sh",
+    "/data/ollama-proxy/generated-rules/firewall/blocklist_nftables.nft",
+    "/data/ollama-proxy/generated-rules/firewall/blocklist_plain_blocklist.txt",
+    "/data/ollama-proxy/generated-rules/stix/bundle.json",
+    "/data/ollama-proxy/generated-rules/iocs/ioc_list.json",
+    "/data/ollama-proxy/generated-rules/reports/threat_intel_report.md",
+    "/data/ollama-proxy/generated-rules/manifest.json"
+  ]
+}
