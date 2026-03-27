@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-03-26T15:37:03.382884+00:00",
+  "source": "LLM Honeypot Intelligence Platform",
+  "version": "2.0",
+  "window_hours": 24,
+  "input_events": {
+    "beelzebub": 997,
+    "galah": 0,
+    "unique_ips": 575,
+    "normalised_commands": 1392,
+    "countries": 38,
+    "asns": 57
+  },
+  "output": {
+    "sigma": 6,
+    "yara": 4,
+    "suricata": 30,
+    "firewall_ips": 517,
+    "stix_objects": 62,
+    "iocs": 218,
+    "report": 1
+  },
+  "files": [
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_system_reconnaissance.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/sigma/honeypot_ssh_system_reconnaissance.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_defense_evasion.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/sigma/honeypot_ssh_defense_evasion.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_credential_theft_attempt.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/sigma/honeypot_ssh_credential_theft_attempt.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_command_execution.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/sigma/honeypot_ssh_command_execution.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_data_collection_exfiltration.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/sigma/honeypot_ssh_data_collection_exfiltration.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_tool_download_c2.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/sigma/honeypot_ssh_tool_download_c2.yml",
+    "/data/ollama-proxy/generated-rules/latest/yara/honeypot_rules.yar",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/yara/honeypot_rules.yar",
+    "/data/ollama-proxy/generated-rules/latest/suricata/honeypot.rules",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/suricata/honeypot.rules",
+    "/data/ollama-proxy/generated-rules/latest/firewall/blocklist_iptables.sh",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/firewall/blocklist_iptables.sh",
+    "/data/ollama-proxy/generated-rules/latest/firewall/blocklist_nftables.nft",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/firewall/blocklist_nftables.nft",
+    "/data/ollama-proxy/generated-rules/latest/firewall/blocklist_plain_blocklist.txt",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/firewall/blocklist_plain_blocklist.txt",
+    "/data/ollama-proxy/generated-rules/latest/stix/bundle.json",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/stix/bundle.json",
+    "/data/ollama-proxy/generated-rules/latest/iocs/ioc_list.json",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/iocs/ioc_list.json",
+    "/data/ollama-proxy/generated-rules/latest/reports/threat_intel_report.md",
+    "/data/ollama-proxy/generated-rules/archive/20260326_1537/reports/threat_intel_report.md"
+  ]
+}

@@ -1,0 +1,36 @@
+title: Honeypot - SSH Command Execution
+id: c02f6680-d344-65cf-57f5-05ea7d0f038e
+status: experimental
+level: medium
+description: Shell command execution patterns from SSH honeypot. 274 events, 2 source
+  IPs, 12 unique patterns.
+author: LLM Honeypot Intelligence Platform (automated)
+date: 2026/03/25
+references:
+- https://attack.mitre.org/
+tags:
+- attack.execution
+- attack.t1033
+- attack.t1059.004
+- attack.t1082
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    CommandLine|contains:
+    - echo "CPU_MODEL:$cpu_model
+    - echo "UPTIME:$uptime
+    - echo "LAST:$last_output
+    - echo "CPUS:$cpus
+    - echo "LS_HELP:$ls_help
+    - echo 1
+    - echo "ARCH:$arch
+    - echo 0
+    - echo "UNAME:$uname
+    - echo "CAT_HELP:$cat_help
+    - echo "GPU:$gpu_info
+    - echo Hi
+  condition: selection
+falsepositives:
+- Legitimate system administration

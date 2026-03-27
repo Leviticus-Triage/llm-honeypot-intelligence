@@ -27,6 +27,7 @@ build/
 .eggs/
 *.egg
 .venv/
+.venv-ci/
 venv/
 env/
 

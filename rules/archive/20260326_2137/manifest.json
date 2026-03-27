@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-03-26T21:37:04.388654+00:00",
+  "source": "LLM Honeypot Intelligence Platform",
+  "version": "2.0",
+  "window_hours": 24,
+  "input_events": {
+    "beelzebub": 1000,
+    "galah": 0,
+    "unique_ips": 568,
+    "normalised_commands": 1310,
+    "countries": 37,
+    "asns": 55
+  },
+  "output": {
+    "sigma": 4,
+    "yara": 3,
+    "suricata": 27,
+    "firewall_ips": 515,
+    "stix_objects": 60,
+    "iocs": 217,
+    "report": 1
+  },
+  "files": [
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_system_reconnaissance.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/sigma/honeypot_ssh_system_reconnaissance.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_command_execution.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/sigma/honeypot_ssh_command_execution.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_tool_download_c2.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/sigma/honeypot_ssh_tool_download_c2.yml",
+    "/data/ollama-proxy/generated-rules/latest/sigma/honeypot_ssh_data_collection_exfiltration.yml",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/sigma/honeypot_ssh_data_collection_exfiltration.yml",
+    "/data/ollama-proxy/generated-rules/latest/yara/honeypot_rules.yar",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/yara/honeypot_rules.yar",
+    "/data/ollama-proxy/generated-rules/latest/suricata/honeypot.rules",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/suricata/honeypot.rules",
+    "/data/ollama-proxy/generated-rules/latest/firewall/blocklist_iptables.sh",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/firewall/blocklist_iptables.sh",
+    "/data/ollama-proxy/generated-rules/latest/firewall/blocklist_nftables.nft",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/firewall/blocklist_nftables.nft",
+    "/data/ollama-proxy/generated-rules/latest/firewall/blocklist_plain_blocklist.txt",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/firewall/blocklist_plain_blocklist.txt",
+    "/data/ollama-proxy/generated-rules/latest/stix/bundle.json",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/stix/bundle.json",
+    "/data/ollama-proxy/generated-rules/latest/iocs/ioc_list.json",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/iocs/ioc_list.json",
+    "/data/ollama-proxy/generated-rules/latest/reports/threat_intel_report.md",
+    "/data/ollama-proxy/generated-rules/archive/20260326_2137/reports/threat_intel_report.md"
+  ]
+}
