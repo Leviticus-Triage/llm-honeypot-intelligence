@@ -1,0 +1,28 @@
+title: Honeypot - SSH Defense Evasion
+id: 3f7220b7-7f95-a64b-99bc-f76a10f50078
+status: experimental
+level: high
+description: Defense evasion techniques from SSH honeypot. 8 events, 2 source IPs,
+  5 unique patterns.
+author: LLM Honeypot Intelligence Platform (automated)
+date: 2026/03/26
+references:
+- https://attack.mitre.org/
+tags:
+- attack.defense_evasion
+- attack.t1105
+- attack.t1222.002
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    CommandLine|contains:
+    - chmod 777 sshbins.sh
+    - chmod +x /usr/.work/work64
+    - chmod 777 tftp2.sh
+    - chmod +x /usr/.work/work32
+    - chmod 777 tftp1.sh
+  condition: selection
+falsepositives:
+- Legitimate system administration

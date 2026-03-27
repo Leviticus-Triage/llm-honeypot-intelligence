@@ -83,16 +83,10 @@ log "Syncing generated rules from volume: $RULES_VOLUME"
 rules_tmp=$(copy_from_volume "$RULES_VOLUME" "$RULES_DEST") || true
 
 if [ -n "${rules_tmp:-}" ] && [ -d "${rules_tmp:-}" ]; then
-    # Map volume structure to repo structure
-    [ -d "$rules_tmp/sigma" ]    && cp -f "$rules_tmp/sigma/"*.yml     "$RULES_DEST/sigma/"    2>/dev/null && log "  Sigma rules synced"
-    [ -d "$rules_tmp/yara" ]     && cp -f "$rules_tmp/yara/"*.yar      "$RULES_DEST/yara/"     2>/dev/null && log "  YARA rules synced"
-    [ -d "$rules_tmp/suricata" ] && cp -f "$rules_tmp/suricata/"*.rules "$RULES_DEST/suricata/honeypot-generated.rules" 2>/dev/null && log "  Suricata rules synced"
-    [ -d "$rules_tmp/firewall" ] && cp -f "$rules_tmp/firewall/"*       "$RULES_DEST/firewall/" 2>/dev/null && log "  Firewall blocklists synced"
-    [ -d "$rules_tmp/stix" ]     && cp -f "$rules_tmp/stix/"*.json      "$RULES_DEST/stix/"     2>/dev/null && log "  STIX bundles synced"
-    [ -d "$rules_tmp/iocs" ]     && cp -f "$rules_tmp/iocs/"*.json      "$RULES_DEST/iocs/"     2>/dev/null && log "  IOC lists synced"
-
-    [ -f "$rules_tmp/manifest.json" ]      && cp -f "$rules_tmp/manifest.json"      "$RULES_DEST/"
-    [ -f "$rules_tmp/latest_summary.json" ] && cp -f "$rules_tmp/latest_summary.json" "$RULES_DEST/"
+    # Merge full generator layout: latest/, archive/<run>/, root mirror, reports/, manifest, etc.
+    # rsync without --delete keeps repo-only files (e.g. suricata/c2-detection.rules, *-peak-run*).
+    rsync -a "$rules_tmp/" "$RULES_DEST/"
+    log "  Rules tree synced (latest/, archive/, root mirror, reports)"
 
     sanitize_dir "$RULES_DEST"
     rm -rf "$rules_tmp"
@@ -128,8 +122,10 @@ suricata_count=$(find "$RULES_DEST/suricata" -name "*.rules" -newer "$RULES_DEST
 sigma_count=$(find "$RULES_DEST/sigma" -name "*.yml" 2>/dev/null | wc -l || echo 0)
 yara_count=$(find "$RULES_DEST/yara" -name "*.yar" 2>/dev/null | wc -l || echo 0)
 ioc_count=0
-if [ -f "$RULES_DEST/iocs/ioc-list.json" ]; then
-    ioc_count=$(python3 -c "import json; d=json.load(open('$RULES_DEST/iocs/ioc-list.json')); print(len(d) if isinstance(d,list) else len(d.get('indicators',d.get('iocs',[]))))" 2>/dev/null || echo "?")
+ioc_file="$RULES_DEST/iocs/ioc_list.json"
+[ -f "$ioc_file" ] || ioc_file="$RULES_DEST/latest/iocs/ioc_list.json"
+if [ -f "$ioc_file" ]; then
+    ioc_count=$(python3 -c "import json; d=json.load(open('$ioc_file')); print(len(d) if isinstance(d,list) else len(d.get('indicators',d.get('iocs',[]))))" 2>/dev/null || echo "?")
 fi
 
 touch "$RULES_DEST/.last-sync"

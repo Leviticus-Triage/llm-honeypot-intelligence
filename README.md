@@ -165,26 +165,41 @@ flowchart TB
 | CVE honeypot profiles | 34 |
 | Kibana dashboards | 7 |
 
+**Latest generated snapshot** (see `rules/latest_summary.json` for timestamp and counts): 6 Sigma, 5 YARA, 30 Suricata rules in the generated set, 514 firewall IPs, 63 STIX objects, 218 IOCs (as of the last rule-generator run).
+
 ---
 
 ## Auto-synced threat intelligence
 
 The `rules/` and `threat-intel/` directories are **automatically updated every 6 hours** from the live honeypot infrastructure. A cron job on the host reads Docker volume outputs, sanitizes internal infrastructure details, and pushes to this repository.
 
+**Rules layout**
+
+| Path | Purpose |
+|------|---------|
+| `rules/latest/` | Current snapshot (same layout as the generator output) |
+| `rules/archive/<YYYYMMDD_HHMM>/` | Append-only per-run copies for history and diffing |
+| `rules/` (root) | Mirror of the latest snapshot for stable URLs and direct `curl` |
+| `rules/suricata/c2-detection.rules` | Handcrafted C2 rules (not overwritten by the generator) |
+| `rules/*-peak-run*` | Historical peak-run exports retained for reference |
+
 ### Consume the feeds
 
-**Suricata rules** -- drop into your `/etc/suricata/rules/` directory:
+**Suricata rules** -- generated set is `honeypot.rules` (root mirror and `latest/suricata/`). Legacy filename `honeypot-generated.rules` may still exist from older syncs; prefer `honeypot.rules` for the current run.
 
 ```bash
-curl -sL https://raw.githubusercontent.com/Leviticus-Triage/llm-honeypot-intelligence/main/rules/suricata/honeypot-generated.rules \
-  -o /etc/suricata/rules/honeypot-generated.rules
+curl -sL https://raw.githubusercontent.com/Leviticus-Triage/llm-honeypot-intelligence/main/rules/suricata/honeypot.rules \
+  -o /etc/suricata/rules/honeypot.rules
+# Optional: handcrafted C2 rules (add alongside generated)
+curl -sL https://raw.githubusercontent.com/Leviticus-Triage/llm-honeypot-intelligence/main/rules/suricata/c2-detection.rules \
+  -o /etc/suricata/rules/c2-detection.rules
 suricatasc -c reload-rules
 ```
 
 **IP blocklist** -- for firewalls, fail2ban, or SOAR playbooks:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/Leviticus-Triage/llm-honeypot-intelligence/main/rules/firewall/blocklist-plain.txt
+curl -sL https://raw.githubusercontent.com/Leviticus-Triage/llm-honeypot-intelligence/main/rules/firewall/blocklist_plain_blocklist.txt
 ```
 
 **STIX 2.1 bundle** -- for MISP, OpenCTI, or any TIP:
@@ -231,7 +246,7 @@ The rule generator analyzes Elasticsearch data and produces rules in multiple fo
 
 Additionally, `rules/suricata/c2-detection.rules` contains **23 handcrafted Suricata rules** for C2 protocol detection (DNS tunneling, HTTP beaconing, encoded payloads, protocol anomalies).
 
-**Cumulative output (peak):** 10 Sigma rules, 7 YARA rules, 48 Suricata rules, 503 firewall-blocked IPs, 261 IOCs, and 60 STIX 2.1 objects. Rules are regenerated every 6 hours from the latest 24-hour attack window.
+**Cumulative output (historical peak):** 10 Sigma rules, 7 YARA rules, 48 Suricata rules, 503 firewall-blocked IPs, 261 IOCs, and 60 STIX 2.1 objects. **Current counts** per run are in `rules/latest_summary.json` (and duplicated under `rules/latest/`). Rules are regenerated every 6 hours from the latest 24-hour attack window; each run is also stored under `rules/archive/`.
 
 ---
 
@@ -368,10 +383,16 @@ llm-honeypot-intelligence/
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── rules/                          # ⚡ AUTO-SYNCED every 6 hours
+│   ├── latest/                     # Current snapshot (sigma, yara, suricata, …)
+│   ├── archive/                    # Per-run history: archive/<YYYYMMDD_HHMM>/…
+│   ├── reports/                    # threat_intel_report.md (under latest/ too)
+│   ├── latest_summary.json         # Counts + manifest for the latest run
+│   ├── manifest.json
 │   ├── suricata/
-│   │   ├── honeypot-generated.rules    # Auto-generated from attack data
-│   │   └── c2-detection.rules         # 23 handcrafted C2 detection rules
-│   ├── sigma/                      # SIEM-agnostic detection rules
+│   │   ├── honeypot.rules          # Auto-generated (current primary)
+│   │   ├── honeypot-generated.rules # Legacy name (may exist from older syncs)
+│   │   └── c2-detection.rules      # 23 handcrafted C2 detection rules
+│   ├── sigma/                      # SIEM-agnostic detection rules (root mirror)
 │   ├── yara/                       # File/memory scanning rules
 │   ├── firewall/                   # iptables, nftables, plain-text blocklists
 │   ├── stix/                       # STIX 2.1 bundles
