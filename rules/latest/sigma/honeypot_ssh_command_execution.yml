@@ -2,37 +2,38 @@ title: Honeypot - SSH Command Execution
 id: c02f6680-d344-65cf-57f5-05ea7d0f038e
 status: experimental
 level: medium
-description: Shell command execution patterns from SSH honeypot. 284 events, 9 source
-  IPs, 14 unique patterns.
+description: Shell command execution patterns from SSH honeypot. 1180 events, 9 source
+  IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/03/27
+date: 2026/03/28
 references:
 - https://attack.mitre.org/
 tags:
 - attack.execution
+- attack.t1033
 - attack.t1059.004
-- attack.t1105
-- attack.t1552.004
+- attack.t1082
 logsource:
   category: process_creation
   product: linux
 detection:
   selection:
     CommandLine|contains:
-    - scp -t /tmp/zbgjp0yc6izgkftm2p29n0msdb
-    - echo 'test' > /tmp/test_1774565799
-    - rm -f /tmp/test_1774565799
-    - echo 1
-    - echo 0
-    - echo 'test' > /tmp/test_1774550975
-    - echo "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEArDp4cun2lhr4KUhBGE7VvAcwdli2a8dbnrTOrbMz1+5O73fcBOx8NVbUT0bUanUV9tJ2/9p7+vD0Ep
-    - echo login_success
-    - rm -f /tmp/test
-    - echo Hi
-    - scp -t /var/tmp/zbgjp0yc6izgkftm2p29n0msdb
-    - echo -e "\x61\x75\x74\x68\x5F\x6F\x6B\x0A
-    - echo no_os_release
+    - echo "CPUS:$cpus
+    - echo "CAT_HELP:$cat_help
+    - echo "UNAME:$uname
     - time dd if=/dev/zero of=/tmp/test bs=1M count=10 2>&1
+    - echo 0
+    - echo "LAST:$last_output
+    - rm -f /tmp/test
+    - echo -e "\x61\x75\x74\x68\x5F\x6F\x6B\x0A
+    - echo 1
+    - echo Hi
+    - echo no_os_release
+    - echo "ARCH:$arch
+    - echo 'second_line
+    - echo "GPU:$gpu_info
+    - echo "UPTIME:$uptime
   condition: selection
 falsepositives:
 - Legitimate system administration

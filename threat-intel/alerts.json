@@ -1,12 +1,135 @@
 [
   {
-    "id": "91d91c758cfc",
-    "timestamp": "2026-03-11T14:44:17.202171+00:00",
-    "severity": "low",
+    "id": "8478cff6cade",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "204.76.203.206",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 204.76.203.206",
+    "reasons": [
+      "ML anomaly (score: 0.110)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "92d002adae8b",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "45.205.1.8",
+    "country": "United States",
+    "description": "Anomalous galah activity from 45.205.1.8",
+    "reasons": [
+      "ML anomaly (score: 0.105)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "905721b07d7e",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "46.151.178.13",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 46.151.178.13",
+    "reasons": [
+      "ML anomaly (score: 0.091)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "5033868eebf1",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "149.86.227.60",
+    "country": "Poland",
+    "description": "Anomalous galah activity from 149.86.227.60",
+    "reasons": [
+      "ML anomaly (score: 0.069)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "aa2703a3445b",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "176.65.149.234",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 176.65.149.234",
+    "reasons": [
+      "ML anomaly (score: 0.039)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "e034daf2b499",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "198.235.24.114",
+    "country": "United States",
+    "description": "Anomalous galah activity from 198.235.24.114",
+    "reasons": [
+      "ML anomaly (score: 0.003)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "966e6473b3dc",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "coordinated_campaign",
+    "ip": "7 IPs",
+    "country": "United States, The Netherlands, Poland",
+    "description": "Coordinated attack campaign (7 IPs, 88 events)",
+    "reasons": [
+      "Behavioural similarity"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "167d4226e405",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "high",
+    "type": "coordinated_campaign",
+    "ip": "71 IPs",
+    "country": "Norway, Germany, United States",
+    "description": "Coordinated attack campaign (71 IPs, 87 events)",
+    "reasons": [
+      "Behavioural similarity"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "93a17533e6fb",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "medium",
     "type": "coordinated_campaign",
     "ip": "5 IPs",
-    "country": "United Kingdom, France, United States",
-    "description": "Coordinated attack campaign (5 IPs, 5 events)",
+    "country": "United States, The Netherlands, South Korea",
+    "description": "Coordinated attack campaign (5 IPs, 154 events)",
+    "reasons": [
+      "Behavioural similarity"
+    ],
+    "recommended_action": "alert"
+  },
+  {
+    "id": "2e54f16dc1f6",
+    "timestamp": "2026-03-28T17:08:59.542572+00:00",
+    "severity": "low",
+    "type": "coordinated_campaign",
+    "ip": "11 IPs",
+    "country": "Ukraine, United States, Taiwan",
+    "description": "Coordinated attack campaign (11 IPs, 110 events)",
     "reasons": [
       "Behavioural similarity"
     ],
