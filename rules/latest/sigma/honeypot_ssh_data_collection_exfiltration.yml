@@ -3,9 +3,9 @@ id: 66bd7ead-1723-d986-0386-79530204e7f3
 status: experimental
 level: high
 description: Data collection patterns (Telegram, SMS, device access) from SSH honeypot.
-  2 events, 1 source IPs, 2 unique patterns.
+  4 events, 2 source IPs, 2 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/03/27
+date: 2026/03/28
 references:
 - https://attack.mitre.org/
 tags:
