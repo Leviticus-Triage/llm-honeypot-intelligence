@@ -1,61 +1,19 @@
 // LLM Honeypot Intelligence Platform - YARA Rules
-// Generated: 20260328_1537
+// Generated: 20260407_1536
 // Source: Elasticsearch honeypot data (24h window)
-
-rule Honeypot_SystemRecon {
-    meta:
-        description = "LLM Honeypot Intelligence - SystemRecon pattern detection"
-        author = "LLM Honeypot Intelligence Platform"
-        date = "2026-03-28"
-        source = "honeypot_auto_generated"
-        confidence = "high"
-        event_count = "2040"
-        unique_patterns = "12"
-    strings:
-        $s0 = "Hardware\" /proc/cpuinfo" ascii nocase
-        $s1 = "grep -c ^processor /proc/cpuinfo 2>/dev/null" ascii nocase
-        $s2 = "ps -ef" ascii nocase
-        $s3 = "grep -i nvidia) 2>/dev/null" ascii nocase
-        $s4 = "lspci" ascii nocase
-        $s5 = "ip addr show 2>/dev/null" ascii nocase
-        $s6 = "/bin/./uname -s -v -n -r -m" ascii nocase
-        $s7 = "uname -p 2>/dev/null" ascii nocase
-        $s8 = "ifconfig" ascii nocase
-        $s9 = "echo \"UNAME:$uname" ascii nocase
-        $s10 = "uname -s -m" ascii nocase
-        $s11 = "lscpu 2>/dev/null" ascii nocase
-    condition:
-        any of them
-}
 
 rule Honeypot_ToolDownload {
     meta:
         description = "LLM Honeypot Intelligence - ToolDownload pattern detection"
         author = "LLM Honeypot Intelligence Platform"
-        date = "2026-03-28"
+        date = "2026-04-07"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "3"
-        unique_patterns = "3"
+        event_count = "2"
+        unique_patterns = "2"
     strings:
-        $s0 = "wget --no-check-certificate -qO- https://31.57.216.121/sh" ascii nocase
-        $s1 = "curl -sk https://31.57.216.121/sh" ascii nocase
-        $s2 = "scp -t /bin/xu43r3rhs64ruxlmet4ngmhj8z" ascii nocase
-    condition:
-        any of them
-}
-
-rule Honeypot_DataCollection {
-    meta:
-        description = "LLM Honeypot Intelligence - DataCollection pattern detection"
-        author = "LLM Honeypot Intelligence Platform"
-        date = "2026-03-28"
-        source = "honeypot_auto_generated"
-        confidence = "high"
-        event_count = "4"
-        unique_patterns = "1"
-    strings:
-        $s0 = "locate D877F783D5D3EF8Cs" ascii nocase
+        $s0 = "curl -sk https://46.151.182.82/sh" ascii nocase
+        $s1 = "wget --no-check-certificate -qO- https://46.151.182.82/sh" ascii nocase
     condition:
         any of them
 }

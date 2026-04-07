@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-07T03:36:04.565268+00:00",
+  "counts": {
+    "sigma": 1,
+    "yara": 1,
+    "firewall_ips": 252,
+    "stix_objects": 55,
+    "iocs": 201,
+    "report": 1
+  },
+  "window_hours": 24,
+  "archive_path": "/data/ollama-proxy/generated-rules/archive/20260407_0336",
+  "latest_path": "/data/ollama-proxy/generated-rules/latest"
+}
