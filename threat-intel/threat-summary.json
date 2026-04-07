@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-03-28T17:08:59",
+  "generated_at": "2026-04-07T17:55:42",
   "version": "1.0",
   "source": "LLM Honeypot Intelligence Platform - Heuristic Detector",
   "window_hours": 24,
-  "total_sessions": 99,
+  "total_sessions": 59,
   "threat_distribution": {
-    "medium": 9,
-    "low": 77,
-    "high": 13
+    "medium": 5,
+    "high": 8,
+    "low": 46
   },
-  "anomalies_detected": 15,
-  "campaigns_identified": 5,
-  "alerts_generated": 10,
-  "ips_to_block": 22,
-  "ips_to_alert": 1,
+  "anomalies_detected": 9,
+  "campaigns_identified": 1,
+  "alerts_generated": 5,
+  "ips_to_block": 10,
+  "ips_to_alert": 3,
   "model_stats": {
-    "processing_time_s": 0.32,
+    "processing_time_s": 0.26,
     "features_extracted": 26,
     "isolation_forest_estimators": 200,
     "dbscan_eps": 1.2,

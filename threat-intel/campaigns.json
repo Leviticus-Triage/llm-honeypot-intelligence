@@ -1,212 +1,79 @@
 [
   {
-    "campaign_id": 2,
-    "ip_count": 4,
-    "ips": [
-      "77.42.70.132",
-      "80.94.92.186",
-      "193.32.162.145",
-      "178.16.54.95"
-    ],
-    "countries": [
-      "Finland",
-      "The Netherlands",
-      "Romania"
-    ],
-    "asns": [
-      "Omegatech LTD",
-      "Unmanaged Ltd",
-      "Hetzner Online GmbH"
-    ],
-    "fingerprints": [
-      "e3b0c44298fc1c14"
-    ],
-    "max_threat_level": "medium",
-    "toolkits": [],
-    "total_events": 741,
-    "avg_anomaly_score": 0.018018202055751414
-  },
-  {
     "campaign_id": 0,
-    "ip_count": 5,
+    "ip_count": 52,
     "ips": [
-      "130.12.180.51",
-      "92.118.39.72",
-      "121.165.84.80",
-      "1.234.19.14",
-      "92.118.39.76"
-    ],
-    "countries": [
-      "United States",
-      "The Netherlands",
-      "South Korea"
-    ],
-    "asns": [
-      "Unmanaged Ltd",
-      "Omegatech LTD",
-      "Korea Telecom",
-      "SK Broadband Co Ltd"
-    ],
-    "fingerprints": [
-      "e3b0c44298fc1c14"
-    ],
-    "max_threat_level": "medium",
-    "toolkits": [],
-    "total_events": 154,
-    "avg_anomaly_score": 0.03522167345048686
-  },
-  {
-    "campaign_id": 1,
-    "ip_count": 11,
-    "ips": [
-      "188.163.15.96",
-      "157.245.10.239",
-      "223.76.107.28",
-      "77.42.34.184",
-      "219.78.63.235",
-      "213.209.159.158",
-      "80.94.92.171",
-      "92.118.39.56",
-      "85.239.151.41",
-      "80.94.92.168",
-      "192.42.116.17"
-    ],
-    "countries": [
-      "Ukraine",
-      "United States",
-      "Taiwan",
-      "Bulgaria",
-      "China",
-      "Romania",
-      "Finland",
-      "The Netherlands",
-      "Hong Kong"
-    ],
-    "asns": [
-      "DigitalOcean, LLC",
-      "China Mobile Communications Group Co., Ltd.",
-      "Unmanaged Ltd",
-      "Interserver, Inc",
-      "Hetzner Online GmbH",
-      "Feo Prest SRL",
-      "Church of Cyberology",
-      "HKT Limited",
-      "Kyivstar PJSC"
-    ],
-    "fingerprints": [
-      "e3b0c44298fc1c14"
-    ],
-    "max_threat_level": "low",
-    "toolkits": [],
-    "total_events": 110,
-    "avg_anomaly_score": -0.10634888145649604
-  },
-  {
-    "campaign_id": 3,
-    "ip_count": 7,
-    "ips": [
-      "204.76.203.206",
+      "118.193.33.249",
+      "18.221.126.14",
+      "129.212.191.195",
+      "158.160.205.148",
+      "18.116.101.220",
+      "185.133.40.94",
+      "185.177.72.61",
+      "3.134.216.108",
+      "3.14.73.100",
       "45.205.1.8",
-      "46.151.178.13",
-      "149.86.227.60",
-      "176.65.149.234",
-      "198.235.24.114",
-      "93.174.93.12"
+      "5.56.24.63",
+      "60.165.238.170",
+      "85.217.140.49",
+      "103.203.56.2",
+      "109.105.209.19",
+      "112.74.38.239",
+      "119.48.135.92",
+      "135.233.112.94",
+      "147.185.132.114",
+      "147.185.132.81"
     ],
     "countries": [
-      "United States",
-      "The Netherlands",
-      "Poland"
-    ],
-    "asns": [
-      "MEVSPACE sp. z o.o.",
-      "IP Volume inc",
-      "Pfcloud UG (haftungsbeschrankt)",
-      "Google LLC",
-      "Sino Worldwide Trading Limited",
-      "Vpsvault.host Ltd"
-    ],
-    "fingerprints": [
-      "8a5edab282632443"
-    ],
-    "max_threat_level": "high",
-    "toolkits": [],
-    "total_events": 88,
-    "avg_anomaly_score": 0.05939505077960678
-  },
-  {
-    "campaign_id": 4,
-    "ip_count": 71,
-    "ips": [
-      "172.94.9.188",
-      "209.38.214.185",
-      "115.231.78.11",
-      "13.214.213.227",
-      "167.94.146.62",
-      "176.65.149.235",
-      "18.218.118.203",
-      "3.129.187.38",
-      "45.156.129.117",
-      "45.156.129.118",
-      "63.180.226.221",
-      "64.62.156.66",
-      "66.132.172.110",
-      "95.214.53.99",
-      "104.243.251.179",
-      "114.97.190.156",
-      "13.222.161.63",
-      "135.237.125.221",
-      "147.185.132.54",
-      "152.32.173.15"
-    ],
-    "countries": [
-      "Norway",
-      "Germany",
-      "United States",
-      "Poland",
+      "Seychelles",
+      "France",
       "Portugal",
       "United Kingdom",
-      "Singapore",
-      "Seychelles",
-      "Russia",
-      "Iran",
-      "China",
       "Belgium",
-      "The Netherlands",
       "Hong Kong",
-      "France"
+      "The Netherlands",
+      "Norway",
+      "United States",
+      "Russia",
+      "Singapore",
+      "South Korea",
+      "Germany",
+      "China"
     ],
     "asns": [
-      "M247 Europe SRL",
-      "MEVSPACE sp. z o.o.",
-      "Pfcloud UG (haftungsbeschrankt)",
-      "Akamai Connected Cloud",
-      "AGOTOZ PTE. LTD.",
-      "Microsoft Corporation",
-      "CHINA UNICOM China169 Backbone",
-      "Blix Solutions AS",
-      "Contabo GmbH",
-      "Chinanet",
-      "Censys, Inc.",
+      "Bucklog SARL",
       "Driftnet Ltd",
-      "UCLOUD INFORMATION TECHNOLOGY HK LIMITED",
-      "CT-HangZhou-IDC",
+      "Beijing Tiantexin Tech. Co., Ltd.",
       "DigitalOcean, LLC",
-      "Vodafone GmbH",
-      "Google LLC",
-      "Limited Network LTD",
-      "Sistemas Informaticos, S.A.",
-      "ONYPHE SAS",
+      "Zenlayer Inc",
       "Amazon.com, Inc.",
+      "IP Volume inc",
+      "Adman LLC",
+      "Hangzhou Alibaba Advertising Co.,Ltd.",
+      "Modat B.V.",
+      "Yandex.Cloud LLC",
       "Hurricane Electric LLC",
-      "Petersburg Internet Network ltd."
+      "Elcro Digital Services, LLC",
+      "UCLOUD INFORMATION TECHNOLOGY HK LIMITED",
+      "China Telecom",
+      "Chinanet",
+      "Contabo GmbH",
+      "Blix Solutions AS",
+      "Microsoft Corporation",
+      "Google LLC",
+      "Hydra Communications Ltd",
+      "Black HOST Ltd",
+      "CHINA UNICOM China169 Backbone",
+      "Censys, Inc.",
+      "Vpsvault.host Ltd",
+      "Korea Telecom"
     ],
     "fingerprints": [
       "8a5edab282632443"
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 87,
-    "avg_anomaly_score": -0.22983454395742584
+    "total_events": 69,
+    "avg_anomaly_score": -0.10884123291087042
   }
 ]
