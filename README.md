@@ -56,46 +56,48 @@ flowchart TB
         ATK[Attacker]
     end
 
-    subgraph TPOT["T-Pot VM · 25+ Sensor Types"]
-        BEE[Beelzebub · SSH Honeypot]
-        GAL[Galah · HTTP Honeypot]
-        OTHER[Cowrie · Dionaea · Honeytrap · ...]
+    subgraph TPOT["T-Pot VM - 25+ sensor types"]
+        BEE[Beelzebub SSH honeypot]
+        GAL[Galah HTTP honeypot]
+        OTHER[Other sensors to Elasticsearch]
         ES[(Elasticsearch)]
-        KIB[Kibana · 7 Dashboards]
+        KIB[Kibana dashboards]
     end
 
-    subgraph HOST["Host · Ollama Proxy Stack"]
-        PROXY[Smart Proxy · FastAPI]
-        CACHE[(SQLite · Exact + Semantic Cache)]
-        OLLAMA[Ollama · LLM Backend]
-        RL[RL Engagement Scorer]
-        RULES[Rule Generator]
-        ML[Heuristic Detector · ML]
-        C2[C2 Detection Engine]
-        CVE[CVE Prompt Engine · 34 Profiles]
+    subgraph HOST["Host - Ollama proxy stack"]
+        PROXY[Smart Proxy FastAPI]
+        CACHE[(SQLite - exact + semantic cache)]
+        OLLAMA[Ollama LLM backend]
+        RL[RL engagement scorer]
+        RULES[Rule generator]
+        ML[Heuristic detector ML]
+        C2[C2 detection engine]
+        CVE[CVE prompt engine]
     end
 
-    subgraph OUTPUT["Generated Output"]
-        SUR[Suricata Rules]
-        SIG[Sigma Rules]
-        YAR[YARA Rules]
-        FW[Firewall Blocklists]
-        STIX[STIX 2.1 Bundles]
-        IOC[IOC Feeds]
-        THREAT[Threat Intel · IP Reputation]
+    subgraph OUTPUT["Generated output"]
+        SUR[Suricata rules]
+        SIG[Sigma rules]
+        YAR[YARA rules]
+        FW[Firewall blocklists]
+        STIX[STIX 2.1 bundles]
+        IOC[IOC feeds]
+        THREAT[Threat intel IP reputation]
     end
 
-    ATK -->|"SSH / HTTP / ..."| TPOT
-    BEE -->|"LLM request"| PROXY
-    GAL -->|"LLM request"| PROXY
+    ATK --> BEE
+    ATK --> GAL
+    ATK --> OTHER
+    BEE -->|LLM request| PROXY
+    GAL -->|LLM request| PROXY
     PROXY --> CACHE
     PROXY --> OLLAMA
-    CVE -->|"system prompt injection"| PROXY
-    RL -->|"score → cache weight"| CACHE
-    ES -->|"attack data"| RL
-    ES -->|"attack data"| RULES
-    ES -->|"attack data"| ML
-    ES -->|"session data"| C2
+    CVE -->|system prompt| PROXY
+    RL -->|score to cache weight| CACHE
+    ES -->|attack data| RL
+    ES -->|attack data| RULES
+    ES -->|attack data| ML
+    ES -->|session data| C2
     OTHER --> ES
     BEE --> ES
     GAL --> ES
