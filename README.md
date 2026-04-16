@@ -1,6 +1,6 @@
 # LLM Honeypot Intelligence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-lightgrey.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/downloads/)
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational.svg)](#requirements)
 [![Auto-Sync](https://img.shields.io/badge/rules-auto--synced%20every%206h-brightgreen.svg)](#auto-synced-threat-intelligence)
@@ -451,4 +451,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Proprietary — all rights reserved. Commercial use, monetization, redistribution
+as a product or service, and similar exploitation require prior written agreement
+with the copyright holder. See [LICENSE](LICENSE).
