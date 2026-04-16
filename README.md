@@ -27,6 +27,7 @@
 - [Requirements](#requirements)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+- [Access and formal review](#access-and-formal-review)
 - [License](#license)
 
 ---
@@ -446,6 +447,19 @@ llm-honeypot-intelligence/
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+
+---
+
+## Access and formal review
+
+The GitHub project is **private**; only invited accounts can browse or clone it
+by default. That does not replace the **written terms** in [LICENSE](LICENSE):
+if you share access with someone who should formally review the work (for
+example as part of an academic or professional assessment), use the German
+template below, fill in purpose and parties, and consider having the final text
+reviewed by a lawyer.
+
+- [docs/ZUGRIFF_UND_VERTRAULICHKEIT_VORLAGE.md](docs/ZUGRIFF_UND_VERTRAULICHKEIT_VORLAGE.md)
 
 ---
 
