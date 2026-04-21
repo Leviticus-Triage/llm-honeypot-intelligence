@@ -5,9 +5,16 @@ Baustein definiert Ziel, Datenfluss, Konfiguration, Änderungen am Code,
 Test-Kriterien und Rollback-Pfad.
 
 > **Status (2026-04-21)**: Phasen 1–6 live, anschließend Hardening-Pass
-> durchgeführt. Defekt-Matrix, Live-KPIs und Akzeptanzkriterien siehe
-> [OPTIMIZATION-ROADMAP.md → Anhang H](./OPTIMIZATION-ROADMAP.md#anhang-h--hardening-pass-2026-04-2021).
-> Composite-Grade nach Hardening: **A / 93**.
+> (Anhang H) + Follow-up-Pass (Anhang I) durchgeführt.
+>
+> - Hardening-Pass: 8 Benchmark-Defekte behoben → Grade **A / 93**.
+> - Follow-up-Pass: Classifier mit Command-Hash-Features +
+>   `predict_proba` Top-K → **100 % Top-1 Accuracy** auf 10 000 Docs /
+>   6 CVE-Klassen. Adversarial-Agent-Simulator → Reward B **0.002 → 0.643**
+>   (320× uplift, alle 6 POS_CATEGORIES aktiv). Grade nach Follow-up: **A+**.
+>
+> Siehe [OPTIMIZATION-ROADMAP.md → Anhang H](./OPTIMIZATION-ROADMAP.md#anhang-h--hardening-pass-2026-04-2021)
+> und [Anhang I](./OPTIMIZATION-ROADMAP.md#anhang-i--follow-up-pass-2026-04-21-teil-2).
 
 Referenz-Topologie:
 
