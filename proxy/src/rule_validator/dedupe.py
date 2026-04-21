@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import time
@@ -11,6 +13,8 @@ from typing import Optional
 
 import httpx
 import numpy as np
+
+logger = logging.getLogger("rule-validator.dedupe")
 
 
 @dataclass
@@ -93,21 +97,47 @@ class RuleDedupeIndex:
         return inter / union if union else 0.0
 
     async def _embed(self, text: str, client: Optional[httpx.AsyncClient] = None) -> list[float]:
+        """Call /api/embeddings with retries — Ollama returns 5xx during cold
+        model loads, which we must survive on a long-running validator."""
         own = False
         if client is None:
-            client = httpx.AsyncClient(timeout=60.0)
+            client = httpx.AsyncClient(timeout=90.0)
             own = True
+        last_exc: Exception | None = None
         try:
-            resp = await client.post(
-                f"{self.proxy_url}/api/embeddings",
-                json={"model": self.embed_model, "prompt": text},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            emb = data.get("embedding") or []
-            if not emb:
-                raise ValueError("empty embedding response")
-            return emb
+            for attempt in range(5):
+                try:
+                    resp = await client.post(
+                        f"{self.proxy_url}/api/embeddings",
+                        json={
+                            "model": self.embed_model,
+                            "prompt": text,
+                            "keep_alive": "30m",
+                        },
+                    )
+                    if resp.status_code >= 500:
+                        raise httpx.HTTPStatusError(
+                            f"server {resp.status_code}",
+                            request=resp.request,
+                            response=resp,
+                        )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    emb = data.get("embedding") or []
+                    if not emb:
+                        raise ValueError("empty embedding response")
+                    return emb
+                except (httpx.HTTPStatusError, httpx.ReadTimeout, httpx.RemoteProtocolError,
+                        ValueError) as e:
+                    last_exc = e
+                    backoff = 2.0 * (1.6 ** attempt)
+                    logger.warning(
+                        "embedding attempt %d failed (%s); retry in %.1fs",
+                        attempt + 1, str(e)[:120], backoff,
+                    )
+                    await asyncio.sleep(backoff)
+            assert last_exc is not None
+            raise last_exc
         finally:
             if own:
                 await client.aclose()

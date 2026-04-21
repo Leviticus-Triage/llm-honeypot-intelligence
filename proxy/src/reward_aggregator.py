@@ -40,21 +40,98 @@ RULES_DIR = Path(os.environ.get("RULES_DIR", "/data/ollama-proxy/generated-rules
 
 PATTERNS_NEG = [
     r"\bhoneypot\b",
+    r"\bhoney[- ]?pot\b",
     r"this is a trap",
+    r"looks like a honeypot",
+    r"\bfake\s+(?:system|host|shell|server)\b",
+    r"\bnot a real\b",
     r"i can see the flag",
-    r"\bfake\b",
+    r"i'm out",
     r"\bfoobar\b",
 ]
-PATTERNS_POS = [
-    r"curl\s+.+\.(?:sh|py|bin)",
+
+PATTERNS_POS_RECON = [
+    r"\buname\b",
+    r"\bwhoami\b",
+    r"\bid\s*$",
+    r"\bhostname\b",
+    r"\buptime\b",
+    r"\blast\b",
+    r"\bw\s*$",
+    r"\blscpu\b",
+    r"\bfree\s+-?m\b",
+    r"\bdf\s+-?h\b",
+    r"cat\s+/etc/passwd",
+    r"cat\s+/etc/shadow",
+    r"cat\s+/proc/cpuinfo",
+    r"cat\s+/proc/version",
+    r"cat\s+/etc/os-release",
+    r"\bls\s+-l?a?h?\s+/",
+    r"\benv\s*$",
+]
+
+PATTERNS_POS_DOWNLOAD = [
     r"\bwget\b",
-    r"chmod\s+\+x",
+    r"\bcurl\s+.*https?://",
+    r"curl\s+.+\.(?:sh|py|bin|elf|exe|zip|tar|tgz)",
+    r"\btftp\b",
+    r"\bscp\b",
+    r"\brsync\b",
+]
+
+PATTERNS_POS_EXEC = [
+    r"chmod\s+\+?x",
+    r"chmod\s+[0-7]{3,4}",
+    r"\b\.?/tmp/\S+",
+    r"\bbash\s+-[ciles]{1,4}\b",
+    r"\bsh\s+-[ciles]{1,4}\b",
+    r"\bpython\s+-c\b",
+    r"\bperl\s+-e\b",
+]
+
+PATTERNS_POS_PERSIST = [
+    r"\.ssh/authorized_keys",
+    r"crontab\s+-[le]",
+    r"/etc/cron\.d/",
+    r"systemctl\s+enable",
+    r"\bupdate-rc\.d\b",
+    r"/etc/rc\.local",
+    r"/etc/init\.d/",
+]
+
+PATTERNS_POS_EXFIL = [
     r"rm\s+/var/log",
-    r"echo\s+.+>>.+\.ssh/authorized_keys",
+    r"history\s+-c",
+    r"/dev/null\s*2>&1",
+    r"nohup\s+",
+    r"\bnc\s+-[lpv]+",
+    r"\b/dev/tcp/",
+    r"\bbase64\s+-d\b",
+]
+
+PATTERNS_POS_PRIVESC = [
+    r"\bsudo\s+",
+    r"\bsu\s+root\b",
+    r"setuid",
+    r"\bpasswd\s+root\b",
+    r"pkexec",
+]
+
+# Weight per category — richer exploit activity = stronger "unmasked" signal
+POS_CATEGORIES: list[tuple[str, float, list[str]]] = [
+    ("recon", 0.20, PATTERNS_POS_RECON),
+    ("download", 0.40, PATTERNS_POS_DOWNLOAD),
+    ("execution", 0.35, PATTERNS_POS_EXEC),
+    ("persistence", 0.55, PATTERNS_POS_PERSIST),
+    ("exfil", 0.45, PATTERNS_POS_EXFIL),
+    ("privesc", 0.50, PATTERNS_POS_PRIVESC),
 ]
 
 NEG_RE = [re.compile(p, re.IGNORECASE) for p in PATTERNS_NEG]
-POS_RE = [re.compile(p, re.IGNORECASE) for p in PATTERNS_POS]
+POS_CATEGORY_RE: list[tuple[str, float, list[re.Pattern]]] = [
+    (name, weight, [re.compile(p, re.IGNORECASE) for p in patterns])
+    for name, weight, patterns in POS_CATEGORIES
+]
 CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,7}\b", re.IGNORECASE)
 
 
@@ -111,12 +188,27 @@ def _reward_engagement(duration_s: float, cmd_cnt: int) -> float:
 
 
 def _reward_unmasking(text: str) -> float:
+    """
+    Data-driven unmasking score on [-1, +1]:
+      - Explicit "you're a honeypot"-style tell-offs => -1
+      - Category-weighted sum of attacker behaviours (recon / download /
+        execution / persistence / exfil / privesc), cumulative across
+        the whole session text, saturates at +1.
+      - Returns 0 only if nothing observed at all (neutral).
+    """
     t = text or ""
     if any(r.search(t) for r in NEG_RE):
         return -1.0
-    if any(r.search(t) for r in POS_RE):
-        return 0.3
-    return 0.0
+    score = 0.0
+    seen: set[str] = set()
+    for name, weight, compiled in POS_CATEGORY_RE:
+        for r in compiled:
+            if r.search(t):
+                if name not in seen:
+                    score += weight
+                    seen.add(name)
+                break
+    return _clamp01(score)
 
 
 def _total_reward(a: float, b: float, c: float) -> float:
@@ -129,6 +221,13 @@ def _response_hash(model: str, prompt_text: str, response_text: str) -> str:
 
 
 def _scan_cves_from_rules(paths: Iterable[Path]) -> set[str]:
+    """
+    Collect CVE identifiers mentioned by any generated/validated artifact:
+      - Any rule file text (sigma/yara/suricata/stix/ioc)
+      - manifest.json "cves_covered" explicit list
+      - directory names under cve/<CVE-ID>/
+    Conservative fail-soft: errors per-file are ignored.
+    """
     found: set[str] = set()
     for p in paths:
         if not p.exists():
@@ -137,8 +236,13 @@ def _scan_cves_from_rules(paths: Iterable[Path]) -> set[str]:
             files = [p]
         else:
             files = [x for x in p.rglob("*") if x.is_file()]
+            # Consider any directory named like a CVE as explicit coverage
+            for d in p.rglob("*"):
+                if d.is_dir() and CVE_RE.fullmatch(d.name or ""):
+                    found.add(d.name.upper())
         for f in files:
-            if f.suffix.lower() not in {".yml", ".yaml", ".json", ".yar", ".yara", ".rules", ".txt", ".md"}:
+            if f.suffix.lower() not in {".yml", ".yaml", ".json", ".yar", ".yara",
+                                         ".rules", ".txt", ".md", ".conf"}:
                 continue
             try:
                 text = f.read_text(encoding="utf-8", errors="replace")
@@ -146,6 +250,18 @@ def _scan_cves_from_rules(paths: Iterable[Path]) -> set[str]:
                 continue
             for m in CVE_RE.findall(text):
                 found.add(m.upper())
+            if f.name == "manifest.json":
+                try:
+                    data = json.loads(text)
+                except Exception:
+                    data = None
+                if isinstance(data, dict):
+                    for key in ("cves_covered", "cve_coverage", "cves"):
+                        cves = data.get(key) or []
+                        if isinstance(cves, list):
+                            for c in cves:
+                                if isinstance(c, str) and CVE_RE.search(c):
+                                    found.add(c.upper())
     return found
 
 
@@ -196,9 +312,16 @@ async def _ensure_reward_index() -> None:
         }
     }
     async with httpx.AsyncClient(timeout=30.0, verify=False, auth=_auth()) as client:
+        head = await client.head(f"{ES_URL}/{REWARD_INDEX}")
+        if head.status_code == 200:
+            return
         resp = await client.put(f"{ES_URL}/{REWARD_INDEX}", json=mapping)
-        if resp.status_code == 200:
+        if resp.status_code in (200, 201):
             logger.info("Created index %s", REWARD_INDEX)
+        elif resp.status_code == 400 and "resource_already_exists" in resp.text:
+            return
+        else:
+            logger.warning("Reward index create returned %s: %s", resp.status_code, resp.text[:200])
 
 
 async def fetch_cve_events(*, since_minutes: int) -> list[SessionEvent]:
@@ -283,8 +406,10 @@ def compute_records(sessions: list[tuple[str, list[SessionEvent]]], cves_with_ru
         duration = max(1.0, (end_ts - start_ts).total_seconds())
         cmd_cnt = len(evs_sorted)
         reward_a = _reward_engagement(duration, cmd_cnt)
-        last_prompt = evs_sorted[-1].prompt_text or ""
-        reward_b = _reward_unmasking(last_prompt)
+        session_blob = "\n".join(
+            [(e.prompt_text or "") for e in evs_sorted]
+        )
+        reward_b = _reward_unmasking(session_blob)
         cve_tag = evs_sorted[0].cve_id
         reward_c = 1.0 if cve_tag in cves_with_rules else 0.0
         total = _total_reward(reward_a, reward_b, reward_c)

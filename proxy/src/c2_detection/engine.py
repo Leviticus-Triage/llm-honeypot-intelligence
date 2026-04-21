@@ -425,18 +425,19 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
         query_count = len(d["queries"])
         sources = d["sources"]
         hit_ddospot = "ddospot" in sources
-        # Lower floor when the Ddospot honeypot saw the IP at all,
-        # because any external interaction with the dark-DNS pot is noteworthy.
-        min_queries = 2 if hit_ddospot else 3
+        # Low floor: a single ddospot touch already counts (dark-net DNS is
+        # not something normal clients hit). Suricata-only traffic keeps a
+        # soft floor of 2 queries so we don't flag single background blips.
+        min_queries = 1 if hit_ddospot else 2
         if query_count < min_queries:
             continue
 
         score = 0
         indicators = []
 
-        # Ddospot interaction itself is a signal (dark-net DNS honeypot)
+        # Ddospot interaction itself is a strong signal (dark-net DNS honeypot)
         if hit_ddospot:
-            score += 15
+            score += 25
             indicators.append("ddospot_hit")
             if len(sources) > 1:
                 indicators.append(f"multi_source({','.join(sorted(sources))})")
@@ -473,7 +474,9 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
                 indicators.append(f"large_rdata(avg={avg_rdata:.0f})")
 
         score = max(0, min(100, score))
-        if score < 15:
+        # Lowered floor: ddospot interactions or small DNS bursts are valid
+        # even below 15; we keep 8 as the absolute minimum signal.
+        if score < 8:
             continue
 
         results.append({
@@ -724,7 +727,9 @@ async def correlate_alerts(client: httpx.AsyncClient, window_min: int) -> list[d
 # ──────────────────────────────────────────────────────────────────────
 
 async def _ensure_index(client: httpx.AsyncClient):
-    """Create the C2 indicators index if it doesn't exist."""
+    """Create the C2 indicators index if it doesn't exist.
+    Idempotent + resilient against transient 5xx / ReadTimeout right after
+    a manual DELETE (the shard isn't ready for a PUT immediately)."""
     mapping = {
         "mappings": {
             "properties": {
@@ -765,13 +770,36 @@ async def _ensure_index(client: httpx.AsyncClient):
             }
         }
     }
-    resp = await client.put(f"{ES_URL}/{C2_INDEX}", json=mapping)
-    if resp.status_code == 200:
-        logger.info("Created index %s", C2_INDEX)
-    elif "resource_already_exists" in (resp.text or ""):
-        pass  # Already exists
-    else:
-        logger.debug("Index creation: %s", resp.text[:200])
+    # HEAD first — saves us the PUT + 400 race on existing indices
+    try:
+        head = await client.head(f"{ES_URL}/{C2_INDEX}", timeout=10.0)
+        if head.status_code == 200:
+            return
+    except (httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError) as e:
+        logger.warning("HEAD %s failed (%s) — falling back to PUT-with-retry",
+                       C2_INDEX, str(e)[:120])
+
+    last_exc: Exception | None = None
+    for attempt in range(4):
+        try:
+            resp = await client.put(f"{ES_URL}/{C2_INDEX}", json=mapping, timeout=60.0)
+            if resp.status_code in (200, 201):
+                logger.info("Created index %s", C2_INDEX)
+                return
+            if "resource_already_exists" in (resp.text or ""):
+                return
+            logger.warning("Index PUT returned %s: %s",
+                           resp.status_code, (resp.text or "")[:200])
+            return
+        except (httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError) as e:
+            last_exc = e
+            backoff = 2.0 * (1.6 ** attempt)
+            logger.warning("Index PUT attempt %d failed (%s); retry in %.1fs",
+                           attempt + 1, str(e)[:120], backoff)
+            await asyncio.sleep(backoff)
+    if last_exc is not None:
+        logger.error("Index PUT permanently failed after 4 attempts: %s",
+                     str(last_exc)[:200])
 
 
 def _threat_level(score: float) -> str:
@@ -816,10 +844,14 @@ async def run_detection_cycle():
     async with httpx.AsyncClient(timeout=30.0, verify=False, auth=auth) as client:
         await _ensure_index(client)
 
+        # DNS traffic into the honeypot is scarce; widen the DNS window
+        # independently so we accumulate enough queries per IP to score.
+        dns_window = max(WINDOW_MINUTES * 4, 240)
+
         # Run all detectors in parallel
         beacon_results, dns_results, proto_results, alert_results = await asyncio.gather(
             detect_beaconing(client, WINDOW_MINUTES),
-            detect_dns_anomalies(client, WINDOW_MINUTES),
+            detect_dns_anomalies(client, dns_window),
             detect_protocol_anomalies(client, WINDOW_MINUTES),
             correlate_alerts(client, WINDOW_MINUTES),
         )
