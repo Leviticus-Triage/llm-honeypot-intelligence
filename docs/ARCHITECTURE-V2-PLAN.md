@@ -590,7 +590,7 @@ statt nur zu halluzinieren.
 | Phase | Dauer | Liefergegenstand | Dependencies | Status |
 |---|---|---|---|---|
 | P1 | 3 Tage | §1 Task-Router + `config.yaml` + Generator-Switch auf qwen2.5-coder | — | **DONE 2026-04-21** (§11) |
-| P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | pending |
+| P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | **in progress (2026-04-21, §12)** |
 | P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | pending |
 | P4 | 4 Tage | §3 Beaconing 2.0 (Lomb-Scargle) + ES-Mapping | — (parallel zu P1–P3) | pending |
 | P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | pending |
@@ -759,3 +759,64 @@ jede heutige Honeypot-Message ohne Header (model=openchat) zu exakt
 demselben Upstream-Call führt wie vorher – der Router fügt nur noch
 `keep_alive`/`temperature`/`num_ctx` als Defaults hinzu, was Ollama zuvor
 sowieso intern gesetzt hat.
+
+---
+
+## §12  Anhang C – Implementierungs-Log Phase 2 (laufend seit 2026-04-21)
+
+### §12.1  Deliverables (Code, committed)
+
+| Artefakt | Ort | Rolle |
+|---|---|---|
+| `proxy/src/rule_validator/static_checks.py` | Repo `proxy/src/rule_validator/` | Deterministische Vorprüfung für Sigma/YARA/Suricata/STIX mit einheitlichem Issue-Schema |
+| `proxy/src/rule_validator/llm_judge.py` | dto. | LLM-as-a-Judge via `X-LLM-Task: rule_validate` (llama3.1:8b), JSON-Extraktion, Retry/Backoff/Pacing |
+| `proxy/src/rule_validator/pipeline.py` | dto. | End-to-end Pipeline + Decision-Matrix aus §2.5 (`output`, `rejected/static`, `rejected/llm`, `rejected/review`) |
+| `proxy/run_rule_validator.py` | `proxy/` | Runner-Service, default `mirror`-Mode: validiert `generated-rules/latest` read-only und schreibt in `validated-rules/` |
+| `proxy/docker-compose.yml` | `proxy/` | Neuer Service `rule-validator` + Volume `rules_validated` |
+
+### §12.2  Design-Entscheidungen
+
+1. **Mirror-first statt Pending-Migration.**
+   Der bestehende `rule_generator.py` schreibt weiterhin in
+   `generated-rules/latest`. Der Validator liest diese Struktur read-only und
+   erzeugt einen separaten, versionierten Validierungsbaum
+   `validated-rules/{approved,rejected}`. So bleibt der produktive Pfad
+   kompatibel, ohne sofortigen Breaking Change im Generator.
+2. **Fail-soft bei Parser-Dependencies.**
+   `pysigma`/`stix2` sind optional. Fehlen sie, läuft ein struktureller
+   Fallback und erzeugt `missing_parser`-Warnings statt harter Abbrüche.
+3. **Queue-Schutz am LLM-Layer.**
+   Der Judge serialisiert Requests minimal (`VALIDATOR_MIN_SPACING`) und nutzt
+   Retry/Backoff für 503/429/502/504, um Ollama-Queue-Überläufe abzufangen.
+
+### §12.3  Smoke-Test (Stand heute)
+
+- **Static-Stage**: lokal kompiliert + gegen Good/Bad-Corpus geprüft
+  (Sigma/YARA/Suricata/STIX Fehlklassen wurden korrekt erkannt).
+- **Service wiring**: `docker compose`-Integration und Build auf
+  `ai-workstation` durchgeführt; `rule-validator` startet und schreibt
+  Sidecar-Issue-JSON pro Datei.
+- **LLM-stage Blocker**: Upstream-Ollama lieferte für `llama3.1:8b` und
+  `qwen2.5-coder:7b` wiederholt `503 server busy / maximum pending requests exceeded`.
+  `openchat` blieb gleichzeitig erreichbar.
+
+### §12.4  Infrastruktur-Blocker (extern zum Validator-Code)
+
+Während des automatisierten Recovery-Versuchs (VM-Neustart über Proxmox)
+wurde `ai-workstation` (VM 200) zwar als `running` gemeldet, war aber
+anschließend unter der bisherigen Management-IP `<ai-workstation-ip>` nicht mehr
+netzseitig erreichbar (kein Ping/SSH, QGA nicht verfügbar). Dadurch konnte der
+abschließende Live-LLM-Validator-Durchlauf nicht finalisiert werden.
+
+### §12.5  Nächster Schritt zur Finalisierung von P2
+
+Sobald `ai-workstation` wieder per SSH erreichbar ist:
+
+1. `docker compose up -d --build rule-validator`
+2. `docker compose run --rm -e ONESHOT=true rule-validator`
+3. Validierung gegen aktuelles `generated-rules/latest` und KPI-Check:
+   - Precision (approved tatsächlich valide) >= 0.93
+   - Recall für kaputte Rules >= 0.90
+   - Median Laufzeit < 8s pro Rule
+
+Danach wird P2 in §7 auf **DONE** gesetzt.

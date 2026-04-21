@@ -99,6 +99,31 @@ services:
       - ./run_c2_detector.py:/app/run_c2_detector.py:ro
     entrypoint: ["python", "/app/run_c2_detector.py"]
 
+  rule-validator:
+    container_name: ollama-rule-validator
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - VALIDATOR_MODE=mirror
+      - SOURCE_DIR=/data/ollama-proxy/generated-rules/latest
+      - VALIDATED_DIR=/data/ollama-proxy/validated-rules
+      - PROXY_URL=http://localhost:11435
+      - VALIDATOR_INTERVAL=900
+      - VALIDATOR_TIMEOUT=220
+      - LLM_CONF_THRESHOLD=0.70
+      - VALIDATOR_RETRY_MAX=4
+      - VALIDATOR_RETRY_BACKOFF=3
+      - VALIDATOR_MIN_SPACING=1.5
+      - SKIP_LLM=false
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - ./run_rule_validator.py:/app/run_rule_validator.py:ro
+      - ./src/rule_validator:/app/src/rule_validator:ro
+      - rules_output:/data/ollama-proxy/generated-rules:ro
+      - rules_validated:/data/ollama-proxy/validated-rules
+    entrypoint: ["python", "/app/run_rule_validator.py"]
+
 volumes:
   proxy_data:
     name: ollama-proxy-data
@@ -106,3 +131,5 @@ volumes:
     name: ollama-rules-output
   threat_output:
     name: ollama-threat-output
+  rules_validated:
+    name: ollama-rules-validated
