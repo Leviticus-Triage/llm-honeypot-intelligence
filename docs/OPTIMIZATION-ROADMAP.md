@@ -22,6 +22,7 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | C2-Indicator-Details | ✅ reichhaltige Indikatoren (`interval`, `cv`, `single_dest`, `rapid_retry`, …) | dito |
 | `tpot` CLI auf `ai-workstation` | ✅ Proxmox-VM-Control via SSH+`qm`, `dashboards-import`, `ssh`, Remote-Logs | `scripts/tpot` |
 | Phase 2 Rule-Validator (LLM-as-a-Judge) | ✅ Live auf `.116`: ONESHOT gelaufen (`processed=12`, `approved=8`, `rejected_static=3`, `rejected_llm=1`) | `proxy/src/rule_validator/*`, `proxy/run_rule_validator.py` |
+| Phase 3 Rule-Dedupe (Embeddings + SQLite) | ✅ Live: `rejected/duplicate` aktiv, konservatives Gate (`cos>=0.985` + `jaccard>=0.80`) | `proxy/src/rule_validator/dedupe.py`, `proxy/run_rule_validator.py` |
 
 ---
 

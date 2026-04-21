@@ -115,6 +115,10 @@ services:
       - VALIDATOR_RETRY_MAX=4
       - VALIDATOR_RETRY_BACKOFF=3
       - VALIDATOR_MIN_SPACING=1.5
+      - DEDUPE_THRESHOLD=0.985
+      - DEDUPE_MIN_JACCARD=0.80
+      - DEDUPE_DB_PATH=/data/ollama-proxy/rule_embeddings.sqlite
+      - DEDUPE_EMBED_MODEL=nomic-embed-text
       - SKIP_LLM=false
     volumes:
       - proxy_data:/data/ollama-proxy

@@ -24,6 +24,7 @@ from typing import Iterable
 import httpx
 
 from src.rule_validator import validate_file
+from src.rule_validator.dedupe import RuleDedupeIndex
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +38,10 @@ LLM_CONF_THRESHOLD = float(os.environ.get("LLM_CONF_THRESHOLD", "0.70"))
 SKIP_LLM = os.environ.get("SKIP_LLM", "false").lower() in {"1", "true", "yes"}
 ONESHOT = os.environ.get("ONESHOT", "false").lower() in {"1", "true", "yes"}
 VALIDATOR_TIMEOUT = float(os.environ.get("VALIDATOR_TIMEOUT", "200"))
+DEDUPE_THRESHOLD = float(os.environ.get("DEDUPE_THRESHOLD", "0.985"))
+DEDUPE_MIN_JACCARD = float(os.environ.get("DEDUPE_MIN_JACCARD", "0.80"))
+DEDUPE_DB_PATH = os.environ.get("DEDUPE_DB_PATH", "/data/ollama-proxy/rule_embeddings.sqlite")
+DEDUPE_EMBED_MODEL = os.environ.get("DEDUPE_EMBED_MODEL", "nomic-embed-text")
 
 SOURCE_DIR = Path(os.environ.get("SOURCE_DIR", "/data/ollama-proxy/generated-rules/latest"))
 VALIDATED_DIR = Path(os.environ.get("VALIDATED_DIR", "/data/ollama-proxy/validated-rules"))
@@ -72,6 +77,8 @@ def _mirror_target_dir(destination: str, rule_type: str) -> Path:
         return VALIDATED_DIR / "rejected" / "static" / rule_type
     if destination == "rejected/llm":
         return VALIDATED_DIR / "rejected" / "llm" / rule_type
+    if destination == "rejected/duplicate":
+        return VALIDATED_DIR / "rejected" / "duplicate" / rule_type
     return VALIDATED_DIR / "rejected" / "review" / rule_type
 
 
@@ -94,7 +101,7 @@ def _save_hash_index(idx: dict) -> None:
 
 
 def _ensure_mirror_dirs() -> None:
-    for sub in ("approved", "rejected/static", "rejected/llm", "rejected/review", ".state"):
+    for sub in ("approved", "rejected/static", "rejected/llm", "rejected/duplicate", "rejected/review", ".state"):
         (VALIDATED_DIR / sub).mkdir(parents=True, exist_ok=True)
 
 
@@ -113,10 +120,18 @@ async def _cycle_mirror() -> dict:
         "approved_warn_fp": 0,
         "rejected_static": 0,
         "rejected_llm": 0,
+        "rejected_duplicate": 0,
         "rejected_review": 0,
         "failures": 0,
         "by_type": {},
     }
+
+    dedupe_index = RuleDedupeIndex(
+        db_path=DEDUPE_DB_PATH,
+        threshold=DEDUPE_THRESHOLD,
+        embed_model=DEDUPE_EMBED_MODEL,
+        min_jaccard=DEDUPE_MIN_JACCARD,
+    )
 
     async with httpx.AsyncClient(timeout=VALIDATOR_TIMEOUT) as client:
         for src in files:
@@ -127,7 +142,8 @@ async def _cycle_mirror() -> dict:
                 logger.exception("hashing failed for %s: %s", src, e)
                 continue
 
-            prev = hash_index.get(h)
+            cache_key = f"{src}:{h}"
+            prev = hash_index.get(cache_key)
             if prev and Path(prev.get("target", "")).exists():
                 summary["skipped"] += 1
                 continue
@@ -138,6 +154,7 @@ async def _cycle_mirror() -> dict:
                     client=client,
                     llm_conf_threshold=LLM_CONF_THRESHOLD,
                     skip_llm=SKIP_LLM,
+                    dedupe_index=dedupe_index,
                 )
             except Exception as e:
                 summary["failures"] += 1
@@ -164,13 +181,14 @@ async def _cycle_mirror() -> dict:
                 logger.exception("copy failed for %s -> %s: %s", src, dst, e)
                 continue
 
-            hash_index[h] = {
+            hash_index[cache_key] = {
                 "source": str(src),
                 "target": str(dst),
                 "destination": verdict.destination,
                 "rule_type": verdict.rule_type,
                 "llm_confidence": verdict.llm_confidence,
                 "fp_risk": verdict.fp_risk,
+                "dedupe_score": verdict.dedupe_score,
                 "ts": int(time.time()),
             }
 
@@ -187,6 +205,25 @@ async def _cycle_mirror() -> dict:
                 if verdict.destination == "output_warn_fp":
                     summary["approved_warn_fp"] += 1
                 summary["by_type"][verdict.rule_type]["approved"] += 1
+                # Persist embedding for future dedupe checks.
+                try:
+                    if verdict.dedupe_rule_hash:
+                        text = src.read_text(encoding="utf-8", errors="replace")
+                        _, emb, _ = await dedupe_index.find_neighbors(
+                            text,
+                            verdict.rule_type,
+                            top_k=1,
+                            client=client,
+                        )
+                        dedupe_index.store_embedding(
+                            rule_hash=verdict.dedupe_rule_hash,
+                            rule_type=verdict.rule_type,
+                            source_path=str(src),
+                            rule_text=text,
+                            embedding=emb,
+                        )
+                except Exception as e:
+                    logger.warning("dedupe embedding store failed for %s: %s", src, e)
             else:
                 logger.warning(
                     "REJECT  %-10s %-15s conf=%.2f fp=%-6s -> %s",
@@ -196,7 +233,12 @@ async def _cycle_mirror() -> dict:
                     verdict.fp_risk,
                     dst,
                 )
-                key = {"rejected/static": "rejected_static", "rejected/llm": "rejected_llm", "rejected/review": "rejected_review"}[verdict.destination]
+                key = {
+                    "rejected/static": "rejected_static",
+                    "rejected/llm": "rejected_llm",
+                    "rejected/duplicate": "rejected_duplicate",
+                    "rejected/review": "rejected_review",
+                }[verdict.destination]
                 summary[key] += 1
                 summary["by_type"][verdict.rule_type]["rejected"] += 1
 
@@ -206,7 +248,7 @@ async def _cycle_mirror() -> dict:
 
 
 def _ensure_pending_dirs() -> None:
-    for d in (PENDING_DIR, P_APPROVED, P_REJECTED / "static", P_REJECTED / "llm", P_REJECTED / "review"):
+    for d in (PENDING_DIR, P_APPROVED, P_REJECTED / "static", P_REJECTED / "llm", P_REJECTED / "duplicate", P_REJECTED / "review"):
         d.mkdir(parents=True, exist_ok=True)
 
 
@@ -226,11 +268,19 @@ async def _cycle_pending() -> dict:
         "approved": 0,
         "rejected_static": 0,
         "rejected_llm": 0,
+        "rejected_duplicate": 0,
         "rejected_review": 0,
         "failures": 0,
     }
     if not files:
         return summary
+
+    dedupe_index = RuleDedupeIndex(
+        db_path=DEDUPE_DB_PATH,
+        threshold=DEDUPE_THRESHOLD,
+        embed_model=DEDUPE_EMBED_MODEL,
+        min_jaccard=DEDUPE_MIN_JACCARD,
+    )
 
     async with httpx.AsyncClient(timeout=VALIDATOR_TIMEOUT) as client:
         for src in files:
@@ -240,6 +290,7 @@ async def _cycle_pending() -> dict:
                     client=client,
                     llm_conf_threshold=LLM_CONF_THRESHOLD,
                     skip_llm=SKIP_LLM,
+                    dedupe_index=dedupe_index,
                 )
             except Exception as e:
                 summary["failures"] += 1
@@ -263,8 +314,33 @@ async def _cycle_pending() -> dict:
 
             if verdict.destination in ("output", "output_warn_fp"):
                 summary["approved"] += 1
+                try:
+                    if verdict.dedupe_rule_hash:
+                        text = dst.read_text(encoding="utf-8", errors="replace")
+                        _, emb, _ = await dedupe_index.find_neighbors(
+                            text,
+                            verdict.rule_type,
+                            top_k=1,
+                            client=client,
+                        )
+                        dedupe_index.store_embedding(
+                            rule_hash=verdict.dedupe_rule_hash,
+                            rule_type=verdict.rule_type,
+                            source_path=str(dst),
+                            rule_text=text,
+                            embedding=emb,
+                        )
+                except Exception as e:
+                    logger.warning("dedupe embedding store failed for %s: %s", dst, e)
             else:
-                summary[{"rejected/static": "rejected_static", "rejected/llm": "rejected_llm", "rejected/review": "rejected_review"}[verdict.destination]] += 1
+                summary[
+                    {
+                        "rejected/static": "rejected_static",
+                        "rejected/llm": "rejected_llm",
+                        "rejected/duplicate": "rejected_duplicate",
+                        "rejected/review": "rejected_review",
+                    }[verdict.destination]
+                ] += 1
 
     logger.info("pending cycle: %s", json.dumps(summary))
     return summary

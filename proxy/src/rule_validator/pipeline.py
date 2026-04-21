@@ -7,6 +7,7 @@ from typing import Optional
 
 import httpx
 
+from .dedupe import DedupeNeighbor, RuleDedupeIndex
 from .llm_judge import review_rule
 from .static_checks import CheckResult, detect_rule_type, validate_rule
 
@@ -18,6 +19,7 @@ DEST_OUTPUT_WARN_FP = "output_warn_fp"
 DEST_REJECTED_STATIC = "rejected/static"
 DEST_REJECTED_LLM = "rejected/llm"
 DEST_REJECTED_REVIEW = "rejected/review"
+DEST_REJECTED_DUPLICATE = "rejected/duplicate"
 
 
 @dataclass
@@ -36,6 +38,10 @@ class ValidationVerdict:
     static_duration_ms: float = 0.0
     llm_duration_ms: float = 0.0
     llm_raw_preview: Optional[str] = None
+    dedupe_score: Optional[float] = None
+    dedupe_neighbor_hash: Optional[str] = None
+    dedupe_neighbor_path: Optional[str] = None
+    dedupe_rule_hash: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -74,6 +80,7 @@ async def validate_file(
     client: Optional[httpx.AsyncClient] = None,
     llm_conf_threshold: float = DEFAULT_LLM_CONF_THRESHOLD,
     skip_llm: bool = False,
+    dedupe_index: Optional[RuleDedupeIndex] = None,
 ) -> ValidationVerdict:
     path = Path(path)
     text = path.read_text(encoding="utf-8", errors="replace")
@@ -100,6 +107,55 @@ async def validate_file(
     static = validate_rule(text, rule_type)
     static_ms = (time.monotonic() - t0) * 1000
 
+    dedupe_rule_hash: Optional[str] = None
+    neighbors_for_llm: list[str] = list(neighbors or [])
+
+    if static.ok and dedupe_index is not None:
+        try:
+            is_dup, dedupe_rule_hash, _, dedupe_neighbors = await dedupe_index.is_duplicate(
+                text,
+                rule_type,
+                client=client,
+            )
+            if not neighbors_for_llm and dedupe_neighbors:
+                neighbors_for_llm = [n.rule_text for n in dedupe_neighbors]
+            if is_dup and dedupe_neighbors:
+                top = dedupe_neighbors[0]
+                return ValidationVerdict(
+                    path=str(path),
+                    rule_type=rule_type,
+                    static_ok=True,
+                    llm_ok=False,
+                    llm_confidence=0.0,
+                    fp_risk="medium",
+                    destination=DEST_REJECTED_DUPLICATE,
+                    issues=[
+                        {
+                            "severity": "high",
+                            "category": "duplicate_rule",
+                            "message": f"Cosine similarity {top.score:.3f} >= {dedupe_index.threshold:.2f} against {top.rule_hash}",
+                            "stage": "dedupe",
+                        }
+                    ],
+                    warnings=list(static.warnings),
+                    suggested_fixes=["merge as variant of existing rule or raise threshold"],
+                    mitre_alignment="partial",
+                    static_duration_ms=static_ms,
+                    llm_duration_ms=0.0,
+                    dedupe_score=top.score,
+                    dedupe_neighbor_hash=top.rule_hash,
+                    dedupe_neighbor_path=top.source_path,
+                    dedupe_rule_hash=dedupe_rule_hash,
+                )
+        except Exception as e:
+            static.warnings.append(
+                {
+                    "severity": "low",
+                    "category": "dedupe_unavailable",
+                    "message": f"{type(e).__name__}: {e}",
+                }
+            )
+
     if not static.ok or skip_llm:
         llm_verdict = {
             "ok": False if not static.ok else True,
@@ -112,7 +168,7 @@ async def validate_file(
         llm_ms = 0.0
     else:
         t0 = time.monotonic()
-        llm_verdict = await review_rule(rule_type, text, neighbors, client=client)
+        llm_verdict = await review_rule(rule_type, text, neighbors_for_llm, client=client)
         llm_ms = (time.monotonic() - t0) * 1000
 
     destination = decide(static, llm_verdict, llm_conf_threshold=llm_conf_threshold)
@@ -138,4 +194,5 @@ async def validate_file(
         static_duration_ms=static_ms,
         llm_duration_ms=llm_ms,
         llm_raw_preview=llm_verdict.get("_raw_preview"),
+        dedupe_rule_hash=dedupe_rule_hash,
     )
