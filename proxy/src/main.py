@@ -7,6 +7,7 @@ Sits between honeypots and Ollama, providing:
 - Exploration vs exploitation balance
 """
 
+import json
 import logging
 import os
 import time
@@ -26,6 +27,7 @@ from .embeddings import (
     shutdown as shutdown_embeddings,
 )
 from .models import get_cache_stats, init_db
+from .task_router import TaskRouter
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -79,11 +81,12 @@ UPSTREAM = config["ollama_upstream"].rstrip("/")
 http_client: httpx.AsyncClient = None
 cache: HybridCache = None
 cve_engine: CVEEngine = None
+task_router: TaskRouter = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global http_client, cache, cve_engine
+    global http_client, cache, cve_engine, task_router
 
     logger.info("Starting Ollama Proxy")
     logger.info("  Upstream: %s", UPSTREAM)
@@ -129,6 +132,9 @@ async def lifespan(app: FastAPI):
     from .cve_templates import ALL_CVE_PROFILES
     logger.info("  CVE Engine: %s (%d profiles loaded)",
                 "enabled" if cve_enabled else "disabled", len(ALL_CVE_PROFILES))
+
+    # Init Task Router (multi-LLM routing based on X-LLM-Task header / _task field)
+    task_router = TaskRouter(config)
 
     stats = get_cache_stats()
     logger.info("Cache loaded: %d prompts, %d responses", stats["total_prompts"], stats["total_responses"])
@@ -319,6 +325,11 @@ async def api_chat(request: Request):
     8. Return to client
     """
     body = await request.json()
+
+    # Multi-LLM Task Routing: resolve task -> model + option defaults.
+    # Mutates body in place; no-op if caller did not specify a task.
+    routing = task_router.apply(request.headers, body) if task_router else None
+
     messages = body.get("messages", [])
     model = body.get("model", "")
     stream = body.get("stream", False)
@@ -332,6 +343,12 @@ async def api_chat(request: Request):
     # For streaming, pass through directly
     if stream:
         return await _proxy_stream(request, body)
+
+    # For non-honeypot tasks (rule_generate, rule_validate, ...) bypass the
+    # cache entirely: rules are per-session, deterministic, and must not leak
+    # across callers. Forward straight upstream with per-task timeout.
+    if routing and routing.explicit and routing.task != "honeypot_response":
+        return await _forward_direct("/api/chat", body, routing)
 
     # CVE Engine: enhance the system prompt with CVE-specific context
     cve_profile = None
@@ -483,13 +500,43 @@ def _build_chat_response(content: str, model: str) -> JSONResponse:
 
 @app.post("/api/generate")
 async def api_generate(request: Request):
-    """Passthrough /api/generate - could be cached in future."""
+    """Passthrough /api/generate with task routing (no cache)."""
     body = await request.json()
+    routing = task_router.apply(request.headers, body) if task_router else None
+    return await _forward_direct("/api/generate", body, routing)
+
+
+async def _forward_direct(path: str, body: dict, routing=None) -> JSONResponse:
+    """Forward a request straight to Ollama, honouring the task-specific timeout."""
+    body = {**body, "stream": False}
+    timeout = httpx.Timeout(
+        connect=10.0,
+        read=float(routing.timeout) if routing and routing.timeout else 300.0,
+        write=10.0,
+        pool=10.0,
+    )
     try:
-        resp = await http_client.post("/api/generate", json={**body, "stream": False})
-        return JSONResponse(status_code=resp.status_code, content=resp.json())
+        resp = await http_client.post(path, json=body, timeout=timeout)
+        try:
+            content = resp.json()
+        except Exception:
+            content = {"error": "upstream returned non-JSON", "raw": resp.text[:500]}
+        return JSONResponse(status_code=resp.status_code, content=content)
+    except httpx.HTTPStatusError as e:
+        logger.error("Upstream error on %s: %s", path, e.response.status_code)
+        return JSONResponse(
+            status_code=e.response.status_code,
+            content={"error": f"Upstream Ollama error: {e.response.status_code}"},
+        )
+    except httpx.TimeoutException as e:
+        # Empty str(e) on some httpx timeout subclasses — include the class name.
+        msg = f"{type(e).__name__}: {e or 'no message'}"
+        logger.error("Upstream timeout on %s: %s", path, msg)
+        return JSONResponse(status_code=504, content={"error": f"Upstream timeout: {msg}"})
     except Exception as e:
-        return JSONResponse(status_code=502, content={"error": str(e)})
+        msg = f"{type(e).__name__}: {e or 'no message'}"
+        logger.error("Upstream connection failed on %s: %s", path, msg)
+        return JSONResponse(status_code=502, content={"error": msg})
 
 
 @app.post("/api/embeddings")
