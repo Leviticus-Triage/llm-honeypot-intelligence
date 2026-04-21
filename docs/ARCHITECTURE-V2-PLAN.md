@@ -594,7 +594,7 @@ statt nur zu halluzinieren.
 | P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | **DONE 2026-04-21 (§13)** |
 | P4 | 4 Tage | §3 Beaconing 2.0 (Periodogramm/FFT) + ES-Mapping | — (parallel zu P1–P3) | **DONE 2026-04-21 (§14)** |
 | P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | **DONE 2026-04-21 (§15)** |
-| P6 | 7 Tage | §5 ML-Runner IsoForest + LightGBM | Datenexport (ab P1 OK) | pending |
+| P6 | 7 Tage | §5 ML-Runner IsoForest + LightGBM | Datenexport (ab P1 OK) | **DONE 2026-04-21 (§16)** |
 
 Gesamt: 3 Arbeitswochen mit 1 Person; mit Parallelisierung ca. 10
 Arbeitstage. Alle Phasen sind einzeln releasbar (kein Big-Bang).
@@ -947,3 +947,47 @@ bereit.
 
 Damit ist Phase 5 produktiv aktiv; nächster Schritt ist Phase 6
 (Offline-ML IsoForest/LightGBM).
+
+---
+
+## §16  Anhang G – Implementierungs-Log Phase 6 (abgeschlossen 2026-04-21)
+
+### §16.1  Deliverables
+
+| Artefakt | Ort | Rolle |
+|---|---|---|
+| `proxy/src/ml_runner.py` | `proxy/src/` | Export/Training/Inference-Pipeline für Offline-ML (`export_trainset`, `train_isoforest`, `train_lgbm`, `infer_and_update`) |
+| `proxy/run_ml_runner.py` | `proxy/` | CLI-Runner (`export`, `train`, `infer`, `all`) für Cron/On-Demand |
+| `proxy/docker-compose.yml` | `proxy/` | Neuer On-Demand Service `ml-runner` + Volumes `ml_models`, `ml_datasets` |
+| `proxy/requirements.txt` | `proxy/` | ML-Dependency erweitert (`lightgbm`) |
+
+### §16.2  Design-Entscheidungen
+
+1. **Training und Inference als entkoppelter Batch-Job.**
+   Der `ml-runner` läuft nicht dauerhaft (`restart: "no"`), sondern wird per
+   `docker compose run --rm ml-runner <cmd>` für Export/Train/Infer getriggert.
+2. **Robuster Fallback bei LightGBM-Importproblemen.**
+   Falls `lightgbm` im Runtime-Container nicht nutzbar ist (z. B. ABI/OpenMP),
+   wechselt der Runner automatisch auf `RandomForest` (One-vs-Rest), statt den
+   Pipeline-Lauf zu blockieren.
+3. **In-Place Enrichment auf `honeypot-cve-sessions`.**
+   Inference schreibt `ml_anomaly_score`, `ml_classifier_tags` und
+   `ml_model_version` per ES Bulk-Update direkt in bestehende Session-Dokumente.
+
+### §16.3  Live-Evidence (P6)
+
+- Build:
+  `docker compose build ml-runner` erfolgreich (inkl. `lightgbm` im Image).
+- Export:
+  `docker compose run --rm ml-runner export` → `rows=10000`.
+- Training:
+  `docker compose run --rm ml-runner train` →
+  - IsoForest: `rows=10000`
+  - Classifier: `rows=10000`, `classes=6` (Fallback: `random_forest_fallback`)
+- Inference:
+  `docker compose run --rm ml-runner infer` → `updated=5000`.
+- ES-Verifikation:
+  `honeypot-cve-sessions` enthält neue Felder:
+  `ml_anomaly_score`, `ml_classifier_tags`, `ml_model_version`.
+
+Damit ist Phase 6 produktiv lauffähig und die v2-Roadmap P1..P6 abgeschlossen.

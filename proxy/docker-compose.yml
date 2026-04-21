@@ -69,6 +69,28 @@ services:
       - rules_validated:/data/ollama-proxy/validated-rules:ro
     entrypoint: ["python", "/app/run_reward_aggregator.py"]
 
+  ml-runner:
+    container_name: ollama-ml-runner
+    build: .
+    restart: "no"
+    network_mode: host
+    environment:
+      - ES_URL=${ES_URL}
+      - ES_USER=${ES_USER}
+      - ES_PASS=${ES_PASS}
+      - DATASET_DIR=/data/ml-runner/datasets
+      - MODEL_DIR=/data/ml-runner/models
+      - ML_SOURCE_INDEX=honeypot-cve-sessions
+      - ML_EXPORT_HOURS=720
+      - ML_INFER_HOURS=24
+      - ML_MAX_EXPORT_DOCS=50000
+      - ML_MAX_INFER_DOCS=5000
+    volumes:
+      - ml_models:/data/ml-runner/models
+      - ml_datasets:/data/ml-runner/datasets
+      - ./run_ml_runner.py:/app/run_ml_runner.py:ro
+    entrypoint: ["python", "/app/run_ml_runner.py"]
+
   rule-generator:
     container_name: ollama-rule-generator
     build: .
@@ -160,3 +182,7 @@ volumes:
     name: ollama-threat-output
   rules_validated:
     name: ollama-rules-validated
+  ml_models:
+    name: ollama-ml-models
+  ml_datasets:
+    name: ollama-ml-datasets

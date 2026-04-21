@@ -1,0 +1,341 @@
+"""
+Offline ML Runner (Phase 6).
+
+Implements:
+- Dataset export from honeypot-cve-sessions
+- IsolationForest training
+- LightGBM One-vs-Rest training (fallback to sklearn if unavailable)
+- Inference + bulk update of ml_* fields in honeypot-cve-sessions
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import math
+import os
+import pickle
+import re
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+import httpx
+import numpy as np
+
+logger = logging.getLogger("ml-runner")
+
+ES_URL = os.environ.get("ES_URL", "https://localhost:64297/es")
+ES_USER = os.environ.get("ES_USER", "")
+ES_PASS = os.environ.get("ES_PASS", "")
+
+DATASET_DIR = Path(os.environ.get("DATASET_DIR", "/data/ml-runner/datasets"))
+MODEL_DIR = Path(os.environ.get("MODEL_DIR", "/data/ml-runner/models"))
+SOURCE_INDEX = os.environ.get("ML_SOURCE_INDEX", "honeypot-cve-sessions")
+
+EXPORT_HOURS = int(os.environ.get("ML_EXPORT_HOURS", "720"))  # 30d
+INFER_HOURS = int(os.environ.get("ML_INFER_HOURS", "24"))
+MAX_EXPORT_DOCS = int(os.environ.get("ML_MAX_EXPORT_DOCS", "50000"))
+MAX_INFER_DOCS = int(os.environ.get("ML_MAX_INFER_DOCS", "5000"))
+
+BASE64_RE = re.compile(r"(?:[A-Za-z0-9+/]{20,}={0,2})")
+URL_RE = re.compile(r"https?://[^\s\"']+", re.IGNORECASE)
+NON_PRINTABLE_RE = re.compile(r"[^\x20-\x7E]")
+
+NUMERIC_FEATURES = [
+    "session_duration",
+    "cmd_count",
+    "unique_cmds",
+    "payload_len",
+    "payload_entropy_byte",
+    "payload_entropy_bigram",
+    "non_printable_ratio",
+    "base64_score",
+    "url_count",
+    "cve_tag_present",
+]
+
+
+def _auth():
+    return (ES_USER, ES_PASS) if ES_USER else None
+
+
+def _entropy(text: str) -> float:
+    if not text:
+        return 0.0
+    freq = Counter(text)
+    total = len(text)
+    return -sum((v / total) * math.log2(v / total) for v in freq.values())
+
+
+def _bigram_entropy(text: str) -> float:
+    if len(text) < 2:
+        return 0.0
+    grams = [text[i : i + 2] for i in range(len(text) - 1)]
+    return _entropy("".join(grams))
+
+
+def _extract_features(doc: dict[str, Any]) -> dict[str, Any]:
+    prompt = str(doc.get("prompt_text", "") or "")
+    response = str(doc.get("response_text", "") or "")
+    cve_id = str(doc.get("cve_id", "") or "")
+
+    merged = (prompt + "\n" + response).strip()
+    lines = [x.strip() for x in prompt.splitlines() if x.strip()]
+    unique_lines = len(set(lines))
+
+    non_print = len(NON_PRINTABLE_RE.findall(merged))
+    base64_hits = BASE64_RE.findall(merged)
+    urls = URL_RE.findall(merged)
+
+    ts = str(doc.get("@timestamp", "") or "")
+    hour_of_day = 0
+    if ts:
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            hour_of_day = dt.hour
+        except Exception:
+            pass
+
+    return {
+        "session_duration": float(doc.get("duration_s", 0.0) or 0.0),
+        "cmd_count": float(len(lines)),
+        "unique_cmds": float(unique_lines),
+        "payload_len": float(len(merged)),
+        "payload_entropy_byte": float(_entropy(merged)),
+        "payload_entropy_bigram": float(_bigram_entropy(merged)),
+        "non_printable_ratio": float(non_print / max(len(merged), 1)),
+        "base64_score": float(sum(len(x) for x in base64_hits) / max(len(merged), 1)),
+        "url_count": float(len(urls)),
+        "cve_tag_present": float(1.0 if cve_id else 0.0),
+        "hour_of_day": float(hour_of_day),
+        "label_cve": cve_id,
+    }
+
+
+def _matrix(rows: list[dict[str, Any]]) -> np.ndarray:
+    m = np.zeros((len(rows), len(NUMERIC_FEATURES)), dtype=np.float32)
+    for i, row in enumerate(rows):
+        for j, k in enumerate(NUMERIC_FEATURES):
+            m[i, j] = float(row.get(k, 0.0) or 0.0)
+    return m
+
+
+async def _es_search(index: str, body: dict[str, Any]) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=60.0, verify=False, auth=_auth()) as client:
+        resp = await client.post(f"{ES_URL}/{index}/_search", json=body)
+        if resp.status_code != 200:
+            logger.warning("ES search failed on %s: %s", index, resp.text[:200])
+            return {"hits": {"hits": []}}
+        return resp.json()
+
+
+async def export_trainset(*, since_hours: int = EXPORT_HOURS, max_docs: int = MAX_EXPORT_DOCS) -> dict:
+    DATASET_DIR.mkdir(parents=True, exist_ok=True)
+    since = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).isoformat()
+    body = {
+        "size": min(max_docs, 10000),
+        "query": {"bool": {"must": [{"range": {"@timestamp": {"gte": since}}}]}},
+        "sort": [{"@timestamp": "desc"}],
+        "_source": ["@timestamp", "prompt_text", "response_text", "cve_id", "src_ip", "serve_log_id"],
+    }
+    data = await _es_search(SOURCE_INDEX, body)
+    hits = data.get("hits", {}).get("hits", [])
+    rows: list[dict[str, Any]] = []
+    for h in hits:
+        src = h.get("_source", {})
+        feat = _extract_features(src)
+        feat["_id"] = h.get("_id")
+        feat["src_ip"] = str(src.get("src_ip", "") or "")
+        feat["serve_log_id"] = src.get("serve_log_id")
+        feat["@timestamp"] = src.get("@timestamp")
+        rows.append(feat)
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    out = DATASET_DIR / f"trainset_{ts}.jsonl"
+    with out.open("w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    latest = DATASET_DIR / "latest_trainset.jsonl"
+    latest.write_text(out.read_text(encoding="utf-8"), encoding="utf-8")
+    summary = {"rows": len(rows), "path": str(out)}
+    logger.info("Exported dataset: %s", summary)
+    return summary
+
+
+def _load_latest_dataset() -> list[dict[str, Any]]:
+    path = DATASET_DIR / "latest_trainset.jsonl"
+    if not path.is_file():
+        raise FileNotFoundError(f"dataset missing: {path}")
+    rows: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rows.append(json.loads(line))
+    return rows
+
+
+def train_isoforest() -> dict:
+    from sklearn.ensemble import IsolationForest
+    from sklearn.preprocessing import StandardScaler
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    rows = _load_latest_dataset()
+    if len(rows) < 50:
+        raise RuntimeError(f"insufficient rows for IsoForest: {len(rows)}")
+    x = _matrix(rows)
+    scaler = StandardScaler()
+    x_scaled = scaler.fit_transform(x)
+    clf = IsolationForest(
+        n_estimators=200,
+        contamination=0.05,
+        random_state=42,
+        n_jobs=-1,
+    )
+    clf.fit(x_scaled)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    out = MODEL_DIR / f"isoforest_v{ts}.pkl"
+    with out.open("wb") as f:
+        pickle.dump({"scaler": scaler, "model": clf, "features": NUMERIC_FEATURES}, f)
+    current = MODEL_DIR / "current_isoforest.pkl"
+    current.write_bytes(out.read_bytes())
+    summary = {"rows": len(rows), "path": str(out)}
+    logger.info("Trained IsoForest: %s", summary)
+    return summary
+
+
+def train_lgbm() -> dict:
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    rows = _load_latest_dataset()
+    labeled = [r for r in rows if r.get("label_cve")]
+    if len(labeled) < 100:
+        raise RuntimeError(f"insufficient labeled rows for classifier: {len(labeled)}")
+    x = _matrix(labeled)
+    labels = [str(r.get("label_cve") or "") for r in labeled]
+    unique = sorted(set(labels))
+
+    from sklearn.multiclass import OneVsRestClassifier
+    from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
+
+    mlb = MultiLabelBinarizer(classes=unique)
+    y = mlb.fit_transform([[l] for l in labels])
+    scaler = StandardScaler()
+    x_scaled = scaler.fit_transform(x)
+
+    estimator_name = "lightgbm"
+    try:
+        from lightgbm import LGBMClassifier
+
+        base = LGBMClassifier(
+            n_estimators=250,
+            learning_rate=0.05,
+            num_leaves=63,
+            feature_fraction=0.8,
+            random_state=42,
+            n_jobs=-1,
+        )
+    except Exception as e:
+        from sklearn.ensemble import RandomForestClassifier
+
+        estimator_name = "random_forest_fallback"
+        logger.warning("LightGBM unavailable, using RandomForest fallback: %s", e)
+        base = RandomForestClassifier(
+            n_estimators=300,
+            max_depth=None,
+            random_state=42,
+            n_jobs=-1,
+        )
+    clf = OneVsRestClassifier(base)
+    clf.fit(x_scaled, y)
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    out = MODEL_DIR / f"lgbm_ovr_v{ts}.pkl"
+    with out.open("wb") as f:
+        pickle.dump(
+            {
+                "scaler": scaler,
+                "model": clf,
+                "mlb": mlb,
+                "features": NUMERIC_FEATURES,
+                "estimator_name": estimator_name,
+            },
+            f,
+        )
+    current = MODEL_DIR / "current_lgbm.pkl"
+    current.write_bytes(out.read_bytes())
+    summary = {"rows": len(labeled), "classes": len(unique), "path": str(out), "estimator": estimator_name}
+    logger.info("Trained classifier: %s", summary)
+    return summary
+
+
+async def infer_and_update(*, since_hours: int = INFER_HOURS, max_docs: int = MAX_INFER_DOCS) -> dict:
+    iso_path = MODEL_DIR / "current_isoforest.pkl"
+    clf_path = MODEL_DIR / "current_lgbm.pkl"
+    if not iso_path.is_file() or not clf_path.is_file():
+        raise FileNotFoundError("current models missing (current_isoforest.pkl/current_lgbm.pkl)")
+    iso = pickle.loads(iso_path.read_bytes())
+    clf = pickle.loads(clf_path.read_bytes())
+
+    since = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).isoformat()
+    body = {
+        "size": min(max_docs, 10000),
+        "query": {"bool": {"must": [{"range": {"@timestamp": {"gte": since}}}]}},
+        "sort": [{"@timestamp": "desc"}],
+        "_source": ["@timestamp", "prompt_text", "response_text", "cve_id", "src_ip", "serve_log_id"],
+    }
+    data = await _es_search(SOURCE_INDEX, body)
+    hits = data.get("hits", {}).get("hits", [])
+    if not hits:
+        return {"updated": 0, "docs": 0}
+
+    feat_rows = [_extract_features(h.get("_source", {})) for h in hits]
+    x = _matrix(feat_rows)
+
+    x_iso = iso["scaler"].transform(x)
+    anomaly_score = -iso["model"].decision_function(x_iso)
+
+    x_clf = clf["scaler"].transform(x)
+    pred = clf["model"].predict(x_clf)
+    classes = list(clf["mlb"].classes_)
+
+    lines: list[str] = []
+    for i, h in enumerate(hits):
+        doc_id = h.get("_id")
+        if not doc_id:
+            continue
+        tags = [classes[j] for j, v in enumerate(pred[i].tolist()) if int(v) == 1]
+        if not tags:
+            tags = []
+        lines.append(json.dumps({"update": {"_index": SOURCE_INDEX, "_id": doc_id}}))
+        lines.append(
+            json.dumps(
+                {
+                    "doc": {
+                        "ml_anomaly_score": float(anomaly_score[i]),
+                        "ml_classifier_tags": tags,
+                        "ml_model_version": {
+                            "isoforest": "current_isoforest.pkl",
+                            "classifier": "current_lgbm.pkl",
+                        },
+                    }
+                }
+            )
+        )
+    if not lines:
+        return {"updated": 0, "docs": len(hits)}
+    payload = "\n".join(lines) + "\n"
+    async with httpx.AsyncClient(timeout=120.0, verify=False, auth=_auth()) as client:
+        resp = await client.post(
+            f"{ES_URL}/_bulk",
+            content=payload,
+            headers={"Content-Type": "application/x-ndjson"},
+        )
+        if resp.status_code not in (200, 201):
+            raise RuntimeError(f"bulk update failed: {resp.status_code} {resp.text[:200]}")
+        updated = len(lines) // 2
+    summary = {"updated": updated, "docs": len(hits)}
+    logger.info("Inference update summary: %s", summary)
+    return summary

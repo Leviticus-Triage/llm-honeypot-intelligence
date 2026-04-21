@@ -25,6 +25,7 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | Phase 3 Rule-Dedupe (Embeddings + SQLite) | ✅ Live: `rejected/duplicate` aktiv, konservatives Gate (`cos>=0.985` + `jaccard>=0.80`) | `proxy/src/rule_validator/dedupe.py`, `proxy/run_rule_validator.py` |
 | Phase 4 Beaconing 2.0 (Periodogramm/FFT + Jitter-Klassen) | ✅ Live auf `<ai-workstation>`: `c2-detector` rebuilt, OneShot `flagged_ips=23`, neue Felder in ES (`dominant_period_sec`, `peak_power`, `spectral_flatness`, `jitter_class`) sichtbar | `proxy/src/c2_detection/engine.py` |
 | Phase 5 RL-Reward-Aggregator + Cache-Gewichtung | ✅ Live auf `<ai-workstation>`: Reward-Index aktiv (`honeypot-response-rewards`), SQLite `response_rewards` befuellt, Cache-Ranking reward-aware | `proxy/src/reward_aggregator.py`, `proxy/src/cache.py`, `proxy/src/models.py`, `proxy/run_reward_aggregator.py` |
+| Phase 6 Offline-ML Runner (IsoForest + Classifier) | ✅ Live auf `<ai-workstation>`: `ml-runner` Export/Train/Infer erfolgreich, `honeypot-cve-sessions` mit `ml_anomaly_score` + `ml_classifier_tags` angereichert | `proxy/src/ml_runner.py`, `proxy/run_ml_runner.py`, `proxy/docker-compose.yml` |
 
 ---
 
@@ -163,6 +164,12 @@ cmd_entropy), (c) Entity-Features (geoip_asn, time_of_day).
 beim Proxy-Start; Vorhersage läuft parallel zur Heuristic. Beide
 Output-Spalten (`cve_heuristic_tag`, `cve_classifier_tag`) getrennt
 speichern, damit man Disagreement messen kann.
+
+**Status (21.04.2026): DONE als Phase 6 (Batch-Variante).**
+- Neuer `ml-runner` Service mit Commands `export`, `train`, `infer`.
+- Trainierte Modelle liegen versioniert in `ollama-ml-models`.
+- Inference schreibt direkt in `honeypot-cve-sessions`:
+  `ml_anomaly_score`, `ml_classifier_tags`, `ml_model_version`.
 
 ### 3.2 Rule-Pipeline mit DVC / MLflow-Tracking
 Rules sind heute Files im Volume. Für Nachvollziehbarkeit:
