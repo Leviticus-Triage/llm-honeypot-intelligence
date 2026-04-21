@@ -23,24 +23,25 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | `tpot` CLI auf `ai-workstation` | ✅ Proxmox-VM-Control via SSH+`qm`, `dashboards-import`, `ssh`, Remote-Logs | `scripts/tpot` |
 | Phase 2 Rule-Validator (LLM-as-a-Judge) | ✅ Live auf `.116`: ONESHOT gelaufen (`processed=12`, `approved=8`, `rejected_static=3`, `rejected_llm=1`) | `proxy/src/rule_validator/*`, `proxy/run_rule_validator.py` |
 | Phase 3 Rule-Dedupe (Embeddings + SQLite) | ✅ Live: `rejected/duplicate` aktiv, konservatives Gate (`cos>=0.985` + `jaccard>=0.80`) | `proxy/src/rule_validator/dedupe.py`, `proxy/run_rule_validator.py` |
+| Phase 4 Beaconing 2.0 (Periodogramm/FFT + Jitter-Klassen) | ✅ Live auf `.116`: `c2-detector` rebuilt, OneShot `flagged_ips=23`, neue Felder in ES (`dominant_period_sec`, `peak_power`, `spectral_flatness`, `jitter_class`) sichtbar | `proxy/src/c2_detection/engine.py` |
 
 ---
 
 ## 1. Kurzfristig (1–2 Tage, hohe Wirkung)
 
-### 1.1 Beaconing-Qualität weiter anheben
-Die Sättigung ist gemildert, aber 40+ Suspects pro Zyklus sind noch viel.
-Ursache: wir nehmen jede IP mit ≥5 Flows und CV<1 in den Score. Vorschläge:
+### 1.1 Beaconing-Qualität weiter anheben (Phase 4 DONE)
+Die Spektral-Erweiterung ist live: statt reinem CV werden jetzt periodische Peaks
+im Intervall-Signal gewertet (Periodogramm/FFT), inklusive `jitter_class`.
+Zusätzliche Verbesserungen für den nächsten Feinschliff:
 
 - **Asset-Context** einziehen. Private/reservierte Ranges raus – ✅ schon da.
 Zusätzlich: IPs, die Suricata selbst als bekannte Scanner/ET-Shadowserver
 markiert, bekommen eigenen `detection_type="known_scanner"` statt
 `beaconing`, damit sie die C2-Top-List nicht dominieren.
-- **Periodogramm / FFT** statt nur σ(intervalle). Echtes Beaconing hat einen
-dominanten Peak im Autokorrelations-Spektrum; Mass-Scanner nicht. Feature:
-`dominant_period_strength`. Referenz: RITA / YAF / DeepBeacon.
-- **Jitter-Klasse**. Wenn CV zwischen 0.25–0.5 und n≥20 Flows: wahrscheinlich
-C2 mit Jitter; unter 0.15: reine Beacon. Unterscheidung surfacen.
+- **Known-Scanner-Entzerrung** als eigener Layer (`detection_type=known_scanner`),
+  damit Internet-Scanner die Beaconing-Top-List weniger dominieren.
+- **Schwellwert-Tuning per Label-Samples**: `peak_power`/`spectral_flatness`-Grenzen
+  gegen kuratierten True/False-Positiv-Korpus feinjustieren.
 
 ### 1.2 DNS-Tunnel-Scoring: echte Signale statt Ddospot-Hit
 Der aktuelle Ddospot-Bonus `+15` ist ein Platzhalter. Sobald echte externe

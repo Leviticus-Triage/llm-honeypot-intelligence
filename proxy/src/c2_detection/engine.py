@@ -14,6 +14,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
 import httpx
+import numpy as np
 
 logger = logging.getLogger("c2-detection")
 
@@ -82,11 +83,11 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
             "by_src": {
                 "terms": {"field": "src_ip.keyword", "size": 200, "min_doc_count": 5},
                 "aggs": {
-                    "timestamps": {
-                        "date_histogram": {
-                            "field": "@timestamp",
-                            "fixed_interval": "10s",
-                            "min_doc_count": 1,
+                    "recent_flows": {
+                        "top_hits": {
+                            "size": 100,
+                            "sort": [{"@timestamp": {"order": "asc"}}],
+                            "_source": ["@timestamp", "dest_ip", "dest_port"],
                         }
                     },
                     "dest_ips": {"cardinality": {"field": "dest_ip.keyword"}},
@@ -103,6 +104,80 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
     data = await _es_search(client, "logstash-*", query)
     results = []
 
+    def _iso_to_epoch(ts: str) -> float | None:
+        try:
+            # ES timestamp usually ends with Z
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            return dt.timestamp()
+        except Exception:
+            return None
+
+    def _beacon_spectrum(timestamps: list[float]) -> dict | None:
+        """
+        FFT-based periodogram on a resampled impulse train.
+        Returns dominant period, peak_power [0..1], spectral_flatness [0..1].
+        """
+        if len(timestamps) < 12:
+            return None
+        ts = sorted(timestamps)
+        span = ts[-1] - ts[0]
+        if span < 20:
+            return None
+
+        # Keep array size bounded while preserving short periods.
+        target_bins = 4096
+        bin_sec = max(1.0, span / target_bins)
+        n = int(span / bin_sec) + 1
+        if n < 64:
+            return None
+
+        x = np.zeros(n, dtype=np.float32)
+        t0 = ts[0]
+        for t in ts:
+            idx = int((t - t0) / bin_sec)
+            if 0 <= idx < n:
+                x[idx] += 1.0
+        if np.count_nonzero(x) < 8:
+            return None
+
+        x = x - np.mean(x)
+        freqs = np.fft.rfftfreq(n, d=bin_sec)
+        power = np.abs(np.fft.rfft(x)) ** 2
+
+        # 10 min .. 5 s period band
+        fmin = 1.0 / 600.0
+        fmax = 1.0 / 5.0
+        mask = (freqs >= fmin) & (freqs <= fmax)
+        if not np.any(mask):
+            return None
+
+        f = freqs[mask]
+        p = power[mask]
+        if len(p) < 3:
+            return None
+
+        peak_idx = int(np.argmax(p))
+        peak = float(p[peak_idx])
+        mean_p = float(np.mean(p))
+        # Peak prominence normalized to [0..1]
+        peak_power = 0.0
+        if peak > 0:
+            peak_power = max(0.0, min(1.0, (peak - mean_p) / (peak + 1e-9)))
+
+        eps = 1e-12
+        spectral_flatness = float(np.exp(np.mean(np.log(p + eps))) / (np.mean(p) + eps))
+        spectral_flatness = max(0.0, min(1.0, spectral_flatness))
+
+        dom_freq = float(f[peak_idx])
+        if dom_freq <= 0:
+            return None
+
+        return {
+            "dominant_period_sec": round(1.0 / dom_freq, 1),
+            "peak_power": round(peak_power, 3),
+            "spectral_flatness": round(spectral_flatness, 3),
+        }
+
     for bucket in data.get("aggregations", {}).get("by_src", {}).get("buckets", []):
         src_ip = bucket["key"]
         if _is_private_ip(src_ip):
@@ -111,19 +186,23 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
         dest_count = bucket["dest_ips"]["value"]
         port_count = bucket["dest_ports"]["value"]
 
-        # Extract timestamps from histogram buckets
-        ts_buckets = bucket["timestamps"]["buckets"]
-        if len(ts_buckets) < 3:
-            continue
-
-        timestamps = [b["key"] for b in ts_buckets if b["doc_count"] > 0]
-        if len(timestamps) < 3:
+        hits = bucket.get("recent_flows", {}).get("hits", {}).get("hits", [])
+        raw_ts = []
+        for h in hits:
+            ts = (h.get("_source") or {}).get("@timestamp")
+            if not ts:
+                continue
+            epoch = _iso_to_epoch(ts)
+            if epoch is not None:
+                raw_ts.append(epoch)
+        if len(raw_ts) < 12:
             continue
 
         # Calculate inter-arrival times (in seconds)
         intervals = []
+        timestamps = sorted(raw_ts)
         for i in range(1, len(timestamps)):
-            delta = (timestamps[i] - timestamps[i - 1]) / 1000.0
+            delta = timestamps[i] - timestamps[i - 1]
             if 0 < delta < 600:  # Ignore gaps > 10min
                 intervals.append(delta)
 
@@ -137,15 +216,29 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
         # Coefficient of variation (lower = more regular = more suspicious)
         cv = std_dev / mean_interval if mean_interval > 0 else 999
 
-        # Sample-size confidence: few intervals with cv=0 is coincidence, not beaconing.
-        # Ramps to full weight at >=10 intervals.
-        sample_confidence = min(len(intervals) / 10.0, 1.0)
+        spectrum = _beacon_spectrum(timestamps)
+        if not spectrum:
+            continue
 
-        regularity_score = max(0, 1.0 - cv) * 100 * sample_confidence
-        volume_score = min(flow_count / 20.0, 1.0) * 30
-        focus_penalty = min(dest_count / 5.0, 1.0) * 20  # Many dests = less suspicious
+        peak_power = spectrum["peak_power"]
+        spectral_flatness = spectrum["spectral_flatness"]
 
-        beacon_score = regularity_score + volume_score - focus_penalty
+        if peak_power >= 0.75:
+            jitter_class = "periodic"
+        elif 0.4 <= peak_power < 0.75 and 0.2 <= cv < 0.6:
+            jitter_class = "jittered"
+        elif peak_power < 0.4 and spectral_flatness > 0.6:
+            jitter_class = "random"
+        else:
+            jitter_class = "bursty"
+
+        beacon_score = (
+            0.45 * (peak_power * 100.0)
+            + 0.20 * max(0.0, 1.0 - cv) * 100.0
+            + 0.15 * min(flow_count / 30.0, 1.0) * 100.0
+            - 0.15 * min(dest_count / 5.0, 1.0) * 100.0
+            + 0.05 * (100.0 if jitter_class == "jittered" else 0.0)
+        )
         beacon_score = max(0, min(100, beacon_score))
 
         if beacon_score < 20:
@@ -163,6 +256,9 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
             f"interval~{mean_interval:.1f}s",
             f"cv={cv:.2f}",
             f"flows={flow_count}",
+            f"peak={peak_power:.2f}",
+            f"flat={spectral_flatness:.2f}",
+            f"jitter={jitter_class}",
         ]
         if dest_count == 1:
             indicators.append("single_dest")
@@ -184,6 +280,10 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
             indicators.append("rapid_retry")
         elif mean_interval > 120:
             indicators.append("slow_beacon")
+        if spectrum["dominant_period_sec"] <= 15:
+            indicators.append("short_period")
+        elif spectrum["dominant_period_sec"] >= 180:
+            indicators.append("long_period")
 
         results.append({
             "src_ip": src_ip,
@@ -200,6 +300,10 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
             "bytes_outbound": int(bytes_out),
             "byte_ratio": byte_ratio,
             "avg_flow_duration_sec": round(bucket["avg_duration"]["value"] or 0, 1),
+            "dominant_period_sec": spectrum["dominant_period_sec"],
+            "peak_power": peak_power,
+            "spectral_flatness": spectral_flatness,
+            "jitter_class": jitter_class,
             "indicators": indicators,
             "mitre_techniques": ["T1071", "T1573", "T1571"],
         })
@@ -645,6 +749,10 @@ async def _ensure_index(client: httpx.AsyncClient):
                 "byte_ratio": {"type": "float"},
                 "mean_interval_sec": {"type": "float"},
                 "coefficient_of_variation": {"type": "float"},
+                "dominant_period_sec": {"type": "float"},
+                "peak_power": {"type": "float"},
+                "spectral_flatness": {"type": "float"},
+                "jitter_class": {"type": "keyword"},
                 "avg_query_length": {"type": "float"},
                 "avg_subdomain_entropy": {"type": "float"},
                 "unique_destinations": {"type": "integer"},
@@ -798,6 +906,8 @@ async def run_detection_cycle():
             for key in ["flow_count", "alert_count", "query_count",
                         "primary_protocol", "bytes_inbound", "bytes_outbound",
                         "byte_ratio", "mean_interval_sec", "coefficient_of_variation",
+                        "dominant_period_sec", "peak_power", "spectral_flatness",
+                        "jitter_class",
                         "avg_query_length", "avg_subdomain_entropy",
                         "unique_destinations", "unique_ports",
                         "protocol_distribution", "port_distribution",

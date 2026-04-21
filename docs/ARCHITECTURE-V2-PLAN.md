@@ -592,7 +592,7 @@ statt nur zu halluzinieren.
 | P1 | 3 Tage | §1 Task-Router + `config.yaml` + Generator-Switch auf qwen2.5-coder | — | **DONE 2026-04-21** (§11) |
 | P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | **DONE 2026-04-21 (§12)** |
 | P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | **DONE 2026-04-21 (§13)** |
-| P4 | 4 Tage | §3 Beaconing 2.0 (Lomb-Scargle) + ES-Mapping | — (parallel zu P1–P3) | pending |
+| P4 | 4 Tage | §3 Beaconing 2.0 (Periodogramm/FFT) + ES-Mapping | — (parallel zu P1–P3) | **DONE 2026-04-21 (§14)** |
 | P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | pending |
 | P6 | 7 Tage | §5 ML-Runner IsoForest + LightGBM | Datenexport (ab P1 OK) | pending |
 
@@ -856,3 +856,50 @@ sowieso intern gesetzt hat.
   `failures=0`.
 
 Damit ist P3 infrastrukturell produktiv und für den weiteren Rollout stabil.
+
+---
+
+## §14  Anhang E – Implementierungs-Log Phase 4 (abgeschlossen 2026-04-21)
+
+### §14.1  Deliverables
+
+| Artefakt | Ort | Rolle |
+|---|---|---|
+| `proxy/src/c2_detection/engine.py` | `proxy/src/c2_detection/` | Beaconing 2.0 mit spektraler Auswertung (Periodogramm/FFT), Jitter-Klassifikation, neuem Score-Blend und erweiterten Indikatoren |
+| `honeypot-c2-indicators` Mapping | `engine.py::_ensure_index` | Neue Felder: `dominant_period_sec`, `peak_power`, `spectral_flatness`, `jitter_class` |
+| C2-Deploy auf `.116` | `~/ollama-proxy` | Rebuild/Recreate `ollama-c2-detector` + Live-OneShot Smoke gegen ES |
+
+### §14.2  Design-Entscheidungen
+
+1. **Periodogramm/FFT statt reinem CV-Scoring.**
+   Pro `src_ip` werden bis zu 100 Flow-Timestamps (`top_hits`) gezogen, in ein
+   Impuls-Signal überführt und per FFT im Frequenzband 5s..600s ausgewertet.
+   Die Peak-Prominenz wird als `peak_power` (0..1) normalisiert.
+2. **Jitter-Klassen explizit surfaced.**
+   Regeln:
+   - `peak_power >= 0.75` → `periodic`
+   - `peak_power in [0.4, 0.75)` + `cv in [0.2, 0.6)` → `jittered`
+   - `peak_power < 0.4` + `spectral_flatness > 0.6` → `random`
+   - sonst `bursty`
+3. **Score-Formel gemäß v2-Plan umgesetzt.**
+   `beacon_score` nutzt nun spektralen Peak, CV-Regularität, Volumen und
+   Destinations-Penalty plus Jitter-Bonus (`jittered`), auf 0..100 begrenzt.
+4. **ES-Limit-Fix direkt integriert.**
+   T-Pot-ES limitiert `top_hits` auf 100. Aggregation wurde von 200 auf 100
+   reduziert, um den Cycle stabil (`HTTP 200`) zu halten.
+
+### §14.3  Smoke-Evidence (P4)
+
+- Deploy/Build:
+  `docker compose up -d --build c2-detector` auf `ai-workstation` erfolgreich.
+- OneShot-Run:
+  `docker compose run --rm --entrypoint python c2-detector ...run_detection_cycle()`
+  → `flagged_ips=23`.
+- Feld-Verifikation gegen ES:
+  Query auf `honeypot-c2-indicators` zeigte neue Beacon-Felder live:
+  `dominant_period_sec=124.0`, `peak_power=0.915`,
+  `spectral_flatness=0.564`, `jitter_class=periodic`
+  (Beispiel-IP `51.89.198.6`).
+
+Damit ist Phase 4 produktiv aktiv und als Grundlage für Phase 5 (RL-Reward)
+bereit.
