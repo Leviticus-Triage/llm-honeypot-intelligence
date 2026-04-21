@@ -137,8 +137,11 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
         # Coefficient of variation (lower = more regular = more suspicious)
         cv = std_dev / mean_interval if mean_interval > 0 else 999
 
-        # Beaconing score: low CV + many connections + few destinations = high score
-        regularity_score = max(0, 1.0 - cv) * 100
+        # Sample-size confidence: few intervals with cv=0 is coincidence, not beaconing.
+        # Ramps to full weight at >=10 intervals.
+        sample_confidence = min(len(intervals) / 10.0, 1.0)
+
+        regularity_score = max(0, 1.0 - cv) * 100 * sample_confidence
         volume_score = min(flow_count / 20.0, 1.0) * 30
         focus_penalty = min(dest_count / 5.0, 1.0) * 20  # Many dests = less suspicious
 
@@ -148,12 +151,39 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
         if beacon_score < 20:
             continue
 
-        # Determine primary protocol
         protos = bucket["protocols"]["buckets"]
         primary_proto = protos[0]["key"] if protos else "unknown"
 
         bytes_in = bucket["total_bytes_in"]["value"] or 0
         bytes_out = bucket["total_bytes_out"]["value"] or 0
+        byte_ratio = round(bytes_out / max(bytes_in, 1), 2)
+
+        # Rich, IP-specific indicators so downstream tables show variation
+        indicators = [
+            f"interval~{mean_interval:.1f}s",
+            f"cv={cv:.2f}",
+            f"flows={flow_count}",
+        ]
+        if dest_count == 1:
+            indicators.append("single_dest")
+        elif dest_count <= 3:
+            indicators.append(f"few_dests({dest_count})")
+        if port_count == 1:
+            indicators.append("single_port")
+        if cv < 0.15 and len(intervals) >= 8:
+            indicators.append("highly_regular")
+        elif cv < 0.4:
+            indicators.append("moderately_regular")
+        if byte_ratio > 2.5:
+            indicators.append(f"uplink_heavy({byte_ratio})")
+        elif byte_ratio < 0.4 and bytes_in > 1024:
+            indicators.append(f"downlink_heavy({byte_ratio})")
+        if primary_proto and primary_proto not in ("TCP", "UDP"):
+            indicators.append(f"proto={primary_proto}")
+        if mean_interval < 5:
+            indicators.append("rapid_retry")
+        elif mean_interval > 120:
+            indicators.append("slow_beacon")
 
         results.append({
             "src_ip": src_ip,
@@ -168,8 +198,9 @@ async def detect_beaconing(client: httpx.AsyncClient, window_min: int) -> list[d
             "primary_protocol": primary_proto,
             "bytes_inbound": int(bytes_in),
             "bytes_outbound": int(bytes_out),
-            "byte_ratio": round(bytes_out / max(bytes_in, 1), 2),
+            "byte_ratio": byte_ratio,
             "avg_flow_duration_sec": round(bucket["avg_duration"]["value"] or 0, 1),
+            "indicators": indicators,
             "mitre_techniques": ["T1071", "T1573", "T1571"],
         })
 
@@ -194,13 +225,14 @@ def _entropy(s: str) -> float:
 
 async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> list[dict]:
     """
-    Detect DNS tunneling indicators:
+    Detect DNS tunneling indicators from Suricata DNS events AND Ddospot
+    honeypot events:
     - High query frequency per source
     - Long subdomain names (high entropy = encoded data)
     - Unusual record types (TXT, NULL, CNAME heavy = tunneling)
-    - Large response sizes
+    - Large response sizes (Suricata only)
     """
-    query = {
+    suricata_query = {
         "size": 500,
         "query": {"bool": {"must": [
             {"term": {"type.keyword": "Suricata"}},
@@ -211,58 +243,99 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
                      "dns.type", "@timestamp"],
         "sort": [{"@timestamp": "desc"}],
     }
+    # Ddospot (T-Pot DNSPot) uses a flat schema
+    ddospot_query = {
+        "size": 500,
+        "query": {"bool": {"must": [
+            {"term": {"type.keyword": "Ddospot"}},
+            {"range": {"@timestamp": {"gte": f"now-{window_min}m"}}},
+        ]}},
+        "_source": ["src_ip", "dns_name", "dns_type", "dns_cls", "@timestamp"],
+        "sort": [{"@timestamp": "desc"}],
+    }
 
-    data = await _es_search(client, "logstash-*", query)
-    hits = data.get("hits", {}).get("hits", [])
+    suri_data, ddo_data = await asyncio.gather(
+        _es_search(client, "logstash-*", suricata_query),
+        _es_search(client, "logstash-*", ddospot_query),
+    )
+    suri_hits = suri_data.get("hits", {}).get("hits", [])
+    ddo_hits = ddo_data.get("hits", {}).get("hits", [])
 
-    if not hits:
+    if not suri_hits and not ddo_hits:
         logger.info("DNS anomaly: no DNS events found in window")
         return []
+    logger.info("DNS anomaly: %d Suricata + %d Ddospot events",
+                len(suri_hits), len(ddo_hits))
 
-    # Group by source IP
+    # Group by source IP, unified schema
     ip_data = defaultdict(lambda: {
         "queries": [], "rrtype_counts": Counter(), "timestamps": [],
         "query_lengths": [], "entropies": [], "rdata_sizes": [],
+        "sources": set(),
     })
 
-    for h in hits:
-        s = h["_source"]
-        ip = s.get("src_ip", "")
+    def _record(ip: str, query_name: str, rrtype: str, rdata: str,
+                ts: str, source: str):
         if not ip or _is_private_ip(ip):
-            continue
-
-        dns = s.get("dns", {}) if isinstance(s.get("dns"), dict) else {}
-        query_name = dns.get("query", s.get("dns.query", ""))
-        rrtype = dns.get("rrtype", s.get("dns.rrtype", ""))
-        rdata = dns.get("rdata", s.get("dns.rdata", ""))
-
+            return
         d = ip_data[ip]
+        d["sources"].add(source)
         d["queries"].append(query_name)
-        d["timestamps"].append(s.get("@timestamp", ""))
-
+        d["timestamps"].append(ts)
         if query_name:
             d["query_lengths"].append(len(query_name))
-            # Calculate entropy of the subdomain part
             parts = query_name.split(".")
             if len(parts) > 2:
                 subdomain = ".".join(parts[:-2])
                 d["entropies"].append(_entropy(subdomain))
-
         if rrtype:
             d["rrtype_counts"][rrtype] += 1
-
         if rdata:
             d["rdata_sizes"].append(len(str(rdata)))
+
+    for h in suri_hits:
+        s = h["_source"]
+        dns = s.get("dns", {}) if isinstance(s.get("dns"), dict) else {}
+        _record(
+            ip=s.get("src_ip", ""),
+            query_name=dns.get("query", s.get("dns.query", "")),
+            rrtype=dns.get("rrtype", s.get("dns.rrtype", "")),
+            rdata=dns.get("rdata", s.get("dns.rdata", "")),
+            ts=s.get("@timestamp", ""),
+            source="suricata",
+        )
+
+    for h in ddo_hits:
+        s = h["_source"]
+        _record(
+            ip=s.get("src_ip", ""),
+            query_name=s.get("dns_name", ""),
+            rrtype=s.get("dns_type", ""),
+            rdata="",
+            ts=s.get("@timestamp", ""),
+            source="ddospot",
+        )
 
     results = []
     for ip, d in ip_data.items():
         query_count = len(d["queries"])
-        if query_count < 3:
+        sources = d["sources"]
+        hit_ddospot = "ddospot" in sources
+        # Lower floor when the Ddospot honeypot saw the IP at all,
+        # because any external interaction with the dark-DNS pot is noteworthy.
+        min_queries = 2 if hit_ddospot else 3
+        if query_count < min_queries:
             continue
 
-        # Scoring factors
         score = 0
         indicators = []
+
+        # Ddospot interaction itself is a signal (dark-net DNS honeypot)
+        if hit_ddospot:
+            score += 15
+            indicators.append("ddospot_hit")
+            if len(sources) > 1:
+                indicators.append(f"multi_source({','.join(sorted(sources))})")
 
         # Factor 1: Query frequency (>10 in window = suspicious for honeypot)
         if query_count > 10:
@@ -619,8 +692,10 @@ def _primary_detection_type(scores: dict) -> str:
     # Return the highest-scoring layer, or "multi_layer" if top 2 are close
     if layer_scores[0][0] == 0:
         return "unknown"
-    if len(layer_scores) > 1 and layer_scores[1][0] > 0:
-        if layer_scores[1][0] / max(layer_scores[0][0], 1) > 0.7:
+    # Surface multi_layer when secondary layer is at least ~50% of primary
+    # (previous threshold 0.7 was too strict, masking real multi-layer hits).
+    if len(layer_scores) > 1 and layer_scores[1][0] > 10:
+        if layer_scores[1][0] / max(layer_scores[0][0], 1) > 0.5:
             return "multi_layer"
     return layer_scores[0][1]
 

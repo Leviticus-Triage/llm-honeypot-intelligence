@@ -26,3 +26,50 @@ log_level: "INFO"
 
 # CVE Honeypot Engine: enhance LLM prompts with CVE-specific system context
 cve_engine_enabled: true
+
+# ---------------------------------------------------------------------------
+# Multi-LLM Task Router (Phase 1)
+# ---------------------------------------------------------------------------
+# Callers can select a task via:
+#   - HTTP header   : X-LLM-Task: rule_generate
+#   - body field    : {"_task": "rule_generate", ...}
+#   - options hint  : {"options": {"task": "rule_generate"}, ...}
+# If no task is set, requests are forwarded unchanged (legacy behaviour).
+# When a task is set explicitly, the body "model" is rewritten to the mapped
+# Ollama model and task-specific option defaults are merged in (caller wins).
+
+default_task: "honeypot_response"
+
+task_models:
+  honeypot_response: "openchat"
+  rule_generate:     "qwen2.5-coder:7b"
+  rule_validate:     "llama3.1:8b"
+  rule_dedupe_embed: "nomic-embed-text"
+  offline_classify:  "dolphin-llama3:8b"
+
+task_options:
+  honeypot_response:
+    temperature: 0.7
+    num_ctx: 4096
+  rule_generate:
+    temperature: 0.1
+    top_p: 0.9
+    num_ctx: 8192
+    format: "json"
+  rule_validate:
+    temperature: 0.0
+    num_ctx: 8192
+    format: "json"
+  offline_classify:
+    temperature: 0.2
+    num_ctx: 4096
+    format: "json"
+
+task_timeouts:
+  # Worst-case budgets (include ~130s cold-load on 12GB GPU when rotating models).
+  # `keep_alive` defaults keep hot models resident so repeat calls are fast.
+  honeypot_response: 30
+  rule_generate:     240
+  rule_validate:     180
+  rule_dedupe_embed: 15
+  offline_classify:  180
