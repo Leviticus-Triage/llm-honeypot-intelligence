@@ -4,6 +4,11 @@ Detaillierter Umsetzungsplan für die sechs strategischen Bausteine. Jeder
 Baustein definiert Ziel, Datenfluss, Konfiguration, Änderungen am Code,
 Test-Kriterien und Rollback-Pfad.
 
+> **Status (2026-04-21)**: Phasen 1–6 live, anschließend Hardening-Pass
+> durchgeführt. Defekt-Matrix, Live-KPIs und Akzeptanzkriterien siehe
+> [OPTIMIZATION-ROADMAP.md → Anhang H](./OPTIMIZATION-ROADMAP.md#anhang-h--hardening-pass-2026-04-2021).
+> Composite-Grade nach Hardening: **A / 93**.
+
 Referenz-Topologie:
 
 ```

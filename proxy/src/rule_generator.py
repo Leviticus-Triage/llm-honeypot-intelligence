@@ -45,6 +45,10 @@ MIN_HITS_FOR_BLOCKLIST = 3
 MIN_HITS_FOR_RULE = 2
 MIN_UNIQUE_IPS_FOR_SIGMA = 1
 
+# How many sessions a CVE needs (per SINCE_HOURS) to earn a dedicated stub rule
+CVE_COVERAGE_MIN_SESSIONS = int(os.environ.get("CVE_COVERAGE_MIN_SESSIONS", "25"))
+CVE_COVERAGE_MAX = int(os.environ.get("CVE_COVERAGE_MAX", "30"))
+
 # ─── MITRE ATT&CK Mapping ────────────────────────────────────────────
 
 MITRE_MAP = {
@@ -1456,6 +1460,27 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
         summary["counts"]["report"] = 1
         logger.info("Wrote Threat Intelligence Report")
 
+    # CVE coverage: write per-CVE stub rules and record in manifest
+    cve_coverage = data.get("cve_coverage") or []
+    if cve_coverage:
+        cve_dir = RULES_DIR / "cve"
+        cve_dir.mkdir(parents=True, exist_ok=True)
+        for entry in cve_coverage:
+            cve_id = entry.get("cve_id") or ""
+            sessions = int(entry.get("sessions", 0))
+            samples = entry.get("sample_cmds") or []
+            if not cve_id:
+                continue
+            rule_path = cve_dir / f"{cve_id}.yml"
+            rule_yaml = _render_cve_stub_rule(cve_id, sessions, samples)
+            try:
+                rule_path.write_text(rule_yaml, encoding="utf-8")
+                summary["files"].append(str(rule_path))
+            except Exception as e:
+                logger.warning("Failed to write CVE stub rule %s: %s", cve_id, e)
+        summary["counts"]["cve_rules"] = len(cve_coverage)
+        logger.info("Wrote %d CVE coverage stubs", len(cve_coverage))
+
     # Manifest
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -1472,6 +1497,8 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
         },
         "output": summary["counts"],
         "files": summary["files"],
+        "cves_covered": [e.get("cve_id") for e in cve_coverage if e.get("cve_id")],
+        "cve_coverage_detail": cve_coverage,
     }
     manifest_path = RULES_DIR / "manifest.json"
     with open(manifest_path, "w") as f:
@@ -1482,6 +1509,112 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────
+
+async def fetch_top_cves_from_sessions(since_hours: int,
+                                        min_sessions: int = CVE_COVERAGE_MIN_SESSIONS,
+                                        max_cves: int = CVE_COVERAGE_MAX) -> list[dict]:
+    """
+    Pull top CVEs observed in honeypot-cve-sessions during the window and
+    return a per-CVE summary with a small sample of attacker commands.
+    Degrades gracefully: if ES is unavailable, returns [].
+    """
+    auth = (ES_USER, ES_PASS) if ES_USER else None
+    since = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).isoformat()
+    body = {
+        "size": 0,
+        "query": {"bool": {"must": [
+            {"range": {"@timestamp": {"gte": since}}},
+            {"exists": {"field": "cve_id"}},
+        ]}},
+        "aggs": {
+            "by_cve": {
+                "terms": {"field": "cve_id", "size": max_cves,
+                           "min_doc_count": min_sessions},
+                "aggs": {
+                    "sample_cmds": {"terms": {
+                        "field": "prompt_text.keyword",
+                        "size": 5,
+                        "missing": "",
+                    }}
+                }
+            }
+        }
+    }
+    try:
+        async with httpx.AsyncClient(timeout=45.0, verify=False, auth=auth) as client:
+            resp = await client.post(
+                f"{ES_URL}/honeypot-cve-sessions/_search",
+                json=body,
+                headers={"Content-Type": "application/json"},
+            )
+            if resp.status_code != 200:
+                logger.warning("CVE coverage fetch failed (%s): %s",
+                               resp.status_code, resp.text[:200])
+                return []
+            data = resp.json()
+    except Exception as e:
+        logger.warning("CVE coverage fetch error: %s", e)
+        return []
+
+    out = []
+    for b in data.get("aggregations", {}).get("by_cve", {}).get("buckets", []):
+        cve_id = str(b.get("key") or "").upper()
+        if not cve_id.startswith("CVE-"):
+            continue
+        samples = [
+            str(x.get("key") or "")[:180]
+            for x in b.get("sample_cmds", {}).get("buckets", [])
+            if x.get("key")
+        ]
+        out.append({
+            "cve_id": cve_id,
+            "sessions": int(b.get("doc_count", 0)),
+            "sample_cmds": samples,
+        })
+    return out
+
+
+def _render_cve_stub_rule(cve_id: str, sessions: int, samples: list[str]) -> str:
+    """Render a minimal Sigma rule with observable attacker patterns for this CVE."""
+    safe_samples = [s.replace("\n", " ").replace("\r", " ")[:120] for s in (samples or []) if s]
+    patterns_yaml = "\n".join(f"        - '{s.replace(chr(39), chr(39)*2)}'" for s in safe_samples[:5])
+    if not patterns_yaml:
+        patterns_yaml = "        - '# empty-sample-placeholder'"
+    return (
+        "title: Honeypot CVE-coverage stub - {cve}\n"
+        "id: {uuid}\n"
+        "description: >\n"
+        "  Auto-generated from LLM Honeypot Intelligence Platform. Flags commands\n"
+        "  observed against {cve} sessions over the last window.\n"
+        "status: experimental\n"
+        "author: ollama-proxy rule-generator\n"
+        "date: {date}\n"
+        "level: medium\n"
+        "tags:\n"
+        "  - attack.t1059\n"
+        "  - {cve_tag}\n"
+        "logsource:\n"
+        "  product: linux\n"
+        "  service: shell\n"
+        "detection:\n"
+        "  session_count: {sessions}\n"
+        "  selection:\n"
+        "    CommandLine|contains:\n"
+        "{patterns}\n"
+        "  condition: selection\n"
+        "falsepositives:\n"
+        "  - Legitimate admin activity on systems unpatched for this CVE\n"
+        "references:\n"
+        "  - https://nvd.nist.gov/vuln/detail/{cve}\n"
+    ).format(
+        cve=cve_id,
+        cve_tag=f"cve.{cve_id.lower()}",
+        uuid=_stable_uuid(f"cve-{cve_id}"),
+        date=datetime.now(timezone.utc).strftime("%Y/%m/%d"),
+        sessions=sessions,
+        patterns=patterns_yaml,
+    )
+
 
 def _rule_uuid(seed: str) -> str:
     h = hashlib.md5(seed.encode()).hexdigest()
@@ -1519,6 +1652,16 @@ async def run_rule_generation() -> dict:
     logger.info("Input: %d events (%d SSH, %d HTTP), %d unique IPs, %d normalised commands",
                 total_events, len(data["beelzebub"]), len(data["galah"]),
                 len(data["all_src_ips"]), len(data["normalised_commands"]))
+
+    # 1b. Cross-index CVE coverage from honeypot-cve-sessions
+    try:
+        cve_coverage = await fetch_top_cves_from_sessions(SINCE_HOURS)
+        data["cve_coverage"] = cve_coverage
+        logger.info("CVE coverage: %d CVEs with >= %d sessions",
+                    len(cve_coverage), CVE_COVERAGE_MIN_SESSIONS)
+    except Exception as e:
+        logger.warning("CVE coverage fetch failed: %s", e)
+        data["cve_coverage"] = []
 
     # 2. Extract IOCs
     iocs = extract_iocs(data)

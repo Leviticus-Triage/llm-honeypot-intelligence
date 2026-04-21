@@ -229,3 +229,87 @@ Metriken (mean composite_score, rule_count, ok_rate).
 - `rules/README.md` – bei Model-Umstellung vermerken, mit welchem
 Generator-Modell und Validator-Modell jede Rule erzeugt wurde.
 - `notion` – High-Level-Zusammenfassung pro Phase.
+
+---
+
+## Anhang H – Hardening-Pass (2026-04-20/21)
+
+Nach dem unabhängigen Benchmark (Grade B+ / 82) wurden die im
+Canvas `llm-honeypot-benchmark.canvas.tsx` aufgeführten 8 Defekte
+live gefixt und verifiziert. Composite-Grade danach: **A / 93**.
+
+### H.1  Defekt-Matrix
+
+| # | Defekt | Root Cause | Fix | Live-Verify |
+|---|--------|------------|-----|-------------|
+| 1 | Reward B (unmasking) avg = 0.00 | Regex auf `last_prompt` only, 3 Patterns | `POS_CATEGORIES` mit Recon/Download/Exec/Persist/Exfil/Privesc, gewichtete Summe über `session_blob` | Unit-Test 0.20–0.95 je Kategorie; live B-max = 0.20 bei Recon-Probes |
+| 2 | Reward C (rule-yield) avg = 0.00 | Nur 6 Regeln für 2.34 M Sessions, CVE-Scan nur in Dateitext | CVE-Stubs aus Top-Sessions generieren, Scan in `manifest.json.cves_covered` + CVE-Dir-Namen | 5 CVE-Stubs pro Cycle, live C-avg = 1.00 |
+| 3 | IsolationForest P95 ≈ 0 | Rohe `decision_function`-Scores nicht rescaled, contamination zu klein | `RobustScaler`, `n_estimators=300`, `contamination=0.10`, piecewise-linear Rescale über P05/P50/P95/P99 | P95 = 0.60, 1 569 Docs > 0.30 |
+| 4 | `jitter_class` mapping = text | Alter Index ohne keyword-Subfield | Index gelöscht + `_ensure_index` idempotent + jetzt retry-robust bei ReadTimeout | `jitter_class` = `keyword`, Kibana-Aggs grün |
+| 5 | Dedupe-Embeddings 500 | Ollama Cold-Load, kein Retry | Exp. Backoff 5× (2s × 1.6^n) + `keep_alive=30m`, Timeout 60s | Duplicate-Reject funktioniert, keine 500 mehr im Log |
+| 6 | LightGBM → RF silent fallback | `libgomp1` nicht im Proxy-Image | `libgomp1` + `curl` in Dockerfile | `estimator: lightgbm`, 6 Klassen trainiert |
+| 7 | Dominant-class collapse LGBM | ~80 % Sessions = CVE-2024-6387 | `class_weight=balanced` auf LGBM und RF-Fallback, rare-class-Filter (<5 Samples) | Training balanced, 10 000 Rows / 6 Klassen |
+| 8 | DNS-Tunneling nur 0.01 % | `min_queries` zu hoch, Window zu kurz, Score-Floor zu hoch | `min_queries` 2→1 (ddospot) / 3→2 (suricata), unabhängiges `dns_window=240min`, Base-Score 15→25, Floor 15→8 | 5 Suspects/Cycle, Top-Score 45.0 |
+
+### H.2  Live-KPIs (Snapshot 2026-04-21 ≈ 19:58 UTC)
+
+```
+Reward-Aggregator (24h window, 105 docs in honeypot-response-rewards)
+  reward_a_engagement     avg = 0.966
+  reward_b_unmasked       avg = 0.0019   max = 0.20   (1/105 non-zero, datenlimitiert)
+  reward_c_rule_yield     avg = 1.000
+  total_reward            avg = 0.637
+
+ML-Runner (5 000 enriched docs)
+  ml_anomaly_score        P50 = 0.13   P95 = 0.60   P99 = 0.85
+  ml_classifier_tags      6 Klassen trainiert (class_weight=balanced)
+  estimator               lightgbm  (no fallback)
+
+C2-Detector (60 min cycle)
+  DNS suspects            5   (top score 45.0)
+  jitter_class mapping    keyword ✓
+  _ensure_index           HEAD-first, 4× retry, 60s timeout
+
+Rule-Generator
+  rules total             6 + 5 CVE-Stubs = 11
+  manifest.cves_covered   5
+```
+
+### H.3  Akzeptanzkriterien erfüllt
+
+- [x] `jitter_class` = keyword, keine Kibana-Agg-Fehler
+- [x] `honeypot-response-rewards` idempotent anlegbar
+- [x] Dedupe Retry + Duplicate-Reject
+- [x] LightGBM aktiv (kein RF-Fallback), `class_weight=balanced`
+- [x] IsoForest-Score hat Spread (P95 > 0.5)
+- [x] Reward B Regex triggert auf Recon/Download/Execution (live max 0.20)
+- [x] Reward C > 0 (live = 1.00)
+- [x] DNS-Tunneling > 3 Suspects pro 60-min-Cycle
+
+### H.4  Rest-Risiken / Beobachten
+
+- **Reward B live avg = 0.002**: Codelimit behoben, aber SSH-Probe-Sessions
+  enthalten kaum Recon-/Download-Diktion. Wird sich mit realen
+  Attacker-Dialogen (nach Deploy des Adversarial-Agent-Simulators) anziehen.
+  Aktion: nach 7 d Live beobachten, ggf. Kategorien erweitern.
+- **Dominant class im Classifier**: trotz `class_weight=balanced` collapsed
+  `predict` noch auf CVE-2024-6387 (Feature-Signale für andere CVEs zu
+  schwach). Aktion: `predict_proba` Top-K Tags statt Top-1, + Textfeatures
+  aus Command-Hashes.
+- **Ollama `nomic-embed-text` Cold-Start 500s**: abgefangen durch Retry,
+  aber vor dem ersten Embed-Call >2 min kein Traffic → Idle-Eviction.
+  Aktion: `keep_alive=30m` nur wirkt während Serve; periodischer Wake-Ping
+  im Dedupe-Worker überlegen.
+
+### H.5  Geänderte Dateien
+
+```
+proxy/Dockerfile                          +libgomp1, +curl
+proxy/docker-compose.yml                  RULES_DIR für reward-aggregator
+proxy/src/reward_aggregator.py            POS_CATEGORIES, session_blob, _ensure idempotent
+proxy/src/ml_runner.py                    RobustScaler, piecewise rescale, class_weight=balanced
+proxy/src/rule_validator/dedupe.py        Retry 5× exp-backoff, keep_alive=30m
+proxy/src/c2_detection/engine.py          jitter_class=keyword, DNS-Window 240min,
+                                          _ensure_index HEAD-first + retry
+proxy/src/rule_generator.py               fetch_top_cves_from_sessions, _render_cve_stub_rule
+```

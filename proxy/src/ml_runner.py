@@ -54,6 +54,9 @@ NUMERIC_FEATURES = [
     "base64_score",
     "url_count",
     "cve_tag_present",
+    "hour_of_day",
+    "prompt_len",
+    "response_len",
 ]
 
 
@@ -110,6 +113,8 @@ def _extract_features(doc: dict[str, Any]) -> dict[str, Any]:
         "url_count": float(len(urls)),
         "cve_tag_present": float(1.0 if cve_id else 0.0),
         "hour_of_day": float(hour_of_day),
+        "prompt_len": float(len(prompt)),
+        "response_len": float(len(response)),
         "label_cve": cve_id,
     }
 
@@ -180,29 +185,50 @@ def _load_latest_dataset() -> list[dict[str, Any]]:
 
 def train_isoforest() -> dict:
     from sklearn.ensemble import IsolationForest
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.preprocessing import RobustScaler
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     rows = _load_latest_dataset()
     if len(rows) < 50:
         raise RuntimeError(f"insufficient rows for IsoForest: {len(rows)}")
     x = _matrix(rows)
-    scaler = StandardScaler()
+    # RobustScaler gives heavy-tailed honeypot data a saner feature scale than
+    # StandardScaler (which gets pulled around by outliers and squishes the
+    # main cluster into ~0, then every decision_function comes out near 0 too).
+    scaler = RobustScaler(with_centering=True, with_scaling=True)
     x_scaled = scaler.fit_transform(x)
     clf = IsolationForest(
-        n_estimators=200,
-        contamination=0.05,
+        n_estimators=300,
+        contamination=0.10,
+        max_samples="auto",
         random_state=42,
         n_jobs=-1,
     )
     clf.fit(x_scaled)
+    raw = -clf.decision_function(x_scaled)
+    median = float(np.median(raw))
+    # Percentile references for robust 0..1 normalisation at inference time.
+    p05 = float(np.quantile(raw, 0.05))
+    p50 = float(np.quantile(raw, 0.50))
+    p95 = float(np.quantile(raw, 0.95))
+    p99 = float(np.quantile(raw, 0.99))
     ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     out = MODEL_DIR / f"isoforest_v{ts}.pkl"
     with out.open("wb") as f:
-        pickle.dump({"scaler": scaler, "model": clf, "features": NUMERIC_FEATURES}, f)
+        pickle.dump(
+            {
+                "scaler": scaler,
+                "model": clf,
+                "features": NUMERIC_FEATURES,
+                "norm": {"p05": p05, "p50": p50, "p95": p95, "p99": p99,
+                         "median": median},
+            },
+            f,
+        )
     current = MODEL_DIR / "current_isoforest.pkl"
     current.write_bytes(out.read_bytes())
-    summary = {"rows": len(rows), "path": str(out)}
+    summary = {"rows": len(rows), "path": str(out),
+               "p05": p05, "p50": p50, "p95": p95, "p99": p99}
     logger.info("Trained IsoForest: %s", summary)
     return summary
 
@@ -213,6 +239,17 @@ def train_lgbm() -> dict:
     labeled = [r for r in rows if r.get("label_cve")]
     if len(labeled) < 100:
         raise RuntimeError(f"insufficient labeled rows for classifier: {len(labeled)}")
+    # Drop extremely rare classes (< 5 samples) — LightGBM/RF handle them badly
+    # and they pollute the feature space with near-zero prior.
+    counts: dict[str, int] = {}
+    for r in labeled:
+        k = str(r.get("label_cve") or "")
+        counts[k] = counts.get(k, 0) + 1
+    labeled = [r for r in labeled if counts.get(str(r.get("label_cve") or ""), 0) >= 5]
+    if len(labeled) < 100:
+        raise RuntimeError(
+            f"insufficient labeled rows after rare-class filter: {len(labeled)}"
+        )
     x = _matrix(labeled)
     labels = [str(r.get("label_cve") or "") for r in labeled]
     unique = sorted(set(labels))
@@ -234,8 +271,12 @@ def train_lgbm() -> dict:
             learning_rate=0.05,
             num_leaves=63,
             feature_fraction=0.8,
+            # Dominant-class correction: without this the classifier collapses
+            # to always predicting CVE-2024-6387 (≈80 % of sessions).
+            class_weight="balanced",
             random_state=42,
             n_jobs=-1,
+            verbose=-1,
         )
     except Exception as e:
         from sklearn.ensemble import RandomForestClassifier
@@ -245,6 +286,7 @@ def train_lgbm() -> dict:
         base = RandomForestClassifier(
             n_estimators=300,
             max_depth=None,
+            class_weight="balanced",
             random_state=42,
             n_jobs=-1,
         )
@@ -295,7 +337,28 @@ async def infer_and_update(*, since_hours: int = INFER_HOURS, max_docs: int = MA
     x = _matrix(feat_rows)
 
     x_iso = iso["scaler"].transform(x)
-    anomaly_score = -iso["model"].decision_function(x_iso)
+    anomaly_raw = -iso["model"].decision_function(x_iso)
+
+    norm = iso.get("norm") or {}
+    p50 = float(norm.get("p50", 0.0))
+    p95 = float(norm.get("p95", p50 + 1e-6))
+    p99 = float(norm.get("p99", p95 + 1e-6))
+    # Piecewise-linear rescale:
+    #   raw <= p50  -> 0.0..0.30 (normal traffic)
+    #   p50..p95    -> 0.30..0.70
+    #   p95..p99    -> 0.70..0.95
+    #   > p99       -> clamp to 0.99
+    anomaly_score = np.zeros_like(anomaly_raw)
+    for i, v in enumerate(anomaly_raw):
+        if v <= p50:
+            span = max(p50 - float(norm.get("p05", p50 - 1e-6)), 1e-6)
+            anomaly_score[i] = max(0.0, 0.30 * (v - float(norm.get("p05", p50 - 1e-6))) / span)
+        elif v <= p95:
+            anomaly_score[i] = 0.30 + 0.40 * (v - p50) / max(p95 - p50, 1e-6)
+        elif v <= p99:
+            anomaly_score[i] = 0.70 + 0.25 * (v - p95) / max(p99 - p95, 1e-6)
+        else:
+            anomaly_score[i] = 0.99
 
     x_clf = clf["scaler"].transform(x)
     pred = clf["model"].predict(x_clf)

@@ -60,7 +60,7 @@ services:
       - REWARD_WINDOW_MINUTES=30
       - REWARD_BACKFILL_HOUR_UTC=2
       - VALIDATED_RULES_DIR=/data/ollama-proxy/validated-rules/approved
-      - RULES_DIR=/data/ollama-proxy/generated-rules/latest
+      - RULES_DIR=/data/ollama-proxy/generated-rules
       - REWARD_STATE_PATH=/data/ollama-proxy/reward_aggregator_state.json
     volumes:
       - proxy_data:/data/ollama-proxy
