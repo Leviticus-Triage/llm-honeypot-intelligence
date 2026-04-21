@@ -24,6 +24,7 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | Phase 2 Rule-Validator (LLM-as-a-Judge) | ✅ Live auf `.116`: ONESHOT gelaufen (`processed=12`, `approved=8`, `rejected_static=3`, `rejected_llm=1`) | `proxy/src/rule_validator/*`, `proxy/run_rule_validator.py` |
 | Phase 3 Rule-Dedupe (Embeddings + SQLite) | ✅ Live: `rejected/duplicate` aktiv, konservatives Gate (`cos>=0.985` + `jaccard>=0.80`) | `proxy/src/rule_validator/dedupe.py`, `proxy/run_rule_validator.py` |
 | Phase 4 Beaconing 2.0 (Periodogramm/FFT + Jitter-Klassen) | ✅ Live auf `.116`: `c2-detector` rebuilt, OneShot `flagged_ips=23`, neue Felder in ES (`dominant_period_sec`, `peak_power`, `spectral_flatness`, `jitter_class`) sichtbar | `proxy/src/c2_detection/engine.py` |
+| Phase 5 RL-Reward-Aggregator + Cache-Gewichtung | ✅ Live auf `.116`: Reward-Index aktiv (`honeypot-response-rewards`), SQLite `response_rewards` befuellt, Cache-Ranking reward-aware | `proxy/src/reward_aggregator.py`, `proxy/src/cache.py`, `proxy/src/models.py`, `proxy/run_reward_aggregator.py` |
 
 ---
 
@@ -130,6 +131,12 @@ Speichern in neuem Index `honeypot-response-rewards`, Felder
 `response_hash, reward_a, reward_b, reward_c, total_reward`. Der Proxy
 zieht beim nächsten Cache-Lookup bevorzugt Antworten mit hohem
 `total_reward`.
+
+**Status (21.04.2026): DONE als Phase 5.**
+- Neuer Service `reward-aggregator` laeuft alle 15 min.
+- Reward-Signale A/B/C werden berechnet und in ES + SQLite persistiert.
+- Cache nutzt live Reward-Gewichtung in semantischer Prompt-Auswahl
+  (`0.70 similarity + 0.30 reward_norm`) und im Response-Pick.
 
 ### 2.4 Rule-Dedupe via Embeddings
 `nomic-embed-text` (bereits installiert) → Embedding der Regel-Beschreibung

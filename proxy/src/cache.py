@@ -15,6 +15,9 @@ from .models import get_db
 
 logger = logging.getLogger("ollama-proxy.cache")
 
+SIMILARITY_WEIGHT = 0.70
+REWARD_WEIGHT = 0.30
+
 
 def compute_prompt_hash(messages: list, model: str) -> str:
     """Compute a deterministic hash of the prompt messages + model."""
@@ -113,29 +116,45 @@ class HybridCache:
         with get_db() as conn:
             if cve_id:
                 rows = conn.execute(
-                    "SELECT id, prompt_hash, prompt_embedding FROM prompt_cache "
-                    "WHERE prompt_embedding IS NOT NULL AND cve_id = ?",
+                    "SELECT pc.id, pc.prompt_hash, pc.prompt_embedding, "
+                    "       COALESCE(MAX(rr.total_reward), 0.0) AS max_reward "
+                    "FROM prompt_cache pc "
+                    "LEFT JOIN responses r ON r.prompt_cache_id = pc.id "
+                    "LEFT JOIN response_rewards rr ON rr.response_id = r.id "
+                    "WHERE pc.prompt_embedding IS NOT NULL AND pc.cve_id = ? "
+                    "GROUP BY pc.id, pc.prompt_hash, pc.prompt_embedding",
                     (cve_id,),
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT id, prompt_hash, prompt_embedding FROM prompt_cache "
-                    "WHERE prompt_embedding IS NOT NULL AND (cve_id = '' OR cve_id IS NULL)"
+                    "SELECT pc.id, pc.prompt_hash, pc.prompt_embedding, "
+                    "       COALESCE(MAX(rr.total_reward), 0.0) AS max_reward "
+                    "FROM prompt_cache pc "
+                    "LEFT JOIN responses r ON r.prompt_cache_id = pc.id "
+                    "LEFT JOIN response_rewards rr ON rr.response_id = r.id "
+                    "WHERE pc.prompt_embedding IS NOT NULL "
+                    "  AND (pc.cve_id = '' OR pc.cve_id IS NULL) "
+                    "GROUP BY pc.id, pc.prompt_hash, pc.prompt_embedding"
                 ).fetchall()
 
-        best_sim = 0.0
+        best_combined = 0.0
         best_row = None
+        best_sim = 0.0
         for row in rows:
             cached_vec = deserialize_embedding(row["prompt_embedding"])
             sim = cosine_similarity(query_vec, cached_vec)
-            if sim > best_sim:
-                best_sim = sim
+            reward_norm = max(0.0, min(1.0, (float(row["max_reward"]) + 1.0) / 2.0))
+            combined = (SIMILARITY_WEIGHT * sim) + (REWARD_WEIGHT * reward_norm)
+            if combined > best_combined:
+                best_combined = combined
                 best_row = row
+                best_sim = sim
 
         if best_row and best_sim >= self.semantic_threshold:
             logger.info(
-                "Semantic hit: similarity=%.3f hash=%s",
+                "Semantic hit: similarity=%.3f combined=%.3f hash=%s",
                 best_sim,
+                best_combined,
                 best_row["prompt_hash"][:12],
             )
             with get_db() as conn:
@@ -148,16 +167,26 @@ class HybridCache:
     def _pick_response(self, conn, prompt_id: int, prompt_hash: str, src_ip: str = "", cve_meta: dict = None) -> Optional[dict]:
         """Pick a response using weighted random selection based on engagement scores."""
         responses = conn.execute(
-            "SELECT id, response_text, engagement_score, times_served "
-            "FROM responses WHERE prompt_cache_id = ? ORDER BY engagement_score DESC",
+            "SELECT r.id, r.response_text, r.engagement_score, r.times_served, "
+            "       COALESCE(rr.total_reward, 0.0) AS total_reward "
+            "FROM responses r "
+            "LEFT JOIN response_rewards rr ON rr.response_id = r.id "
+            "WHERE r.prompt_cache_id = ? "
+            "ORDER BY r.engagement_score DESC",
             (prompt_id,),
         ).fetchall()
 
         if not responses:
             return None
 
-        # Softmax-weighted selection based on engagement scores
-        scores = [max(r["engagement_score"], 0.01) for r in responses]
+        # Weighted selection based on engagement + reward.
+        # total_reward is in [-1, 1] and is normalized to [0, 1].
+        scores = []
+        for r in responses:
+            engagement = max(0.0, min(1.0, float(r["engagement_score"])))
+            reward_norm = max(0.0, min(1.0, (float(r["total_reward"]) + 1.0) / 2.0))
+            blended = 0.60 * engagement + 0.40 * reward_norm
+            scores.append(max(blended, 0.01))
         total_score = sum(scores)
         weights = [s / total_score for s in scores]
 
@@ -186,6 +215,7 @@ class HybridCache:
             "response_text": chosen["response_text"],
             "source": "cache",
             "engagement_score": chosen["engagement_score"],
+            "total_reward": chosen["total_reward"],
         }
 
     async def store(

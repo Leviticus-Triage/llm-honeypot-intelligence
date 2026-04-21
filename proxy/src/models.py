@@ -68,6 +68,20 @@ def init_db():
             prompt_hash TEXT NOT NULL DEFAULT '',
             FOREIGN KEY (response_id) REFERENCES responses(id)
         );
+
+        CREATE TABLE IF NOT EXISTS response_rewards (
+            response_id INTEGER PRIMARY KEY,
+            response_hash TEXT NOT NULL DEFAULT '',
+            session_id TEXT NOT NULL DEFAULT '',
+            model TEXT NOT NULL DEFAULT '',
+            cve_tag TEXT NOT NULL DEFAULT '',
+            reward_a_engagement REAL NOT NULL DEFAULT 0.0,
+            reward_b_unmasked REAL NOT NULL DEFAULT 0.0,
+            reward_c_rule_yield REAL NOT NULL DEFAULT 0.0,
+            total_reward REAL NOT NULL DEFAULT 0.0,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (response_id) REFERENCES responses(id)
+        );
     """)
 
     # Migrations: add columns if missing (for existing databases)
@@ -90,6 +104,9 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_prompt_hash ON prompt_cache(prompt_hash);
         CREATE INDEX IF NOT EXISTS idx_responses_prompt ON responses(prompt_cache_id);
         CREATE INDEX IF NOT EXISTS idx_responses_score ON responses(engagement_score DESC);
+        CREATE INDEX IF NOT EXISTS idx_rewards_total ON response_rewards(total_reward DESC);
+        CREATE INDEX IF NOT EXISTS idx_rewards_hash ON response_rewards(response_hash);
+        CREATE INDEX IF NOT EXISTS idx_rewards_cve ON response_rewards(cve_tag);
         CREATE INDEX IF NOT EXISTS idx_serve_log_time ON serve_log(served_at);
         CREATE INDEX IF NOT EXISTS idx_serve_log_response ON serve_log(response_id);
         CREATE INDEX IF NOT EXISTS idx_serve_log_ip ON serve_log(src_ip);
@@ -106,12 +123,18 @@ def get_cache_stats() -> dict:
         total_prompts = conn.execute("SELECT COUNT(*) FROM prompt_cache").fetchone()[0]
         total_responses = conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
         total_served = conn.execute("SELECT COUNT(*) FROM serve_log").fetchone()[0]
+        total_rewards = conn.execute("SELECT COUNT(*) FROM response_rewards").fetchone()[0]
         avg_score = conn.execute(
             "SELECT AVG(engagement_score) FROM responses"
+        ).fetchone()[0]
+        avg_reward = conn.execute(
+            "SELECT AVG(total_reward) FROM response_rewards"
         ).fetchone()[0]
     return {
         "total_prompts": total_prompts,
         "total_responses": total_responses,
         "total_served": total_served,
+        "total_rewards": total_rewards,
         "avg_engagement_score": round(avg_score, 3) if avg_score else 0.0,
+        "avg_total_reward": round(avg_reward, 3) if avg_reward else 0.0,
     }

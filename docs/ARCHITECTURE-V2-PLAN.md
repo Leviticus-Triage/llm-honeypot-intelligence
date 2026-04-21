@@ -593,7 +593,7 @@ statt nur zu halluzinieren.
 | P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | **DONE 2026-04-21 (§12)** |
 | P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | **DONE 2026-04-21 (§13)** |
 | P4 | 4 Tage | §3 Beaconing 2.0 (Periodogramm/FFT) + ES-Mapping | — (parallel zu P1–P3) | **DONE 2026-04-21 (§14)** |
-| P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | pending |
+| P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | **DONE 2026-04-21 (§15)** |
 | P6 | 7 Tage | §5 ML-Runner IsoForest + LightGBM | Datenexport (ab P1 OK) | pending |
 
 Gesamt: 3 Arbeitswochen mit 1 Person; mit Parallelisierung ca. 10
@@ -903,3 +903,47 @@ Damit ist P3 infrastrukturell produktiv und für den weiteren Rollout stabil.
 
 Damit ist Phase 4 produktiv aktiv und als Grundlage für Phase 5 (RL-Reward)
 bereit.
+
+---
+
+## §15  Anhang F – Implementierungs-Log Phase 5 (abgeschlossen 2026-04-21)
+
+### §15.1  Deliverables
+
+| Artefakt | Ort | Rolle |
+|---|---|---|
+| `proxy/src/reward_aggregator.py` | `proxy/src/` | Reward-Worker: Session-Building, Reward-Signale A/B/C, ES-Bulk-Write nach `honeypot-response-rewards`, SQLite-Upsert in `response_rewards` |
+| `proxy/run_reward_aggregator.py` | `proxy/` | Scheduler (15 min), täglicher 24h-Backfill (02:00 UTC), ONESHOT-Support |
+| `proxy/src/models.py` | `proxy/src/` | Neues SQLite-Table `response_rewards` + Stats (`total_rewards`, `avg_total_reward`) |
+| `proxy/src/cache.py` | `proxy/src/` | Reward-aware Cache-Ranking: semantische Auswahl mit `0.70*similarity + 0.30*reward_norm`, Response-Pick mit Engagement+Reward |
+| `proxy/docker-compose.yml` | `proxy/` | Neuer Service `reward-aggregator` (`ollama-reward-aggregator`) |
+
+### §15.2  Design-Entscheidungen
+
+1. **Response-zentrierte Reward-Persistenz.**
+   Rewards werden sowohl in ES als auch lokal pro `response_id` geführt, damit
+   der Proxy ohne ES-Roundtrip direkt bei Cache-Lookups gewichten kann.
+2. **Session-Building über CVE-Events mit Gap-Splitting.**
+   Aus `honeypot-cve-sessions` werden Pseudo-Sessions via
+   `(src_ip, cve_id, inactivity_gap=300s)` gebildet; robust gegen fehlende
+   explizite Session-IDs in älteren Dokumenten.
+3. **Rule-Yield pragmatisch über CVE-Matches auf Rule-Artefakten.**
+   Da `source_sessions[]` in den aktuellen Rule-Artefakten noch fehlt, wird
+   `reward_c` über vorhandene CVE-IDs in approved/generated Rules abgeleitet.
+   Das hält P5 produktiv, bis Phase 6 die Session-Provenance ergänzt.
+
+### §15.3  Live-Evidence (P5)
+
+- Deploy auf `ai-workstation`:
+  `docker compose up -d --build reward-aggregator ollama-proxy` erfolgreich.
+- OneShot (24h Fenster):
+  `events=2000`, `sessions=4`, `records=2000`, `local_updates=2000`, `es_docs=2000`.
+- ES-Verifikation:
+  `honeypot-response-rewards` enthält produktive Dokumente (Count > 0),
+  inkl. Feldern `reward_a_engagement`, `reward_b_unmasked`,
+  `reward_c_rule_yield`, `total_reward`.
+- Proxy-DB-Stats (`/proxy/stats`):
+  `total_rewards=8`, `avg_total_reward=0.328` – Cache-Layer nutzt Rewards live.
+
+Damit ist Phase 5 produktiv aktiv; nächster Schritt ist Phase 6
+(Offline-ML IsoForest/LightGBM).

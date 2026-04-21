@@ -46,6 +46,29 @@ services:
       - ./run_scorer.py:/app/run_scorer.py:ro
     entrypoint: ["python", "/app/run_scorer.py"]
 
+  reward-aggregator:
+    container_name: ollama-reward-aggregator
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - CACHE_DB=/data/ollama-proxy/cache.db
+      - ES_URL=${ES_URL}
+      - ES_USER=${ES_USER}
+      - ES_PASS=${ES_PASS}
+      - REWARD_INTERVAL=900
+      - REWARD_WINDOW_MINUTES=30
+      - REWARD_BACKFILL_HOUR_UTC=2
+      - VALIDATED_RULES_DIR=/data/ollama-proxy/validated-rules/approved
+      - RULES_DIR=/data/ollama-proxy/generated-rules/latest
+      - REWARD_STATE_PATH=/data/ollama-proxy/reward_aggregator_state.json
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - ./run_reward_aggregator.py:/app/run_reward_aggregator.py:ro
+      - rules_output:/data/ollama-proxy/generated-rules:ro
+      - rules_validated:/data/ollama-proxy/validated-rules:ro
+    entrypoint: ["python", "/app/run_reward_aggregator.py"]
+
   rule-generator:
     container_name: ollama-rule-generator
     build: .

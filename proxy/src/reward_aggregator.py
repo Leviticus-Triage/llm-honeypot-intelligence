@@ -1,0 +1,400 @@
+"""
+Reward Aggregator (Phase 5).
+
+Builds response-level rewards from CVE session telemetry and writes:
+- Elasticsearch index: honeypot-response-rewards
+- Local SQLite table: response_rewards (used by cache ranking)
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+import os
+import re
+import sqlite3
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Iterable
+
+import httpx
+
+logger = logging.getLogger("reward-aggregator")
+
+ES_URL = os.environ.get("ES_URL", "https://localhost:64297/es")
+ES_USER = os.environ.get("ES_USER", "")
+ES_PASS = os.environ.get("ES_PASS", "")
+
+DB_PATH = os.environ.get("CACHE_DB", "/data/ollama-proxy/cache.db")
+REWARD_INDEX = os.environ.get("REWARD_INDEX", "honeypot-response-rewards")
+
+WINDOW_MINUTES = int(os.environ.get("REWARD_WINDOW_MINUTES", "30"))
+SESSION_GAP_SECONDS = int(os.environ.get("REWARD_SESSION_GAP_SECONDS", "300"))
+
+VALIDATED_RULES_DIR = Path(
+    os.environ.get("VALIDATED_RULES_DIR", "/data/ollama-proxy/validated-rules/approved")
+)
+RULES_DIR = Path(os.environ.get("RULES_DIR", "/data/ollama-proxy/generated-rules/latest"))
+
+PATTERNS_NEG = [
+    r"\bhoneypot\b",
+    r"this is a trap",
+    r"i can see the flag",
+    r"\bfake\b",
+    r"\bfoobar\b",
+]
+PATTERNS_POS = [
+    r"curl\s+.+\.(?:sh|py|bin)",
+    r"\bwget\b",
+    r"chmod\s+\+x",
+    r"rm\s+/var/log",
+    r"echo\s+.+>>.+\.ssh/authorized_keys",
+]
+
+NEG_RE = [re.compile(p, re.IGNORECASE) for p in PATTERNS_NEG]
+POS_RE = [re.compile(p, re.IGNORECASE) for p in PATTERNS_POS]
+CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,7}\b", re.IGNORECASE)
+
+
+@dataclass
+class SessionEvent:
+    ts: datetime
+    src_ip: str
+    cve_id: str
+    serve_log_id: int
+    prompt_text: str
+    response_text: str
+
+
+@dataclass
+class RewardRecord:
+    session_id: str
+    serve_log_id: int
+    response_id: int | None
+    response_hash: str
+    model: str
+    cve_tag: str
+    reward_a: float
+    reward_b: float
+    reward_c: float
+    total_reward: float
+    ts: datetime
+
+    def to_es_doc(self) -> dict:
+        return {
+            "@timestamp": self.ts.isoformat(),
+            "response_hash": self.response_hash,
+            "session_id": self.session_id,
+            "model": self.model,
+            "cve_tag": self.cve_tag,
+            "serve_log_id": self.serve_log_id,
+            "response_id": self.response_id,
+            "reward_a_engagement": self.reward_a,
+            "reward_b_unmasked": self.reward_b,
+            "reward_c_rule_yield": self.reward_c,
+            "total_reward": self.total_reward,
+        }
+
+
+def _auth():
+    return (ES_USER, ES_PASS) if ES_USER else None
+
+
+def _clamp01(v: float) -> float:
+    return max(0.0, min(1.0, v))
+
+
+def _reward_engagement(duration_s: float, cmd_cnt: int) -> float:
+    return _clamp01((0.3 * (duration_s / 300.0)) + (0.7 * (cmd_cnt / 15.0)))
+
+
+def _reward_unmasking(text: str) -> float:
+    t = text or ""
+    if any(r.search(t) for r in NEG_RE):
+        return -1.0
+    if any(r.search(t) for r in POS_RE):
+        return 0.3
+    return 0.0
+
+
+def _total_reward(a: float, b: float, c: float) -> float:
+    return 0.40 * a + 0.35 * b + 0.25 * c
+
+
+def _response_hash(model: str, prompt_text: str, response_text: str) -> str:
+    raw = f"{model}\n{prompt_text}\n{response_text}"
+    return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
+
+
+def _scan_cves_from_rules(paths: Iterable[Path]) -> set[str]:
+    found: set[str] = set()
+    for p in paths:
+        if not p.exists():
+            continue
+        if p.is_file():
+            files = [p]
+        else:
+            files = [x for x in p.rglob("*") if x.is_file()]
+        for f in files:
+            if f.suffix.lower() not in {".yml", ".yaml", ".json", ".yar", ".yara", ".rules", ".txt", ".md"}:
+                continue
+            try:
+                text = f.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            for m in CVE_RE.findall(text):
+                found.add(m.upper())
+    return found
+
+
+def _lookup_local_response(serve_log_id: int) -> tuple[int | None, str, str, str]:
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT sl.response_id, pc.model, pc.prompt_text, r.response_text "
+            "FROM serve_log sl "
+            "JOIN responses r ON r.id = sl.response_id "
+            "JOIN prompt_cache pc ON pc.id = r.prompt_cache_id "
+            "WHERE sl.id = ?",
+            (serve_log_id,),
+        ).fetchone()
+        if not row:
+            return None, "", "", ""
+        return int(row["response_id"]), row["model"] or "", row["prompt_text"] or "", row["response_text"] or ""
+    finally:
+        conn.close()
+
+
+async def _es_search(index: str, body: dict) -> dict:
+    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=_auth()) as client:
+        resp = await client.post(f"{ES_URL}/{index}/_search", json=body)
+        if resp.status_code != 200:
+            logger.warning("ES search failed on %s: %s", index, resp.text[:200])
+            return {"hits": {"hits": []}}
+        return resp.json()
+
+
+async def _ensure_reward_index() -> None:
+    mapping = {
+        "mappings": {
+            "properties": {
+                "@timestamp": {"type": "date"},
+                "response_hash": {"type": "keyword"},
+                "session_id": {"type": "keyword"},
+                "model": {"type": "keyword"},
+                "cve_tag": {"type": "keyword"},
+                "serve_log_id": {"type": "long"},
+                "response_id": {"type": "long"},
+                "reward_a_engagement": {"type": "float"},
+                "reward_b_unmasked": {"type": "float"},
+                "reward_c_rule_yield": {"type": "float"},
+                "total_reward": {"type": "float"},
+            }
+        }
+    }
+    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=_auth()) as client:
+        resp = await client.put(f"{ES_URL}/{REWARD_INDEX}", json=mapping)
+        if resp.status_code == 200:
+            logger.info("Created index %s", REWARD_INDEX)
+
+
+async def fetch_cve_events(*, since_minutes: int) -> list[SessionEvent]:
+    since = (datetime.now(timezone.utc) - timedelta(minutes=since_minutes)).isoformat()
+    body = {
+        "size": 2000,
+        "query": {
+            "bool": {
+                "must": [
+                    {"range": {"@timestamp": {"gte": since}}},
+                    {"exists": {"field": "serve_log_id"}},
+                    {"exists": {"field": "cve_id"}},
+                ]
+            }
+        },
+        "sort": [{"@timestamp": "asc"}],
+        "_source": ["@timestamp", "src_ip", "cve_id", "serve_log_id", "prompt_text", "response_text"],
+    }
+    data = await _es_search("honeypot-cve-sessions", body)
+    out: list[SessionEvent] = []
+    for hit in data.get("hits", {}).get("hits", []):
+        s = hit.get("_source", {})
+        ts = s.get("@timestamp")
+        src_ip = s.get("src_ip", "")
+        cve_id = (s.get("cve_id", "") or "").upper()
+        sid = s.get("serve_log_id")
+        if not ts or not src_ip or not cve_id or sid is None:
+            continue
+        try:
+            tsv = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        except Exception:
+            continue
+        out.append(
+            SessionEvent(
+                ts=tsv,
+                src_ip=src_ip,
+                cve_id=cve_id,
+                serve_log_id=int(sid),
+                prompt_text=str(s.get("prompt_text", "") or ""),
+                response_text=str(s.get("response_text", "") or ""),
+            )
+        )
+    return out
+
+
+def build_sessions(events: list[SessionEvent]) -> list[tuple[str, list[SessionEvent]]]:
+    if not events:
+        return []
+    sessions: list[tuple[str, list[SessionEvent]]] = []
+    groups: dict[tuple[str, str], list[SessionEvent]] = {}
+    for e in events:
+        groups.setdefault((e.src_ip, e.cve_id), []).append(e)
+    for (src_ip, cve_id), evs in groups.items():
+        evs.sort(key=lambda x: x.ts)
+        chunk: list[SessionEvent] = []
+        start_ts = evs[0].ts
+        prev = evs[0].ts
+        for e in evs:
+            if chunk and (e.ts - prev).total_seconds() > SESSION_GAP_SECONDS:
+                session_id = hashlib.sha1(
+                    f"{src_ip}|{cve_id}|{int(start_ts.timestamp())}".encode("utf-8")
+                ).hexdigest()[:24]
+                sessions.append((session_id, chunk))
+                chunk = []
+                start_ts = e.ts
+            chunk.append(e)
+            prev = e.ts
+        if chunk:
+            session_id = hashlib.sha1(
+                f"{src_ip}|{cve_id}|{int(start_ts.timestamp())}".encode("utf-8")
+            ).hexdigest()[:24]
+            sessions.append((session_id, chunk))
+    return sessions
+
+
+def compute_records(sessions: list[tuple[str, list[SessionEvent]]], cves_with_rules: set[str]) -> list[RewardRecord]:
+    records: list[RewardRecord] = []
+    for session_id, evs in sessions:
+        evs_sorted = sorted(evs, key=lambda x: x.ts)
+        start_ts = evs_sorted[0].ts
+        end_ts = evs_sorted[-1].ts
+        duration = max(1.0, (end_ts - start_ts).total_seconds())
+        cmd_cnt = len(evs_sorted)
+        reward_a = _reward_engagement(duration, cmd_cnt)
+        last_prompt = evs_sorted[-1].prompt_text or ""
+        reward_b = _reward_unmasking(last_prompt)
+        cve_tag = evs_sorted[0].cve_id
+        reward_c = 1.0 if cve_tag in cves_with_rules else 0.0
+        total = _total_reward(reward_a, reward_b, reward_c)
+
+        for e in evs_sorted:
+            response_id, model, prompt_text, response_text = _lookup_local_response(e.serve_log_id)
+            model_v = model or "openchat"
+            prompt_v = prompt_text or e.prompt_text
+            response_v = response_text or e.response_text
+            r_hash = _response_hash(model_v, prompt_v, response_v)
+            records.append(
+                RewardRecord(
+                    session_id=session_id,
+                    serve_log_id=e.serve_log_id,
+                    response_id=response_id,
+                    response_hash=r_hash,
+                    model=model_v,
+                    cve_tag=cve_tag,
+                    reward_a=round(reward_a, 4),
+                    reward_b=round(reward_b, 4),
+                    reward_c=round(reward_c, 4),
+                    total_reward=round(total, 4),
+                    ts=e.ts,
+                )
+            )
+    return records
+
+
+def upsert_local_rewards(records: list[RewardRecord]) -> int:
+    if not records:
+        return 0
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    try:
+        updated = 0
+        for r in records:
+            if r.response_id is None:
+                continue
+            conn.execute(
+                "INSERT INTO response_rewards("
+                "response_id, response_hash, session_id, model, cve_tag, "
+                "reward_a_engagement, reward_b_unmasked, reward_c_rule_yield, total_reward, updated_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) "
+                "ON CONFLICT(response_id) DO UPDATE SET "
+                "response_hash=excluded.response_hash, "
+                "session_id=excluded.session_id, "
+                "model=excluded.model, "
+                "cve_tag=excluded.cve_tag, "
+                "reward_a_engagement=excluded.reward_a_engagement, "
+                "reward_b_unmasked=excluded.reward_b_unmasked, "
+                "reward_c_rule_yield=excluded.reward_c_rule_yield, "
+                "total_reward=excluded.total_reward, "
+                "updated_at=datetime('now')",
+                (
+                    r.response_id,
+                    r.response_hash,
+                    r.session_id,
+                    r.model,
+                    r.cve_tag,
+                    r.reward_a,
+                    r.reward_b,
+                    r.reward_c,
+                    r.total_reward,
+                ),
+            )
+            updated += 1
+        conn.commit()
+        return updated
+    finally:
+        conn.close()
+
+
+async def push_rewards_to_es(records: list[RewardRecord]) -> int:
+    if not records:
+        return 0
+    bulk = []
+    for r in records:
+        doc_id = f"{r.session_id}-{r.serve_log_id}"
+        bulk.append(json.dumps({"index": {"_index": REWARD_INDEX, "_id": doc_id}}))
+        bulk.append(json.dumps(r.to_es_doc()))
+    payload = "\n".join(bulk) + "\n"
+    async with httpx.AsyncClient(timeout=60.0, verify=False, auth=_auth()) as client:
+        resp = await client.post(
+            f"{ES_URL}/_bulk",
+            content=payload,
+            headers={"Content-Type": "application/x-ndjson"},
+        )
+        if resp.status_code not in (200, 201):
+            logger.warning("Reward bulk push failed: %s", resp.text[:200])
+            return 0
+        return len(records)
+
+
+async def run_reward_cycle(*, since_minutes: int = WINDOW_MINUTES) -> dict:
+    await _ensure_reward_index()
+    events = await fetch_cve_events(since_minutes=since_minutes)
+    if not events:
+        return {"events": 0, "sessions": 0, "local_updates": 0, "es_docs": 0}
+
+    cves_with_rules = _scan_cves_from_rules([VALIDATED_RULES_DIR, RULES_DIR])
+    sessions = build_sessions(events)
+    records = compute_records(sessions, cves_with_rules)
+    local_updates = upsert_local_rewards(records)
+    es_docs = await push_rewards_to_es(records)
+    summary = {
+        "events": len(events),
+        "sessions": len(sessions),
+        "records": len(records),
+        "local_updates": local_updates,
+        "es_docs": es_docs,
+        "rules_cve_count": len(cves_with_rules),
+    }
+    logger.info("Reward cycle summary: %s", summary)
+    return summary
