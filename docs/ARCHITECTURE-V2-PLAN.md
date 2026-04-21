@@ -591,7 +591,7 @@ statt nur zu halluzinieren.
 |---|---|---|---|---|
 | P1 | 3 Tage | §1 Task-Router + `config.yaml` + Generator-Switch auf qwen2.5-coder | — | **DONE 2026-04-21** (§11) |
 | P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | **DONE 2026-04-21 (§12)** |
-| P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | pending |
+| P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | **DONE 2026-04-21 (§13)** |
 | P4 | 4 Tage | §3 Beaconing 2.0 (Lomb-Scargle) + ES-Mapping | — (parallel zu P1–P3) | pending |
 | P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | pending |
 | P6 | 7 Tage | §5 ML-Runner IsoForest + LightGBM | Datenexport (ab P1 OK) | pending |
@@ -816,3 +816,43 @@ sowieso intern gesetzt hat.
 - Für den Compose-Betrieb wurde auf der `ai-workstation` eine `.env` mit
   `ES_URL`, `ES_USER`, `ES_PASS`, `TPOT_VM_IP` hinterlegt, damit
   `docker compose` ohne Warnungen läuft.
+
+---
+
+## §13  Anhang D – Implementierungs-Log Phase 3 (abgeschlossen 2026-04-21)
+
+### §13.1  Deliverables
+
+| Artefakt | Ort | Rolle |
+|---|---|---|
+| `proxy/src/rule_validator/dedupe.py` | `proxy/src/rule_validator/` | SQLite-gestützter Embedding-Index (`rule_embeddings.sqlite`), Cosine-Similarity + Line-Jaccard-Gate |
+| `proxy/src/rule_validator/pipeline.py` | dto. | Dedupe-Stage zwischen Static-Checks und LLM-Judge (`rejected/duplicate`) |
+| `proxy/run_rule_validator.py` | `proxy/` | Dedupe-Config (`DEDUPE_*`), Duplicate-Bucket in Summary, embedding persistence nach Approve |
+| `proxy/docker-compose.yml` | `proxy/` | `rule-validator` env erweitert (`DEDUPE_THRESHOLD`, `DEDUPE_MIN_JACCARD`, `DEDUPE_DB_PATH`) |
+
+### §13.2  Design-Entscheidungen
+
+1. **Konservatives Duplicate-Gate**:
+   duplicate nur wenn
+   - `cosine >= DEDUPE_THRESHOLD` (Default 0.985) und
+   - `line_jaccard >= DEDUPE_MIN_JACCARD` (Default 0.80).
+   Dadurch werden strukturell ähnliche, aber inhaltlich unterschiedliche
+   Rules nicht sofort weggefiltert.
+2. **Fail-soft bei Embedding-Fehlern**:
+   Wenn `/api/embeddings` temporär fehlschlägt, wird die Rule nicht
+   geblockt; die Pipeline protokolliert `dedupe_unavailable` als Warning und
+   läuft mit LLM-Validation weiter.
+3. **Hash-Index pro Pfad+Inhalt**:
+   Mirror-Skip-Key wurde auf `"{source_path}:{sha256}"` erweitert, damit
+   unterschiedliche Dateien mit identischem Inhalt nicht vorzeitig übersprungen werden.
+
+### §13.3  Smoke-Evidence (P3)
+
+- **Gezielter Duplicate-Test** (`latest/dedupe-test`, zwei identische Sigma-Rules):
+  `processed=2`, `approved=1`, `rejected_duplicate=1`, `failures=0`.
+- **Voller Run mit frischer Dedupe-DB**:
+  `processed=14`, `approved=7`, `approved_warn_fp=2`,
+  `rejected_static=3`, `rejected_llm=2`, `rejected_duplicate=2`,
+  `failures=0`.
+
+Damit ist P3 infrastrukturell produktiv und für den weiteren Rollout stabil.
