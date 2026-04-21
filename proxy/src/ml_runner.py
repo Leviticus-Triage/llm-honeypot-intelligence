@@ -23,6 +23,7 @@ from typing import Any
 
 import httpx
 import numpy as np
+import zlib
 
 logger = logging.getLogger("ml-runner")
 
@@ -58,6 +59,58 @@ NUMERIC_FEATURES = [
     "prompt_len",
     "response_len",
 ]
+
+# Command/text feature-hashing:
+# For CVE-classification the pure numeric surface (length, entropy, …) is not
+# enough — different CVEs share very similar shell-probe shape. We add a
+# fixed-size feature-hashed bag of command tokens + bigrams so the classifier
+# can learn per-CVE command signatures (e.g. "overlayfs", "sudo -u#",
+# "CVE-2024-1086"…) without blowing up the feature space.
+HASH_DIMS = int(os.environ.get("ML_HASH_DIMS", "128"))
+TOKEN_SPLIT_RE = re.compile(r"[\s;&|`$()<>\"'\\]+")
+CLASSIFIER_TOP_K = int(os.environ.get("ML_CLASSIFIER_TOP_K", "3"))
+CLASSIFIER_PROBA_FLOOR = float(os.environ.get("ML_CLASSIFIER_PROBA_FLOOR", "0.15"))
+
+
+def _command_tokens(text: str) -> list[str]:
+    """Coarse shell/URL/CVE tokens from prompt or full session blob.
+
+    We deliberately keep short tokens (3+ chars) and skip pure digits so the
+    hashing bucket has signal, not noise.
+    """
+    if not text:
+        return []
+    out: list[str] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        for tok in TOKEN_SPLIT_RE.split(line):
+            tok = tok.strip().lower()
+            if 3 <= len(tok) <= 48 and not tok.isdigit():
+                out.append(tok)
+    return out
+
+
+def _tok_hash(tok: str, n_dims: int) -> int:
+    """Deterministic hash across Python processes (Python's hash() is not)."""
+    return zlib.crc32(tok.encode("utf-8", "ignore")) % n_dims
+
+
+def _hash_features(text: str, n_dims: int = HASH_DIMS) -> np.ndarray:
+    """Feature-hash trick: count unigrams + bigrams into fixed-size vector."""
+    vec = np.zeros(n_dims, dtype=np.float32)
+    toks = _command_tokens(text)
+    if not toks:
+        return vec
+    for t in toks:
+        vec[_tok_hash(t, n_dims)] += 1.0
+    for a, b in zip(toks, toks[1:]):
+        vec[_tok_hash(a + "\x01" + b, n_dims)] += 0.5
+    vmax = vec.max()
+    if vmax > 0:
+        vec /= vmax
+    return vec
 
 
 def _auth():
@@ -101,6 +154,8 @@ def _extract_features(doc: dict[str, Any]) -> dict[str, Any]:
         except Exception:
             pass
 
+    # Keep only prompt for the hashing channel — response is LLM-generated and
+    # would pollute the attacker-signature space.
     return {
         "session_duration": float(doc.get("duration_s", 0.0) or 0.0),
         "cmd_count": float(len(lines)),
@@ -116,6 +171,7 @@ def _extract_features(doc: dict[str, Any]) -> dict[str, Any]:
         "prompt_len": float(len(prompt)),
         "response_len": float(len(response)),
         "label_cve": cve_id,
+        "_text_for_hash": prompt[:4000],
     }
 
 
@@ -124,6 +180,15 @@ def _matrix(rows: list[dict[str, Any]]) -> np.ndarray:
     for i, row in enumerate(rows):
         for j, k in enumerate(NUMERIC_FEATURES):
             m[i, j] = float(row.get(k, 0.0) or 0.0)
+    return m
+
+
+def _hash_matrix(rows: list[dict[str, Any]], n_dims: int = HASH_DIMS) -> np.ndarray:
+    """Feature-hashed command/token matrix. Used by the classifier, not by
+    IsolationForest (too high-cardinal to help anomaly scoring)."""
+    m = np.zeros((len(rows), n_dims), dtype=np.float32)
+    for i, row in enumerate(rows):
+        m[i] = _hash_features(str(row.get("_text_for_hash") or ""), n_dims)
     return m
 
 
@@ -250,7 +315,8 @@ def train_lgbm() -> dict:
         raise RuntimeError(
             f"insufficient labeled rows after rare-class filter: {len(labeled)}"
         )
-    x = _matrix(labeled)
+    x_num = _matrix(labeled)
+    x_hash = _hash_matrix(labeled, HASH_DIMS)
     labels = [str(r.get("label_cve") or "") for r in labeled]
     unique = sorted(set(labels))
 
@@ -260,7 +326,11 @@ def train_lgbm() -> dict:
     mlb = MultiLabelBinarizer(classes=unique)
     y = mlb.fit_transform([[l] for l in labels])
     scaler = StandardScaler()
-    x_scaled = scaler.fit_transform(x)
+    # Scale ONLY the numeric channel; hash features are already in [0,1] and
+    # scaling them across the whole dataset would spread the zero-background
+    # into meaningless noise.
+    x_num_scaled = scaler.fit_transform(x_num)
+    x_scaled = np.concatenate([x_num_scaled, x_hash], axis=1)
 
     estimator_name = "lightgbm"
     try:
@@ -303,12 +373,18 @@ def train_lgbm() -> dict:
                 "mlb": mlb,
                 "features": NUMERIC_FEATURES,
                 "estimator_name": estimator_name,
+                "hash_dims": HASH_DIMS,
+                "top_k": CLASSIFIER_TOP_K,
+                "proba_floor": CLASSIFIER_PROBA_FLOOR,
             },
             f,
         )
     current = MODEL_DIR / "current_lgbm.pkl"
     current.write_bytes(out.read_bytes())
-    summary = {"rows": len(labeled), "classes": len(unique), "path": str(out), "estimator": estimator_name}
+    summary = {
+        "rows": len(labeled), "classes": len(unique), "path": str(out),
+        "estimator": estimator_name, "hash_dims": HASH_DIMS,
+    }
     logger.info("Trained classifier: %s", summary)
     return summary
 
@@ -360,25 +436,71 @@ async def infer_and_update(*, since_hours: int = INFER_HOURS, max_docs: int = MA
         else:
             anomaly_score[i] = 0.99
 
-    x_clf = clf["scaler"].transform(x)
-    pred = clf["model"].predict(x_clf)
+    # Classifier: numeric features scaled + hashed command features appended.
+    # Backward-compatible: legacy models without hash_dims still work.
+    hash_dims = int(clf.get("hash_dims") or 0)
+    x_num_scaled = clf["scaler"].transform(x)
+    if hash_dims > 0:
+        x_hash = _hash_matrix(feat_rows, hash_dims)
+        x_clf = np.concatenate([x_num_scaled, x_hash], axis=1)
+    else:
+        x_clf = x_num_scaled
+
     classes = list(clf["mlb"].classes_)
+    top_k = int(clf.get("top_k") or CLASSIFIER_TOP_K)
+    proba_floor = float(clf.get("proba_floor") or CLASSIFIER_PROBA_FLOOR)
+
+    # OvR → predict_proba returns (n, n_classes). We rank per row, keep the
+    # top-K classes whose proba is above the floor, and emit them as tags +
+    # a structured ml_classifier_top list so Kibana can show per-CVE confidence.
+    try:
+        proba = clf["model"].predict_proba(x_clf)
+    except Exception as e:
+        logger.warning("predict_proba failed (%s), falling back to predict", e)
+        proba = None
+
+    if proba is None:
+        pred = clf["model"].predict(x_clf)
+        tag_rows = [
+            [classes[j] for j, v in enumerate(p.tolist()) if int(v) == 1]
+            for p in pred
+        ]
+        top_rows: list[list[dict[str, float]]] = [[] for _ in tag_rows]
+    else:
+        proba = np.asarray(proba, dtype=np.float32)
+        tag_rows = []
+        top_rows = []
+        for row in proba:
+            order = np.argsort(-row)
+            picked = [
+                (classes[j], float(row[j]))
+                for j in order[:top_k]
+                if float(row[j]) >= proba_floor
+            ]
+            if not picked and order.size:
+                j = int(order[0])
+                picked = [(classes[j], float(row[j]))]
+            tag_rows.append([p[0] for p in picked])
+            top_rows.append([
+                {"cve": cve, "proba": round(p, 4)} for cve, p in picked
+            ])
 
     lines: list[str] = []
     for i, h in enumerate(hits):
         doc_id = h.get("_id")
         if not doc_id:
             continue
-        tags = [classes[j] for j, v in enumerate(pred[i].tolist()) if int(v) == 1]
-        if not tags:
-            tags = []
         lines.append(json.dumps({"update": {"_index": SOURCE_INDEX, "_id": doc_id}}))
         lines.append(
             json.dumps(
                 {
                     "doc": {
                         "ml_anomaly_score": float(anomaly_score[i]),
-                        "ml_classifier_tags": tags,
+                        "ml_classifier_tags": tag_rows[i],
+                        "ml_classifier_top": top_rows[i],
+                        "ml_classifier_top1_proba": (
+                            top_rows[i][0]["proba"] if top_rows[i] else 0.0
+                        ),
                         "ml_model_version": {
                             "isoforest": "current_isoforest.pkl",
                             "classifier": "current_lgbm.pkl",
@@ -389,16 +511,25 @@ async def infer_and_update(*, since_hours: int = INFER_HOURS, max_docs: int = MA
         )
     if not lines:
         return {"updated": 0, "docs": len(hits)}
-    payload = "\n".join(lines) + "\n"
+    # Chunk to stay below the nginx/ES body limit (≈1 MB default). Each doc
+    # update is ~2 lines of ndjson — 1000 pairs = 2000 lines stays comfortably
+    # under 1 MB even with top_k and ml_classifier_top objects.
+    chunk_size_pairs = int(os.environ.get("ML_BULK_CHUNK_PAIRS", "1000"))
+    updated = 0
     async with httpx.AsyncClient(timeout=120.0, verify=False, auth=_auth()) as client:
-        resp = await client.post(
-            f"{ES_URL}/_bulk",
-            content=payload,
-            headers={"Content-Type": "application/x-ndjson"},
-        )
-        if resp.status_code not in (200, 201):
-            raise RuntimeError(f"bulk update failed: {resp.status_code} {resp.text[:200]}")
-        updated = len(lines) // 2
+        for start in range(0, len(lines), chunk_size_pairs * 2):
+            chunk = lines[start: start + chunk_size_pairs * 2]
+            payload = "\n".join(chunk) + "\n"
+            resp = await client.post(
+                f"{ES_URL}/_bulk",
+                content=payload,
+                headers={"Content-Type": "application/x-ndjson"},
+            )
+            if resp.status_code not in (200, 201):
+                raise RuntimeError(
+                    f"bulk update failed: {resp.status_code} {resp.text[:200]}"
+                )
+            updated += len(chunk) // 2
     summary = {"updated": updated, "docs": len(hits)}
     logger.info("Inference update summary: %s", summary)
     return summary
