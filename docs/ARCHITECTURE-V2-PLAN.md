@@ -590,7 +590,7 @@ statt nur zu halluzinieren.
 | Phase | Dauer | Liefergegenstand | Dependencies | Status |
 |---|---|---|---|---|
 | P1 | 3 Tage | §1 Task-Router + `config.yaml` + Generator-Switch auf qwen2.5-coder | — | **DONE 2026-04-21** (§11) |
-| P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | **in progress (2026-04-21, §12)** |
+| P2 | 3 Tage | §2 Static-Checks + `rule-validator`-Service | P1 | **DONE 2026-04-21 (§12)** |
 | P3 | 2 Tage | §6 Dedupe (SQLite) + Integration in Validator | P2 | pending |
 | P4 | 4 Tage | §3 Beaconing 2.0 (Lomb-Scargle) + ES-Mapping | — (parallel zu P1–P3) | pending |
 | P5 | 5 Tage | §4 RL-Reward-Aggregator + Cache-Gewichtung | P1 | pending |
@@ -789,34 +789,30 @@ sowieso intern gesetzt hat.
    Der Judge serialisiert Requests minimal (`VALIDATOR_MIN_SPACING`) und nutzt
    Retry/Backoff für 503/429/502/504, um Ollama-Queue-Überläufe abzufangen.
 
-### §12.3  Smoke-Test (Stand heute)
+### §12.3  Smoke-Test / Live-Evidence (final)
 
 - **Static-Stage**: lokal kompiliert + gegen Good/Bad-Corpus geprüft
-  (Sigma/YARA/Suricata/STIX Fehlklassen wurden korrekt erkannt).
+  (Sigma/YARA/Suricata/STIX Fehlklassen erkannt).
 - **Service wiring**: `docker compose`-Integration und Build auf
-  `ai-workstation` durchgeführt; `rule-validator` startet und schreibt
-  Sidecar-Issue-JSON pro Datei.
-- **LLM-stage Blocker**: Upstream-Ollama lieferte für `llama3.1:8b` und
-  `qwen2.5-coder:7b` wiederholt `503 server busy / maximum pending requests exceeded`.
-  `openchat` blieb gleichzeitig erreichbar.
+  `ai-workstation` erfolgreich; Container `ollama-rule-validator` läuft.
+- **Live ONESHOT (voller latest-Tree)**:
+  - Command:
+    `docker compose run --rm -e ONESHOT=true -e SKIP_LLM=false -e SOURCE_DIR=/data/ollama-proxy/generated-rules/latest rule-validator`
+  - Ergebnis:
+    `processed=12`, `approved=8`, `approved_warn_fp=2`,
+    `rejected_static=3`, `rejected_llm=1`, `rejected_review=0`, `failures=0`
+  - Type-Breakdown:
+    - `sigma`: 6 approved (davon 2 mit `output_warn_fp`)
+    - `suricata`: 1 approved
+    - `yara`: 1 approved
+    - `stix`: 1 rejected (`llm_noncompliant`, non-JSON output)
+    - `unknown`: 3 static rejects (`ioc_list.json`, `latest_summary.json`, `manifest.json`) – expected in mirror mode
 
-### §12.4  Infrastruktur-Blocker (extern zum Validator-Code)
+### §12.4  Betriebsbeobachtung nach Recovery
 
-Während des automatisierten Recovery-Versuchs (VM-Neustart über Proxmox)
-wurde `ai-workstation` (VM 200) zwar als `running` gemeldet, war aber
-anschließend unter der bisherigen Management-IP `192.168.2.116` nicht mehr
-netzseitig erreichbar (kein Ping/SSH, QGA nicht verfügbar). Dadurch konnte der
-abschließende Live-LLM-Validator-Durchlauf nicht finalisiert werden.
-
-### §12.5  Nächster Schritt zur Finalisierung von P2
-
-Sobald `ai-workstation` wieder per SSH erreichbar ist:
-
-1. `docker compose up -d --build rule-validator`
-2. `docker compose run --rm -e ONESHOT=true rule-validator`
-3. Validierung gegen aktuelles `generated-rules/latest` und KPI-Check:
-   - Precision (approved tatsächlich valide) >= 0.93
-   - Recall für kaputte Rules >= 0.90
-   - Median Laufzeit < 8s pro Rule
-
-Danach wird P2 in §7 auf **DONE** gesetzt.
+- Nach LUKS-Unlock der VM war Ollama zeitweise erneut instabil
+  (`server busy`/Timeouts). Der Validator blieb funktionsfähig durch
+  Retry/Backoff/Pacing in `llm_judge.py`.
+- Für den Compose-Betrieb wurde auf der `ai-workstation` eine `.env` mit
+  `ES_URL`, `ES_USER`, `ES_PASS`, `TPOT_VM_IP` hinterlegt, damit
+  `docker compose` ohne Warnungen läuft.

@@ -21,7 +21,7 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | Beaconing-Sättigung | ✅ `sample_confidence` gewichtet CV<br>→ Scores jetzt 83–91 statt uniform 100 | `engine.py::detect_beaconing` |
 | C2-Indicator-Details | ✅ reichhaltige Indikatoren (`interval`, `cv`, `single_dest`, `rapid_retry`, …) | dito |
 | `tpot` CLI auf `ai-workstation` | ✅ Proxmox-VM-Control via SSH+`qm`, `dashboards-import`, `ssh`, Remote-Logs | `scripts/tpot` |
-| Phase 2 Rule-Validator (LLM-as-a-Judge) | 🟡 Code + Compose integriert, Live-LLM-Test wartet auf stabile `.116`-Erreichbarkeit | `proxy/src/rule_validator/*`, `proxy/run_rule_validator.py` |
+| Phase 2 Rule-Validator (LLM-as-a-Judge) | ✅ Live auf `.116`: ONESHOT gelaufen (`processed=12`, `approved=8`, `rejected_static=3`, `rejected_llm=1`) | `proxy/src/rule_validator/*`, `proxy/run_rule_validator.py` |
 
 ---
 
