@@ -26,6 +26,7 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | Phase 4 Beaconing 2.0 (Periodogramm/FFT + Jitter-Klassen) | ✅ Live auf `<ai-workstation>`: `c2-detector` rebuilt, OneShot `flagged_ips=23`, neue Felder in ES (`dominant_period_sec`, `peak_power`, `spectral_flatness`, `jitter_class`) sichtbar | `proxy/src/c2_detection/engine.py` |
 | Phase 5 RL-Reward-Aggregator + Cache-Gewichtung | ✅ Live auf `<ai-workstation>`: Reward-Index aktiv (`honeypot-response-rewards`), SQLite `response_rewards` befuellt, Cache-Ranking reward-aware | `proxy/src/reward_aggregator.py`, `proxy/src/cache.py`, `proxy/src/models.py`, `proxy/run_reward_aggregator.py` |
 | Phase 6 Offline-ML Runner (IsoForest + Classifier) | ✅ Live auf `<ai-workstation>`: `ml-runner` Export/Train/Infer erfolgreich, `honeypot-cve-sessions` mit `ml_anomaly_score` + `ml_classifier_tags` angereichert | `proxy/src/ml_runner.py`, `proxy/run_ml_runner.py`, `proxy/docker-compose.yml` |
+| Phase 2.5 Threshold-Kalibrator | ✅ Offline-Replay der `*.issues.json` Sidecars, Precision/Recall/FP-Sweep über `LLM_CONF_THRESHOLD` + `DEDUPE_THRESHOLD` mit harter `MAX_FP_RATE`-Schranke (yara-gen/PMLR'25-Methodik) | `proxy/calibrate_thresholds.py` |
 
 ---
 
