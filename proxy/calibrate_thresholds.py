@@ -119,6 +119,14 @@ def _load_label(rule_path: Path) -> Optional[str]:
     return label if label in ("tp", "fp") else None
 
 
+def _rule_path_from_sidecar(sidecar: Path) -> Path:
+    """Return the validated rule path for a `<rule>.issues.json` sidecar."""
+    suffix = ".issues.json"
+    if sidecar.name.endswith(suffix):
+        return sidecar.with_name(sidecar.name[: -len(suffix)])
+    return sidecar
+
+
 def _proxy_label(verdict: dict) -> str:
     """
     Heuristic label used only when no *.label.json is provided.
@@ -149,14 +157,21 @@ def _collect_samples() -> list[Sample]:
             logger.warning("bad sidecar %s: %s", sidecar, e)
             continue
 
-        rule_path = Path(str(verdict.get("source_path") or verdict.get("path") or ""))
-        label = _load_label(rule_path) if rule_path else None
+        # In mirror mode, labels are written next to the validated rule copy
+        # (same folder as the sidecar), while `source_path` usually points to
+        # generated-rules/latest. Prefer the sidecar-adjacent rule path first.
+        mirrored_rule_path = _rule_path_from_sidecar(sidecar)
+        source_rule_path = Path(str(verdict.get("source_path") or verdict.get("path") or ""))
+
+        label = _load_label(mirrored_rule_path) if mirrored_rule_path else None
+        if label is None and source_rule_path:
+            label = _load_label(source_rule_path)
         if label is None:
             label = _proxy_label(verdict)
 
         samples.append(
             Sample(
-                path=str(rule_path),
+                path=str(mirrored_rule_path or source_rule_path),
                 rule_type=str(verdict.get("rule_type", "unknown")),
                 llm_confidence=float(verdict.get("llm_confidence", 0.0) or 0.0),
                 fp_risk=str(verdict.get("fp_risk", "medium")).lower(),
