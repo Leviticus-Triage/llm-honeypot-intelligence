@@ -11,7 +11,7 @@ import logging
 import math
 import os
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import numpy as np
@@ -39,6 +39,17 @@ C2_INDEX = "honeypot-c2-indicators"
 INTERVAL = int(os.environ.get("C2_INTERVAL", "300"))
 WINDOW_MINUTES = int(os.environ.get("C2_WINDOW", "60"))
 KNOWN_SCANNER_DAMPING = float(os.environ.get("C2_KNOWN_SCANNER_DAMPING", "0.60"))
+
+# Fusion with the offline IsolationForest (see Roadmap 1.3):
+# ml_runner writes ml_anomaly_score in [0,1] on honeypot-cve-sessions.
+# When a src_ip from the live C2 cycle also shows elevated session-level
+# anomaly, we lift the composite slightly. Score*10 caps the lift at ~+10
+# points in the composite (which tops around 50 for pure signal layers).
+ML_SESSION_WINDOW_HOURS = int(os.environ.get("C2_ML_SESSION_WINDOW_HOURS", "48"))
+ML_SESSION_BOOST = float(os.environ.get("C2_ML_SESSION_BOOST", "10.0"))
+ML_SESSION_INDICATOR_THRESHOLD = float(
+    os.environ.get("C2_ML_SESSION_INDICATOR_THRESHOLD", "0.7")
+)
 
 KNOWN_SCANNER_KEYWORDS = (
     "et scan",
@@ -847,6 +858,93 @@ async def detect_known_scanners(client: httpx.AsyncClient, window_min: int) -> l
 # Orchestrator: Combine all layers and push to ES
 # ──────────────────────────────────────────────────────────────────────
 
+# ──────────────────────────────────────────────────────────────────────
+# Fusion Layer: offline IsolationForest anomaly on CVE sessions
+# ──────────────────────────────────────────────────────────────────────
+
+async def lookup_session_ml_anomaly(
+    client: httpx.AsyncClient,
+    ips: list[str],
+    window_hours: int = ML_SESSION_WINDOW_HOURS,
+) -> dict[str, dict]:
+    """
+    For each candidate src_ip, look up its aggregated `ml_anomaly_score`
+    from `honeypot-cve-sessions` within the given window. Returns
+    `{ip: {"max": float, "avg": float, "count": int}}`.
+
+    Silently returns an empty mapping if the index is missing, the agg
+    fails, or no IPs have ML-annotated sessions. This is a non-critical
+    enrichment layer — we never fail the cycle on its behalf.
+    """
+    if not ips:
+        return {}
+    ips = [ip for ip in set(ips) if ip and not _is_private_ip(ip)]
+    if not ips:
+        return {}
+
+    since = (datetime.now(timezone.utc) - timedelta(hours=window_hours)).isoformat()
+    body = {
+        "size": 0,
+        "query": {
+            "bool": {
+                "must": [
+                    {"range": {"@timestamp": {"gte": since}}},
+                    {"exists": {"field": "ml_anomaly_score"}},
+                    {"terms": {"src_ip": ips}},
+                ]
+            }
+        },
+        "aggs": {
+            "by_ip": {
+                "terms": {"field": "src_ip", "size": max(len(ips), 500)},
+                "aggs": {
+                    "ml_max": {"max": {"field": "ml_anomaly_score"}},
+                    "ml_avg": {"avg": {"field": "ml_anomaly_score"}},
+                },
+            }
+        },
+    }
+
+    try:
+        resp = await client.post(
+            f"{ES_URL}/honeypot-cve-sessions/_search",
+            json=body,
+            headers={"Content-Type": "application/json"},
+            timeout=20.0,
+        )
+        if resp.status_code != 200:
+            logger.debug(
+                "ML-session lookup non-200 (%s); skipping fusion for this cycle",
+                resp.status_code,
+            )
+            return {}
+        data = resp.json()
+    except (httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError) as e:
+        logger.debug("ML-session lookup failed (%s); skipping fusion", str(e)[:120])
+        return {}
+
+    out: dict[str, dict] = {}
+    for b in data.get("aggregations", {}).get("by_ip", {}).get("buckets", []):
+        ip = str(b.get("key") or "")
+        if not ip:
+            continue
+        ml_max = b.get("ml_max", {}).get("value")
+        ml_avg = b.get("ml_avg", {}).get("value")
+        count = int(b.get("doc_count", 0))
+        if ml_max is None:
+            continue
+        out[ip] = {
+            "max": float(ml_max),
+            "avg": float(ml_avg or 0.0),
+            "count": count,
+        }
+    logger.info(
+        "ML-session fusion: %d of %d candidate IPs have ml_anomaly_score in last %dh",
+        len(out), len(ips), window_hours,
+    )
+    return out
+
+
 async def _ensure_index(client: httpx.AsyncClient):
     """Create the C2 indicators index if it doesn't exist.
     Idempotent + resilient against transient 5xx / ReadTimeout right after
@@ -864,6 +962,9 @@ async def _ensure_index(client: httpx.AsyncClient):
                 "anomaly_score": {"type": "float"},
                 "correlation_score": {"type": "float"},
                 "known_scanner_score": {"type": "float"},
+                "ml_session_anomaly_max": {"type": "float"},
+                "ml_session_anomaly_avg": {"type": "float"},
+                "ml_session_count": {"type": "integer"},
                 "threat_level": {"type": "keyword"},
                 "flow_count": {"type": "integer"},
                 "alert_count": {"type": "integer"},
@@ -1026,6 +1127,18 @@ async def run_detection_cycle():
             ip_scores[ip]["all_indicators"].extend(r.get("indicators", []))
             ip_scores[ip]["all_mitre"].update(r.get("mitre_techniques", []))
 
+        ml_session_lookup = await lookup_session_ml_anomaly(
+            client, list(ip_scores.keys()), ML_SESSION_WINDOW_HOURS
+        )
+        for ip, ml in ml_session_lookup.items():
+            ip_scores[ip]["ml_session_anomaly_max"] = ml["max"]
+            ip_scores[ip]["ml_session_anomaly_avg"] = ml["avg"]
+            ip_scores[ip]["ml_session_count"] = ml["count"]
+            if ml["max"] >= ML_SESSION_INDICATOR_THRESHOLD:
+                ip_scores[ip]["all_indicators"].append(
+                    f"ml_session_anomaly_max={ml['max']:.2f}({ml['count']} sessions)"
+                )
+
         # Build and push composite documents
         now = datetime.now(timezone.utc).isoformat()
         bulk_body = ""
@@ -1039,6 +1152,9 @@ async def run_detection_cycle():
                 + scores["anomaly"] * 0.20
                 + scores["correlation"] * 0.20
             )
+            ml_max = float(scores.get("ml_session_anomaly_max", 0.0) or 0.0)
+            if ml_max > 0:
+                composite += ml_max * ML_SESSION_BOOST
             if scores["known_scanner"] > 0:
                 composite *= KNOWN_SCANNER_DAMPING
 
@@ -1073,6 +1189,14 @@ async def run_detection_cycle():
                 "indicators": list(set(scores["all_indicators"]))[:20],
                 "mitre_techniques": sorted(scores["all_mitre"]),
             }
+            if "ml_session_anomaly_max" in scores:
+                doc["ml_session_anomaly_max"] = round(
+                    float(scores["ml_session_anomaly_max"]), 3
+                )
+                doc["ml_session_anomaly_avg"] = round(
+                    float(scores.get("ml_session_anomaly_avg", 0.0)), 3
+                )
+                doc["ml_session_count"] = int(scores.get("ml_session_count", 0))
 
             # Merge in details from individual detectors
             for key in ["flow_count", "alert_count", "query_count",
