@@ -45,8 +45,11 @@ Zusätzliche Verbesserungen für den nächsten Feinschliff:
 Zusätzlich: IPs, die Suricata selbst als bekannte Scanner/ET-Shadowserver
 markiert, bekommen eigenen `detection_type="known_scanner"` statt
 `beaconing`, damit sie die C2-Top-List nicht dominieren.
-- **Known-Scanner-Entzerrung** als eigener Layer (`detection_type=known_scanner`),
-  damit Internet-Scanner die Beaconing-Top-List weniger dominieren.
+- **Known-Scanner-Entzerrung** als eigener Layer (`detection_type=known_scanner`) —
+  ✅ umgesetzt (2026-04-22): Scanner-IPs werden aus Suricata-Alerts per
+  Signatur/Category-Keywords erkannt und im Composite per Dämpfungsfaktor
+  (`C2_KNOWN_SCANNER_DAMPING`, Default 0.60) heruntergewichtet, damit
+  Internet-Scanner die Beaconing-Top-List weniger dominieren.
 - **Schwellwert-Tuning per Label-Samples**: `peak_power`/`spectral_flatness`-Grenzen
   gegen kuratierten True/False-Positiv-Korpus feinjustieren.
 
@@ -55,9 +58,14 @@ Der aktuelle Ddospot-Bonus `+15` ist ein Platzhalter. Sobald echte externe
 Queries reinkommen, nutzen:
 
 - **Payload-Shannon-Entropy** über die vollständige Subdomain (bereits da)
-*plus* **Bigramm-Entropy** (gegen Wörterbuch-Maskierung).
-- **NXDOMAIN-Ratio** je Src-IP (nur Suricata-seitig verfügbar).
-- **Record-Type-Distribution**: >20 % TXT/NULL/CNAME ist starker Indikator.
+*plus* **Bigramm-Entropy** (gegen Wörterbuch-Maskierung) — ✅ umgesetzt
+  (2026-04-22, Feld `avg_subdomain_bigram_entropy` + Score-Faktor).
+- **NXDOMAIN-Ratio** je Src-IP (nur Suricata-seitig verfügbar) — ✅ umgesetzt
+  (2026-04-22, Feld `nxdomain_ratio` + Score-Faktor ab 0.25).
+- **Record-Type-Distribution**: >20 % TXT/NULL/CNAME ist starker Indikator —
+  ✅ umgesetzt (vorher >50 %, jetzt graduell ab 20 %).
+- Ddospot-Hit-Bonus von +25 auf +10 reduziert, damit echte DNS-Merkmale
+  (Entropy/NXDOMAIN/RR-Type) das Ranking dominieren.
 
 ### 1.3 Heuristic-Detector → Isolation Forest Baseline
 `heuristic_detector.py` nutzt heute harte Schwellen. Ersatz: ein
