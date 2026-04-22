@@ -169,6 +169,7 @@ services:
       - proxy_data:/data/ollama-proxy
       - ./run_rule_validator.py:/app/run_rule_validator.py:ro
       - ./calibrate_thresholds.py:/app/calibrate_thresholds.py:ro
+      - ./label_rules.py:/app/label_rules.py:ro
       - ./src/rule_validator:/app/src/rule_validator:ro
       - rules_output:/data/ollama-proxy/generated-rules:ro
       - rules_validated:/data/ollama-proxy/validated-rules
