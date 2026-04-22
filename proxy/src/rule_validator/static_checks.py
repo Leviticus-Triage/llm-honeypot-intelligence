@@ -147,7 +147,7 @@ _SURICATA_REQUIRED_OPTS = {"sid", "msg"}
 def check_suricata(text: str) -> CheckResult:
     res = CheckResult(ok=True, rule_type="suricata")
 
-    rules = [l for l in text.splitlines() if l.strip() and not l.strip().startswith("#")]
+    rules = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
     if not rules:
         res.add_issue("high", "suricata_parse", "File contains no non-comment lines")
         return res
