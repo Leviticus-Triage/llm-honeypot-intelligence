@@ -169,22 +169,41 @@ hält die letzten Embeddings. Cosine-Similarity ≥ `DEDUPE_THRESHOLD`
 (live `0.93`, Plateau-Median-Empfehlung `0.89`) → `rejected/duplicate`.
 Neighbors gehen zusätzlich in den LLM-Judge-Prompt für Kontext.
 
-### 1.3-Fusion (offen) — ML-Anomaly in C2-Indikatoren einfließen lassen
+### 1.3-Fusion — ML-Anomaly in C2-Indikatoren einfließen lassen
+
+**Status: ✅ DONE** (2026-04-22, `proxy/src/c2_detection/engine.py`).
 
 `heuristic_detector.py` trainiert in-line einen IsolationForest pro Zyklus
 auf den aktiv beobachteten Features und mischt `anomaly_score` in die
-Threat-Level-Bewertung — ✅ aktiv. `ml_runner.py` trainiert offline einen
+Threat-Level-Bewertung. `ml_runner.py` trainiert offline einen
 IsoForest auf `honeypot-cve-sessions` und schreibt `ml_anomaly_score` pro
-Session — ✅ aktiv.
+Session (Range [0,1], p50=0.28 / p95=0.69 / p99=0.96).
 
-**Offen**: Die Korrelations-Stufe in `c2_detection/engine.py` zieht pro
-verdächtiger Src-IP noch KEIN Lookup auf den `ml_anomaly_score` aus
-`honeypot-cve-sessions`. Ziel: in `run_detection_cycle()` nach den
-Layer-Scans eine `lookup_session_ml_anomaly(ip, window_hours)`-Stufe
-ergänzen (Max/Avg über Sessions der IP), als weiteres Signal in
-`ip_scores[ip]["ml_session_anomaly"]` aufnehmen und im Composite leicht
-gewichten. Reduziert Falschpositive gegen IPs, deren CVE-Sessions in
-normalem Bereich liegen, obwohl die Timing-Signatur anomal aussieht.
+Neue Fusion-Schicht in `run_detection_cycle()`:
+
+- Nach den fünf Layer-Scans ruft der Cycle `lookup_session_ml_anomaly()`
+  gegen `honeypot-cve-sessions` auf und aggregiert pro Kandidaten-IP
+  `max` / `avg` / `count` des `ml_anomaly_score` im Fenster
+  `C2_ML_SESSION_WINDOW_HOURS` (Default **48h**, defensiv gegen ml-runner-
+  Lücken — der Runner läuft on-demand, nicht periodisch).
+- Composite-Boost: `composite += ml_max × C2_ML_SESSION_BOOST`
+  (Default 10.0 → maximal ~+10 Punkte bei `ml_max=1.0`). Wird VOR der
+  Known-Scanner-Dämpfung angewandt, damit Scanner-IPs trotz hoher
+  Session-Anomalie noch gedämpft werden.
+- Indikator-Surfacing: ab `ml_max ≥ C2_ML_SESSION_INDICATOR_THRESHOLD`
+  (Default 0.7) wird ein Indicator `ml_session_anomaly_max=X(N sessions)`
+  zur `indicators`-Liste des IP-Dokuments ergänzt.
+- Neue ES-Felder im `honeypot-c2-indicators` Mapping:
+  `ml_session_anomaly_max` (float), `ml_session_anomaly_avg` (float),
+  `ml_session_count` (integer).
+- Robust gegen fehlenden Index / Timeouts: wenn die CVE-Session-Abfrage
+  scheitert, läuft der Cycle unverändert weiter — Fusion ist bewusst ein
+  weicher Enrichment-Layer, kein Pflicht-Signal.
+
+**Live-Verifikation (2026-04-22)**: IP `18.218.118.203` zeigt
+Beaconing+ProtocolAnomaly (composite=26.1, medium) UND hat 100
+CVE-Sessions mit `ml_anomaly_score`-Max/Avg=0.543 → Fusion-Boost
+`+5.4` im Composite (ohne Fusion wäre die IP bei 20.7 gelandet).
 
 ---
 
