@@ -21,6 +21,8 @@ from typing import Iterable
 
 import httpx
 
+from . import adversarial_judge as aj
+
 logger = logging.getLogger("reward-aggregator")
 
 ES_URL = os.environ.get("ES_URL", "https://localhost:64297/es")
@@ -158,9 +160,14 @@ class RewardRecord:
     reward_c: float
     total_reward: float
     ts: datetime
+    prompt_text: str = ""
+    response_text: str = ""
+    # Plausibility score from the adversarial critic (0.0-1.0). -1.0 means
+    # "not judged yet" — distinguishable from a legitimate 0.0 ("implausible").
+    plausibility_score: float = -1.0
 
     def to_es_doc(self) -> dict:
-        return {
+        doc = {
             "@timestamp": self.ts.isoformat(),
             "response_hash": self.response_hash,
             "session_id": self.session_id,
@@ -173,6 +180,9 @@ class RewardRecord:
             "reward_c_rule_yield": self.reward_c,
             "total_reward": self.total_reward,
         }
+        if self.plausibility_score >= 0.0:
+            doc["plausibility_score"] = round(self.plausibility_score, 4)
+        return doc
 
 
 def _auth():
@@ -308,6 +318,7 @@ async def _ensure_reward_index() -> None:
                 "reward_b_unmasked": {"type": "float"},
                 "reward_c_rule_yield": {"type": "float"},
                 "total_reward": {"type": "float"},
+                "plausibility_score": {"type": "float"},
             }
         }
     }
@@ -433,6 +444,8 @@ def compute_records(sessions: list[tuple[str, list[SessionEvent]]], cves_with_ru
                     reward_c=round(reward_c, 4),
                     total_reward=round(total, 4),
                     ts=e.ts,
+                    prompt_text=prompt_v,
+                    response_text=response_v,
                 )
             )
     return records
@@ -447,33 +460,68 @@ def upsert_local_rewards(records: list[RewardRecord]) -> int:
         for r in records:
             if r.response_id is None:
                 continue
-            conn.execute(
-                "INSERT INTO response_rewards("
-                "response_id, response_hash, session_id, model, cve_tag, "
-                "reward_a_engagement, reward_b_unmasked, reward_c_rule_yield, total_reward, updated_at"
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) "
-                "ON CONFLICT(response_id) DO UPDATE SET "
-                "response_hash=excluded.response_hash, "
-                "session_id=excluded.session_id, "
-                "model=excluded.model, "
-                "cve_tag=excluded.cve_tag, "
-                "reward_a_engagement=excluded.reward_a_engagement, "
-                "reward_b_unmasked=excluded.reward_b_unmasked, "
-                "reward_c_rule_yield=excluded.reward_c_rule_yield, "
-                "total_reward=excluded.total_reward, "
-                "updated_at=datetime('now')",
-                (
-                    r.response_id,
-                    r.response_hash,
-                    r.session_id,
-                    r.model,
-                    r.cve_tag,
-                    r.reward_a,
-                    r.reward_b,
-                    r.reward_c,
-                    r.total_reward,
-                ),
-            )
+            # plausibility_score is optional: only overwrite when we have a
+            # fresh score (>=0); preserve previous value otherwise.
+            if r.plausibility_score >= 0.0:
+                conn.execute(
+                    "INSERT INTO response_rewards("
+                    "response_id, response_hash, session_id, model, cve_tag, "
+                    "reward_a_engagement, reward_b_unmasked, reward_c_rule_yield, "
+                    "total_reward, plausibility_score, updated_at"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) "
+                    "ON CONFLICT(response_id) DO UPDATE SET "
+                    "response_hash=excluded.response_hash, "
+                    "session_id=excluded.session_id, "
+                    "model=excluded.model, "
+                    "cve_tag=excluded.cve_tag, "
+                    "reward_a_engagement=excluded.reward_a_engagement, "
+                    "reward_b_unmasked=excluded.reward_b_unmasked, "
+                    "reward_c_rule_yield=excluded.reward_c_rule_yield, "
+                    "total_reward=excluded.total_reward, "
+                    "plausibility_score=excluded.plausibility_score, "
+                    "updated_at=datetime('now')",
+                    (
+                        r.response_id,
+                        r.response_hash,
+                        r.session_id,
+                        r.model,
+                        r.cve_tag,
+                        r.reward_a,
+                        r.reward_b,
+                        r.reward_c,
+                        r.total_reward,
+                        r.plausibility_score,
+                    ),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO response_rewards("
+                    "response_id, response_hash, session_id, model, cve_tag, "
+                    "reward_a_engagement, reward_b_unmasked, reward_c_rule_yield, "
+                    "total_reward, updated_at"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) "
+                    "ON CONFLICT(response_id) DO UPDATE SET "
+                    "response_hash=excluded.response_hash, "
+                    "session_id=excluded.session_id, "
+                    "model=excluded.model, "
+                    "cve_tag=excluded.cve_tag, "
+                    "reward_a_engagement=excluded.reward_a_engagement, "
+                    "reward_b_unmasked=excluded.reward_b_unmasked, "
+                    "reward_c_rule_yield=excluded.reward_c_rule_yield, "
+                    "total_reward=excluded.total_reward, "
+                    "updated_at=datetime('now')",
+                    (
+                        r.response_id,
+                        r.response_hash,
+                        r.session_id,
+                        r.model,
+                        r.cve_tag,
+                        r.reward_a,
+                        r.reward_b,
+                        r.reward_c,
+                        r.total_reward,
+                    ),
+                )
             updated += 1
         conn.commit()
         return updated
@@ -502,6 +550,91 @@ async def push_rewards_to_es(records: list[RewardRecord]) -> int:
         return len(records)
 
 
+async def judge_records(records: list[RewardRecord]) -> dict:
+    """
+    Annotate records with adversarial plausibility scores.
+    Cache hits are free; cache misses call the critic LLM via the proxy.
+    Bounded by JUDGE_BATCH_LIMIT so a single cycle can never stall the
+    aggregator loop if the critic is slow or Ollama cold-loads the model.
+
+    Mutates `records` in-place: sets r.plausibility_score for every record
+    whose response_hash is present in (or newly added to) the judgement cache.
+    Returns a small summary dict.
+    """
+    if not aj.JUDGE_ENABLED:
+        return {"enabled": False, "hit": 0, "miss": 0, "judged": 0, "skipped": 0}
+
+    hits = miss = judged = skipped = errors = 0
+    # Pre-fill from cache: cheap local SQLite reads first, so we minimise the
+    # critic-LLM calls to just the records we have never seen.
+    need_judge: list[RewardRecord] = []
+    seen_hashes: set[str] = set()
+    for r in records:
+        if not r.response_hash:
+            continue
+        cached = aj.get_cached_judgement(DB_PATH, r.response_hash)
+        if cached is not None:
+            r.plausibility_score = cached.plausibility
+            hits += 1
+            continue
+        if r.response_hash in seen_hashes:
+            # Same hash already queued for judging; copy the score post-loop.
+            need_judge_hashes = {x.response_hash for x in need_judge}
+            if r.response_hash in need_judge_hashes:
+                continue
+        if not r.response_text:
+            # Nothing to judge; keep plausibility_score == -1.0 (unscored).
+            skipped += 1
+            continue
+        need_judge.append(r)
+        seen_hashes.add(r.response_hash)
+        miss += 1
+
+    if not need_judge:
+        return {"enabled": True, "hit": hits, "miss": 0, "judged": 0,
+                "skipped": skipped, "errors": 0, "limit": aj.JUDGE_BATCH_LIMIT}
+
+    to_judge = need_judge[: aj.JUDGE_BATCH_LIMIT]
+    remainder = len(need_judge) - len(to_judge)
+
+    async with httpx.AsyncClient(timeout=aj.JUDGE_TIMEOUT + 10.0) as client:
+        for r in to_judge:
+            try:
+                j = await aj.judge_response(client, r.prompt_text, r.response_text)
+            except Exception as e:
+                logger.warning("Judge crash for response_hash=%s: %s",
+                               r.response_hash[:12], e)
+                errors += 1
+                continue
+            if j is None:
+                errors += 1
+                continue
+            j.response_hash = r.response_hash
+            r.plausibility_score = j.plausibility
+            aj.upsert_judgement(DB_PATH, r.response_hash, r.model, j)
+            judged += 1
+
+    # Propagate fresh scores back to any OTHER records that share a hash we
+    # just judged (same response served twice in the same cycle).
+    score_by_hash = {r.response_hash: r.plausibility_score for r in to_judge
+                     if r.plausibility_score >= 0.0}
+    if score_by_hash:
+        for r in records:
+            if r.plausibility_score < 0.0 and r.response_hash in score_by_hash:
+                r.plausibility_score = score_by_hash[r.response_hash]
+
+    return {
+        "enabled": True,
+        "hit": hits,
+        "miss": miss,
+        "judged": judged,
+        "skipped": skipped,
+        "errors": errors,
+        "deferred": remainder,
+        "limit": aj.JUDGE_BATCH_LIMIT,
+    }
+
+
 async def run_reward_cycle(*, since_minutes: int = WINDOW_MINUTES) -> dict:
     await _ensure_reward_index()
     events = await fetch_cve_events(since_minutes=since_minutes)
@@ -511,6 +644,11 @@ async def run_reward_cycle(*, since_minutes: int = WINDOW_MINUTES) -> dict:
     cves_with_rules = _scan_cves_from_rules([VALIDATED_RULES_DIR, RULES_DIR])
     sessions = build_sessions(events)
     records = compute_records(sessions, cves_with_rules)
+
+    # Adversarial judging runs BEFORE persistence so SQLite + ES both get the
+    # fresh plausibility score in the same cycle.
+    judge_summary = await judge_records(records)
+
     local_updates = upsert_local_rewards(records)
     es_docs = await push_rewards_to_es(records)
     summary = {
@@ -520,6 +658,7 @@ async def run_reward_cycle(*, since_minutes: int = WINDOW_MINUTES) -> dict:
         "local_updates": local_updates,
         "es_docs": es_docs,
         "rules_cve_count": len(cves_with_rules),
+        "judge": judge_summary,
     }
     logger.info("Reward cycle summary: %s", summary)
     return summary

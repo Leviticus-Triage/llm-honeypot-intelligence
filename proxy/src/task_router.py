@@ -35,6 +35,9 @@ DEFAULT_TASK_MODELS: dict[str, str] = {
     "rule_dedupe_embed": "nomic-embed-text",
     # Offline classification fallback.
     "offline_classify": "dolphin-llama3:8b",
+    # Adversarial critic — small, fast model that rates honeypot-response realism.
+    # Runs out-of-band from the reward aggregator, so it must NOT block real traffic.
+    "adversarial_critique": "llama3.2:3b",
 }
 
 DEFAULT_TASK_OPTIONS: dict[str, dict[str, Any]] = {
@@ -61,6 +64,11 @@ DEFAULT_TASK_OPTIONS: dict[str, dict[str, Any]] = {
         "num_ctx": 4096,
         "format": "json",
     },
+    "adversarial_critique": {
+        "temperature": 0.0,
+        "num_ctx": 4096,
+        "format": "json",
+    },
 }
 
 DEFAULT_TASK_TIMEOUTS: dict[str, float] = {
@@ -71,6 +79,8 @@ DEFAULT_TASK_TIMEOUTS: dict[str, float] = {
     "rule_validate": 180.0,
     "rule_dedupe_embed": 15.0,
     "offline_classify": 180.0,
+    # Small critic — cold-load llama3.2:3b is ~20-30s on a 12GB GPU.
+    "adversarial_critique": 90.0,
 }
 
 # Ollama top-level `keep_alive` per task — how long the model stays resident in
@@ -82,6 +92,7 @@ DEFAULT_TASK_KEEP_ALIVE: dict[str, str] = {
     "rule_validate": "15m",
     "rule_dedupe_embed": "30m",
     "offline_classify": "10m",
+    "adversarial_critique": "10m",
 }
 
 
