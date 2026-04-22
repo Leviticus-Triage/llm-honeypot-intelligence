@@ -94,41 +94,47 @@ genug Daten da sind. (UI-Fix, kein Code.)
 
 ### 2.1 Multi-LLM-Architektur – Begründung
 
-**Ja, openchat ist für den Response-Pfad gut, aber nicht für
-Rule-Generation.** openchat ist auf Konversation getuned; die Ausgabe
-für Sigma/YARA-Regeln ist zwar lauffähig, aber syntaktisch oft zu frei.
-Empfohlene Aufteilung (alle Modelle sind auf `192.168.2.116` bereits
-installiert – Check via `ollama list`):
+**Status: ✅ DONE** (via `proxy/src/task_router.py`, `X-LLM-Task`-Header-Routing).
 
-| Aufgabe | Heute | Empfehlung | Grund |
-|---------|-------|------------|-------|
-| Beelzebub/Galah-Response (Honeypot-Antworten) | `openchat:latest` | **bleibt `openchat`** | klein, schnell (~200 Tok/s), realistische Shell-Antworten, 7B reicht |
-| CVE-Szenario-Injection (realistischer Exploit-Dialog) | `openchat` | **`dolphin-llama3:8b`** | ungefilterte Exploit-Payloads, tieferes CVE-Wissen |
-| **Sigma/YARA/Suricata-Generator** | openchat via `rule_generator.py` | **`qwen2.5-coder:7b`** | strukturierter Code-Output, deutlich weniger Halluzinationen bei DSLs |
-| Threat-Intel-Zusammenfassung / IOC-Clustering | nicht vorhanden | **`llama3.1:8b`** | bestes Reasoning in der 8B-Klasse für deutschsprachige Reports |
-| **Meta-Validator** (zweite Meinung vor Rule-Commit) | nicht vorhanden | **`llama3.1:8b`** (anderer Kontext als Generator) | LLM-as-a-Judge: syntax + logisch konsistent, keine Duplikate |
-| Embedding (Cache, Similarity) | `nomic-embed-text` | bleibt | State-of-the-Art OS-Embedding für 768-Dim |
+Der Task-Router mappt logische Aufgaben auf konkrete Ollama-Modelle mit
+task-spezifischen Options/Timeouts/`keep_alive`:
 
-Umsetzung (klein): `config.yaml` um `task_models:`-Mapping erweitern,
-`rule_generator.py` bekommt einen Parameter `model=`, der per Default
-`qwen2.5-coder:7b` zieht. Ressourcen: auf dem ai-workstation-GPU-Budget
-passt jeweils 1 Modell gleichzeitig in VRAM – Ollama lädt on demand;
-akzeptabel, weil Rule-Generation asynchron läuft.
+| Aufgabe | `X-LLM-Task` | Modell | Options |
+|---------|--------------|--------|---------|
+| Honeypot-Response (Beelzebub/Galah) | `honeypot_response` | `openchat` | `temperature=0.7`, `num_ctx=4096`, `keep_alive=30m` |
+| Rule-Generator (Sigma/YARA/Suricata) | `rule_generate` | `qwen2.5-coder:7b` | `temperature=0.1`, `format=json`, `num_ctx=8192` |
+| Rule-Validator (LLM-as-a-Judge) | `rule_validate` | `llama3.1:8b` | `temperature=0.0`, `format=json`, `num_ctx=8192` |
+| Embedding (Cache, Dedupe) | `rule_dedupe_embed` | `nomic-embed-text` | — |
+| Offline-Classifier (ML-Fallback) | `offline_classify` | `dolphin-llama3:8b` | `temperature=0.2`, `format=json` |
+
+Alle Modelle sind auf `192.168.2.116` bereits installiert (`ollama list`),
+`keep_alive`-Werte sind auf das 12 GB VRAM-Budget abgestimmt, damit
+Rotation zwischen Tasks keine Cold-Load-Kaskaden triggert.
 
 ### 2.2 Validator-Stage („Second Opinion")
-Nach jeder Rule-Generierung ein zweiter Prompt an `llama3.1:8b`:
 
-```
-Prüfe die folgende Sigma-Rule auf:
-1. Syntax (YAML valide, Felder korrekt),
-2. Logische Integrität (Condition referenziert definierte Selections),
-3. Duplikatscheck gegen die letzten 500 Rules (Liste anbei),
-4. False-Positive-Risiko (warum könnte das unter legitimem Traffic feuern?)
-Antwort: JSON mit {ok: bool, issues: [str], suggested_fixes: [str]}.
-```
+**Status: ✅ DONE** (via `proxy/src/rule_validator/llm_judge.py`).
 
-Nur Rules mit `ok=true` gehen ins Volume `ollama-rules-output`; Rest
-geht in `ollama-rules-rejected` mit Issues-Log.
+Jede generierte Rule geht durch einen zweistufigen Static→LLM-Judge-Pfad:
+1. **Static Checks** (`static_checks.py`): YAML/YARA/Suricata-Syntax,
+   Selection/String/SID-Referenzen, MITRE-ID-Format.
+2. **LLM-Judge** (`llm_judge.py`) via Task-Router → `llama3.1:8b`:
+   liefert JSON `{ok, confidence, issues, suggested_fixes, fp_risk,
+   mitre_alignment}`. Prompt prüft Syntax, logische Integrität,
+   Dedupe-Nachbarschaft (aus `RuleDedupeIndex`), FP-Risiko und
+   MITRE-ATT&CK-Alignment.
+
+Pipeline-Routing (`pipeline.decide()`):
+- `static_fail` → `rejected/static`
+- `static_ok` + `llm_ok=true` + `llm_conf ≥ LLM_CONF_THRESHOLD` +
+  `fp_risk ∈ {low, medium}` → `approved/` (oder `approved/` mit
+  `output_warn_fp` Marker bei `fp_risk=high`)
+- `static_ok` + `llm_ok=false` oder Conf unterhalb Schwelle →
+  `rejected/review`
+- Dedupe-Treffer (cosine > `DEDUPE_THRESHOLD`) → `rejected/duplicate`
+
+Thresholds sind durch Phase 2.5-Kalibrator geführt (`LLM_CONF=0.70` /
+`DEDUPE=0.93` live, Empfehlung Plateau-Median `0.65` / `0.89`).
 
 ### 2.3 RL-Scorer echten Reward geben
 `rl_scorer.py` schreibt heute CVE-Sessions nach Elasticsearch, benutzt
@@ -154,10 +160,31 @@ zieht beim nächsten Cache-Lookup bevorzugt Antworten mit hohem
   (`0.70 similarity + 0.30 reward_norm`) und im Response-Pick.
 
 ### 2.4 Rule-Dedupe via Embeddings
-`nomic-embed-text` (bereits installiert) → Embedding der Regel-Beschreibung
-vor Commit → Cosine-Similarity <0.93 gegen die letzten 1000 Rules. Blocker
-gegen „neue Rule, aber inhaltlich identisch". Indexiert in SQLite (lokal)
-oder Qdrant (wenn wir auf eine echte Vector-DB wollen).
+
+**Status: ✅ DONE** (via `proxy/src/rule_validator/dedupe.py` + `RuleDedupeIndex`).
+
+`nomic-embed-text` liefert 768-Dim-Embeddings der Rule-Descriptions;
+SQLite-Index (`/data/ollama-proxy/validated-rules/.state/embeddings.db`)
+hält die letzten Embeddings. Cosine-Similarity ≥ `DEDUPE_THRESHOLD`
+(live `0.93`, Plateau-Median-Empfehlung `0.89`) → `rejected/duplicate`.
+Neighbors gehen zusätzlich in den LLM-Judge-Prompt für Kontext.
+
+### 1.3-Fusion (offen) — ML-Anomaly in C2-Indikatoren einfließen lassen
+
+`heuristic_detector.py` trainiert in-line einen IsolationForest pro Zyklus
+auf den aktiv beobachteten Features und mischt `anomaly_score` in die
+Threat-Level-Bewertung — ✅ aktiv. `ml_runner.py` trainiert offline einen
+IsoForest auf `honeypot-cve-sessions` und schreibt `ml_anomaly_score` pro
+Session — ✅ aktiv.
+
+**Offen**: Die Korrelations-Stufe in `c2_detection/engine.py` zieht pro
+verdächtiger Src-IP noch KEIN Lookup auf den `ml_anomaly_score` aus
+`honeypot-cve-sessions`. Ziel: in `run_detection_cycle()` nach den
+Layer-Scans eine `lookup_session_ml_anomaly(ip, window_hours)`-Stufe
+ergänzen (Max/Avg über Sessions der IP), als weiteres Signal in
+`ip_scores[ip]["ml_session_anomaly"]` aufnehmen und im Composite leicht
+gewichten. Reduziert Falschpositive gegen IPs, deren CVE-Sessions in
+normalem Bereich liegen, obwohl die Timing-Signatur anomal aussieht.
 
 ---
 
