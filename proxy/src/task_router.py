@@ -25,18 +25,28 @@ logger = logging.getLogger("ollama-proxy.task_router")
 
 
 DEFAULT_TASK_MODELS: dict[str, str] = {
-    # Honeypot responses — stays on the fast, "realistic" chat model.
+    # ACTIVE — used by api_chat (honeypot traffic, implicit default).
     "honeypot_response": "openchat",
-    # Structured rule generation — prefer a code-focused model with JSON mode.
+    # RESERVED — no in-tree caller yet. The current rule generation path
+    # (`src/rule_generator.py`) is template-driven, not LLM-driven. Kept
+    # here so a future LLM-backed generator can flip one header
+    # (X-LLM-Task: rule_generate) and inherit model/options/timeout/
+    # keep_alive without touching the router. If you remove this, also
+    # remove the matching entries in DEFAULT_TASK_OPTIONS /
+    # _TIMEOUTS / _KEEP_ALIVE below.
     "rule_generate": "qwen2.5-coder:7b",
-    # LLM-as-a-judge validator — a stronger reasoning model.
+    # ACTIVE — used by rule_validator.llm_judge.review_rule.
     "rule_validate": "llama3.1:8b",
-    # Dedupe / similarity — the embedding model.
+    # ACTIVE — used by rule_validator.dedupe (embeddings).
     "rule_dedupe_embed": "nomic-embed-text",
-    # Offline classification fallback.
+    # RESERVED — no in-tree caller yet. Placeholder for the offline
+    # classifier phase (Roadmap 3.1 follow-up). Currently the classifier
+    # runs purely on LightGBM/RandomForest features, no LLM fallback. If
+    # you remove this, also drop the matching option/timeout/keep_alive.
     "offline_classify": "dolphin-llama3:8b",
-    # Adversarial critic — small, fast model that rates honeypot-response realism.
-    # Runs out-of-band from the reward aggregator, so it must NOT block real traffic.
+    # ACTIVE — used by adversarial_judge.judge_response. Small, fast
+    # model that rates honeypot-response realism. Runs out-of-band from
+    # the reward aggregator, so it must NOT block real traffic.
     "adversarial_critique": "llama3.2:3b",
 }
 
@@ -96,6 +106,27 @@ DEFAULT_TASK_KEEP_ALIVE: dict[str, str] = {
 }
 
 
+# System-prompt anchor per task. The router only injects these as a FALLBACK
+# — specifically when the request has no system message at all. For tasks
+# whose callers already construct their own rich system prompt (rule_validate
+# via SYSTEM_PROMPT, adversarial_critique via _SYSTEM_PROMPT), the router
+# must NOT override or duplicate. For honeypot_response, the CVE engine owns
+# the system prompt on the cache-miss path and composes it WITH the anchor
+# (see cve_engine.enhance_messages + honeypot_persona.with_anchor). The
+# router here is the fallback for the less common case of traffic that
+# bypasses the CVE engine entirely (e.g. dev smoke tests against the proxy
+# with no CVE profile match).
+#
+# Rule: if a caller already supplies a system message, leave it alone.
+DEFAULT_TASK_SYSTEM_PROMPTS: dict[str, str] = {}
+try:
+    # Imported lazily to avoid a hard import cycle on module load order.
+    from .honeypot_persona import HONEYPOT_PERSONA_ANCHOR as _ANCHOR
+    DEFAULT_TASK_SYSTEM_PROMPTS["honeypot_response"] = _ANCHOR
+except ImportError:  # pragma: no cover — module always ships together
+    pass
+
+
 @dataclass(frozen=True)
 class RoutingDecision:
     task: str
@@ -133,6 +164,10 @@ class TaskRouter:
         self.task_timeouts: dict[str, float] = {**DEFAULT_TASK_TIMEOUTS, **user_timeouts}
         user_keep_alive = dict(config.get("task_keep_alive") or {})
         self.task_keep_alive: dict[str, str] = {**DEFAULT_TASK_KEEP_ALIVE, **user_keep_alive}
+        user_system_prompts = dict(config.get("task_system_prompts") or {})
+        self.task_system_prompts: dict[str, str] = {
+            **DEFAULT_TASK_SYSTEM_PROMPTS, **user_system_prompts
+        }
         self.default_task: str = str(config.get("default_task") or "honeypot_response")
 
         logger.info(
@@ -209,6 +244,23 @@ class TaskRouter:
             if keep:
                 body["keep_alive"] = keep
                 applied.append("keep_alive")
+
+        # System-prompt fallback. ONLY inject when there is no system
+        # message at all — otherwise we trust the caller / CVE engine
+        # to have composed the correct one. The anchor is harmless on
+        # endpoints that ignore messages (embeddings), but we also skip
+        # injection entirely when "messages" is absent or not a list.
+        messages = body.get("messages")
+        if isinstance(messages, list):
+            has_system = any(
+                isinstance(m, dict) and m.get("role") == "system"
+                for m in messages
+            )
+            if not has_system:
+                anchor = self.task_system_prompts.get(task)
+                if anchor:
+                    messages.insert(0, {"role": "system", "content": anchor})
+                    applied.append("system_anchor")
 
         timeout = self.task_timeouts.get(task)
 
