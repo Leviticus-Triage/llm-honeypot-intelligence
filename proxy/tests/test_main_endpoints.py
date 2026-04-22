@@ -148,12 +148,32 @@ async def test_proxy_health_returns_200_when_upstream_reachable(main_client: htt
     assert resp.json()["upstream_reachable"] is True
 
 
-@pytest.mark.xfail(reason="/admin/warmup endpoint is not implemented on main branch")
 @pytest.mark.asyncio
 async def test_admin_warmup_returns_ok(main_client: httpx.AsyncClient):
+    """Warmup should succeed against the mock upstream without needing
+    a real Ollama. The mock returns 200 on /api/chat, so the warmup
+    helper must report ok=True and include the resolved model."""
     resp = await main_client.post("/admin/warmup?task=honeypot_response")
     assert resp.status_code == 200
-    assert resp.json() == [{"ok": True}]
+    body = resp.json()
+    assert isinstance(body, list) and len(body) == 1
+    entry = body[0]
+    assert entry["task"] == "honeypot_response"
+    assert entry["ok"] is True
+    assert entry["status"] == 200
+    assert "elapsed_ms" in entry
+
+
+@pytest.mark.asyncio
+async def test_admin_warmup_all_tasks_when_no_query(main_client: httpx.AsyncClient):
+    """POST /admin/warmup without ?task=... should warm every task
+    that has a payload defined in _WARMUP_PAYLOADS."""
+    resp = await main_client.post("/admin/warmup")
+    assert resp.status_code == 200
+    body = resp.json()
+    tasks = {entry["task"] for entry in body}
+    assert {"honeypot_response", "rule_validate",
+            "adversarial_critique", "rule_dedupe_embed"}.issubset(tasks)
 
 
 @pytest.mark.asyncio

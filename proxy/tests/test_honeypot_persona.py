@@ -1,45 +1,23 @@
-import importlib.util
-from pathlib import Path
-
-import pytest
+from proxy.src.honeypot_persona import HONEYPOT_PERSONA_ANCHOR, with_anchor
 
 
-def _has_honeypot_persona_module() -> bool:
-    module_path = Path(__file__).resolve().parents[1] / "src" / "honeypot_persona.py"
-    if not module_path.exists():
-        return False
-    spec = importlib.util.spec_from_file_location("proxy.src.honeypot_persona", module_path)
-    return spec is not None
-
-
-HAS_PERSONA = _has_honeypot_persona_module()
-
-
-pytestmark = pytest.mark.skipif(
-    not HAS_PERSONA,
-    reason="honeypot_persona module is not present on current main branch",
-)
-
-
-@pytest.mark.skipif(not HAS_PERSONA, reason="module missing")
 def test_with_anchor_empty_returns_anchor_verbatim():
-    from proxy.src.honeypot_persona import HONEYPOT_PERSONA_ANCHOR, with_anchor
-
     assert with_anchor("") == HONEYPOT_PERSONA_ANCHOR
+    assert with_anchor(None) == HONEYPOT_PERSONA_ANCHOR  # type: ignore[arg-type]
 
 
-@pytest.mark.skipif(not HAS_PERSONA, reason="module missing")
+def test_with_anchor_strips_surrounding_whitespace_before_concat():
+    assert with_anchor("  foo  ") == f"{HONEYPOT_PERSONA_ANCHOR}\n\nfoo"
+
+
 def test_with_anchor_foo_concatenates_anchor_and_text():
-    from proxy.src.honeypot_persona import HONEYPOT_PERSONA_ANCHOR, with_anchor
-
     assert with_anchor("foo") == f"{HONEYPOT_PERSONA_ANCHOR}\n\nfoo"
 
 
-@pytest.mark.skipif(not HAS_PERSONA, reason="module missing")
 def test_anchor_contains_invariant_keywords():
-    from proxy.src.honeypot_persona import HONEYPOT_PERSONA_ANCHOR
-
+    """Regression guard: these substrings define the anchor's purpose.
+    If any of them disappear, the anchor has drifted and may no longer
+    defend against the adversarial probes we tested in Anhang L."""
     lower = HONEYPOT_PERSONA_ANCHOR.lower()
     for keyword in ("never", "honeypot", "ai", "in-character"):
-        assert keyword in lower
-
+        assert keyword in lower, f"missing anchor invariant: {keyword!r}"

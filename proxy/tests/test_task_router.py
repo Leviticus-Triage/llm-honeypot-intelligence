@@ -1,5 +1,3 @@
-import pytest
-
 from proxy.src.task_router import DEFAULT_TASK_OPTIONS, TaskRouter
 
 
@@ -57,8 +55,11 @@ def test_routing_timeout_uses_per_task_value():
     assert decision.timeout == 240.0
 
 
-@pytest.mark.xfail(reason="TaskRouter does not currently implement system-anchor injection")
 def test_system_anchor_injection_only_when_no_system():
+    """Router must NOT clobber a caller-provided system message, but must
+    insert the anchor as a fallback when none is present. This defends
+    the invariant documented in Anhang L (exactly one source of truth
+    for the persona per request)."""
     router = _router()
 
     with_system = {
@@ -71,14 +72,28 @@ def test_system_anchor_injection_only_when_no_system():
     }
     router.apply({"x-llm-task": "honeypot_response"}, with_system)
     assert with_system["messages"][0]["content"] == "existing"
+    assert len(with_system["messages"]) == 2  # nothing was added
 
     without_system = {
         "messages": [{"role": "user", "content": "id"}],
         "model": "foo",
         "options": {},
     }
-    router.apply({"x-llm-task": "honeypot_response"}, without_system)
+    decision = router.apply({"x-llm-task": "honeypot_response"}, without_system)
     assert without_system["messages"][0]["role"] == "system"
+    assert without_system["messages"][0]["content"]  # non-empty
+    assert "system_anchor" in decision.applied_option_defaults
+
+
+def test_system_anchor_not_injected_for_non_primary_tasks():
+    """Only honeypot_response has a fallback anchor; other tasks either
+    don't need one (rule_validate supplies its own) or must stay
+    pass-through (rule_dedupe_embed, offline_classify)."""
+    router = _router()
+    body = {"messages": [{"role": "user", "content": "x"}], "options": {}}
+    decision = router.apply({"x-llm-task": "rule_validate"}, body)
+    assert all(m["role"] != "system" for m in body["messages"])
+    assert "system_anchor" not in decision.applied_option_defaults
 
 
 def test_system_anchor_not_injected_for_embeddings():
