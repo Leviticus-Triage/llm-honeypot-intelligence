@@ -38,6 +38,19 @@ ES_PASS = os.environ.get("ES_PASS", "")
 C2_INDEX = "honeypot-c2-indicators"
 INTERVAL = int(os.environ.get("C2_INTERVAL", "300"))
 WINDOW_MINUTES = int(os.environ.get("C2_WINDOW", "60"))
+KNOWN_SCANNER_DAMPING = float(os.environ.get("C2_KNOWN_SCANNER_DAMPING", "0.60"))
+
+KNOWN_SCANNER_KEYWORDS = (
+    "et scan",
+    "shadowserver",
+    "masscan",
+    "zmap",
+    "zgrab",
+    "nmap",
+    "censys",
+    "shodan",
+    "internet scanner",
+)
 
 
 def _auth():
@@ -327,6 +340,17 @@ def _entropy(s: str) -> float:
     return -sum((c / total) * math.log2(c / total) for c in freq.values())
 
 
+def _bigram_entropy(s: str) -> float:
+    """Shannon entropy over character bigrams (detects dictionary masking)."""
+    s = (s or "").lower()
+    if len(s) < 2:
+        return 0.0
+    grams = [s[i:i + 2] for i in range(len(s) - 1)]
+    freq = Counter(grams)
+    total = len(grams)
+    return -sum((c / total) * math.log2(c / total) for c in freq.values())
+
+
 async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> list[dict]:
     """
     Detect DNS tunneling indicators from Suricata DNS events AND Ddospot
@@ -344,7 +368,7 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
             {"range": {"@timestamp": {"gte": f"now-{window_min}m"}}},
         ]}},
         "_source": ["src_ip", "dns.query", "dns.rrtype", "dns.rdata",
-                     "dns.type", "@timestamp"],
+                     "dns.type", "dns.rcode", "dns.rcode_name", "@timestamp"],
         "sort": [{"@timestamp": "desc"}],
     }
     # Ddospot (T-Pot DNSPot) uses a flat schema
@@ -374,12 +398,13 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
     # Group by source IP, unified schema
     ip_data = defaultdict(lambda: {
         "queries": [], "rrtype_counts": Counter(), "timestamps": [],
-        "query_lengths": [], "entropies": [], "rdata_sizes": [],
+        "query_lengths": [], "entropies": [], "bigram_entropies": [], "rdata_sizes": [],
+        "suricata_dns_events": 0, "nxdomain_count": 0,
         "sources": set(),
     })
 
     def _record(ip: str, query_name: str, rrtype: str, rdata: str,
-                ts: str, source: str):
+                ts: str, source: str, rcode: str = ""):
         if not ip or _is_private_ip(ip):
             return
         d = ip_data[ip]
@@ -392,6 +417,12 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
             if len(parts) > 2:
                 subdomain = ".".join(parts[:-2])
                 d["entropies"].append(_entropy(subdomain))
+                d["bigram_entropies"].append(_bigram_entropy(subdomain))
+        if source == "suricata":
+            d["suricata_dns_events"] += 1
+            rc = str(rcode or "").strip().upper()
+            if rc in {"3", "NXDOMAIN"}:
+                d["nxdomain_count"] += 1
         if rrtype:
             d["rrtype_counts"][rrtype] += 1
         if rdata:
@@ -407,6 +438,7 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
             rdata=dns.get("rdata", s.get("dns.rdata", "")),
             ts=s.get("@timestamp", ""),
             source="suricata",
+            rcode=dns.get("rcode_name", dns.get("rcode", s.get("dns.rcode_name", s.get("dns.rcode", "")))),
         )
 
     for h in ddo_hits:
@@ -418,6 +450,7 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
             rdata="",
             ts=s.get("@timestamp", ""),
             source="ddospot",
+            rcode="",
         )
 
     results = []
@@ -435,9 +468,10 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
         score = 0
         indicators = []
 
-        # Ddospot interaction itself is a strong signal (dark-net DNS honeypot)
+        # Ddospot interaction itself is a signal, but not sufficient alone.
+        # Keep this as a small prior and let lexical/protocol features dominate.
         if hit_ddospot:
-            score += 25
+            score += 10
             indicators.append("ddospot_hit")
             if len(sources) > 1:
                 indicators.append(f"multi_source({','.join(sorted(sources))})")
@@ -453,18 +487,37 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
             score += min((avg_entropy - 3.0) * 20, 30)
             indicators.append(f"high_entropy({avg_entropy:.2f})")
 
+        # Factor 2b: Bigram entropy (catches dictionary-word masking attempts)
+        avg_bigram_entropy = (
+            sum(d["bigram_entropies"]) / len(d["bigram_entropies"])
+            if d["bigram_entropies"] else 0
+        )
+        if avg_bigram_entropy > 2.6:
+            score += min((avg_bigram_entropy - 2.4) * 25, 20)
+            indicators.append(f"high_bigram_entropy({avg_bigram_entropy:.2f})")
+
         # Factor 3: Average query length (>30 chars = tunneling)
         avg_length = sum(d["query_lengths"]) / len(d["query_lengths"]) if d["query_lengths"] else 0
         if avg_length > 25:
             score += min((avg_length - 20) * 2, 25)
             indicators.append(f"long_queries(avg={avg_length:.0f})")
 
-        # Factor 4: Unusual record types (TXT, NULL, CNAME dominant)
+        # Factor 4: Unusual record types (TXT/NULL/CNAME/MX share)
         total_rr = sum(d["rrtype_counts"].values())
         unusual_types = sum(d["rrtype_counts"].get(t, 0) for t in ["TXT", "NULL", "CNAME", "MX"])
-        if total_rr > 0 and unusual_types / total_rr > 0.5:
-            score += 20
+        unusual_ratio = (unusual_types / total_rr) if total_rr > 0 else 0.0
+        if unusual_ratio > 0.2:
+            score += min((unusual_ratio - 0.2) * 40, 22)
             indicators.append(f"unusual_rrtype_ratio({unusual_types}/{total_rr})")
+
+        # Factor 4b: NXDOMAIN ratio (Suricata only)
+        nxdomain_ratio = (
+            d["nxdomain_count"] / d["suricata_dns_events"]
+            if d["suricata_dns_events"] > 0 else 0.0
+        )
+        if nxdomain_ratio > 0.25:
+            score += min((nxdomain_ratio - 0.2) * 50, 20)
+            indicators.append(f"high_nxdomain_ratio({nxdomain_ratio:.2f})")
 
         # Factor 5: Large response data
         if d["rdata_sizes"]:
@@ -486,6 +539,8 @@ async def detect_dns_anomalies(client: httpx.AsyncClient, window_min: int) -> li
             "query_count": query_count,
             "avg_query_length": round(avg_length, 1),
             "avg_subdomain_entropy": round(avg_entropy, 2),
+            "avg_subdomain_bigram_entropy": round(avg_bigram_entropy, 2),
+            "nxdomain_ratio": round(nxdomain_ratio, 3),
             "rrtype_distribution": dict(d["rrtype_counts"]),
             "indicators": indicators,
             "mitre_techniques": ["T1071.004", "T1572"],
@@ -722,6 +777,72 @@ async def correlate_alerts(client: httpx.AsyncClient, window_min: int) -> list[d
     return results
 
 
+async def detect_known_scanners(client: httpx.AsyncClient, window_min: int) -> list[dict]:
+    """
+    Detect known internet scanners from Suricata alert metadata.
+
+    These sources can look periodic/noisy and otherwise inflate beaconing ranks.
+    We keep them visible but in their own dedicated layer.
+    """
+    query = {
+        "size": 0,
+        "query": {"bool": {"must": [
+            {"term": {"type.keyword": "Suricata"}},
+            {"term": {"event_type.keyword": "alert"}},
+            {"range": {"@timestamp": {"gte": f"now-{window_min}m"}}},
+        ]}},
+        "aggs": {
+            "by_src": {
+                "terms": {"field": "src_ip.keyword", "size": 300, "min_doc_count": 2},
+                "aggs": {
+                    "categories": {"terms": {"field": "alert.category.keyword", "size": 20}},
+                    "signatures": {"terms": {"field": "alert.signature.keyword", "size": 30}},
+                },
+            }
+        },
+    }
+
+    data = await _es_search(client, "logstash-*", query)
+    results = []
+
+    for bucket in data.get("aggregations", {}).get("by_src", {}).get("buckets", []):
+        src_ip = bucket["key"]
+        if _is_private_ip(src_ip):
+            continue
+
+        cat_terms = [str(c["key"]) for c in bucket.get("categories", {}).get("buckets", [])]
+        sig_terms = [str(s["key"]) for s in bucket.get("signatures", {}).get("buckets", [])]
+        haystack = " || ".join(cat_terms + sig_terms).lower()
+
+        matched = [kw for kw in KNOWN_SCANNER_KEYWORDS if kw in haystack]
+        if not matched:
+            continue
+
+        alert_count = int(bucket.get("doc_count", 0))
+        score = min(100.0, 35.0 + min(alert_count, 40) * 1.2 + len(set(matched)) * 6.0)
+        indicators = [f"known_scanner_match({kw})" for kw in sorted(set(matched))[:6]]
+        indicators.append(f"scanner_alerts({alert_count})")
+
+        results.append({
+            "src_ip": src_ip,
+            "detection_type": "known_scanner",
+            "known_scanner_score": round(score, 1),
+            "alert_count": alert_count,
+            "scanner_categories": cat_terms[:10],
+            "scanner_signatures": sig_terms[:10],
+            "indicators": indicators,
+            "mitre_techniques": ["T1595"],
+        })
+
+    results.sort(key=lambda x: x["known_scanner_score"], reverse=True)
+    logger.info(
+        "Known scanner: %d suspects (top score: %.1f)",
+        len(results),
+        results[0]["known_scanner_score"] if results else 0,
+    )
+    return results
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Orchestrator: Combine all layers and push to ES
 # ──────────────────────────────────────────────────────────────────────
@@ -742,6 +863,7 @@ async def _ensure_index(client: httpx.AsyncClient):
                 "dns_score": {"type": "float"},
                 "anomaly_score": {"type": "float"},
                 "correlation_score": {"type": "float"},
+                "known_scanner_score": {"type": "float"},
                 "threat_level": {"type": "keyword"},
                 "flow_count": {"type": "integer"},
                 "alert_count": {"type": "integer"},
@@ -760,6 +882,8 @@ async def _ensure_index(client: httpx.AsyncClient):
                 "jitter_class": {"type": "keyword"},
                 "avg_query_length": {"type": "float"},
                 "avg_subdomain_entropy": {"type": "float"},
+                "avg_subdomain_bigram_entropy": {"type": "float"},
+                "nxdomain_ratio": {"type": "float"},
                 "unique_destinations": {"type": "integer"},
                 "unique_ports": {"type": "integer"},
                 "protocol_distribution": {"type": "object", "enabled": False},
@@ -818,6 +942,8 @@ def _threat_level(score: float) -> str:
 
 def _primary_detection_type(scores: dict) -> str:
     """Determine the primary detection type based on highest layer score."""
+    if scores.get("known_scanner", 0) > 0:
+        return "known_scanner"
     layer_scores = [
         (scores["beacon"], "beaconing"),
         (scores["dns"], "dns_tunneling"),
@@ -849,16 +975,18 @@ async def run_detection_cycle():
         dns_window = max(WINDOW_MINUTES * 4, 240)
 
         # Run all detectors in parallel
-        beacon_results, dns_results, proto_results, alert_results = await asyncio.gather(
+        beacon_results, dns_results, proto_results, alert_results, scanner_results = await asyncio.gather(
             detect_beaconing(client, WINDOW_MINUTES),
             detect_dns_anomalies(client, dns_window),
             detect_protocol_anomalies(client, WINDOW_MINUTES),
             correlate_alerts(client, WINDOW_MINUTES),
+            detect_known_scanners(client, WINDOW_MINUTES),
         )
 
         # Merge results by IP for composite scoring
         ip_scores = defaultdict(lambda: {
             "beacon": 0, "dns": 0, "anomaly": 0, "correlation": 0,
+            "known_scanner": 0,
             "data": {}, "all_indicators": [], "all_mitre": set(),
         })
 
@@ -891,6 +1019,13 @@ async def run_detection_cycle():
             ip_scores[ip]["all_indicators"].extend(r.get("indicators", []))
             ip_scores[ip]["all_mitre"].update(r.get("mitre_techniques", []))
 
+        for r in scanner_results:
+            ip = r["src_ip"]
+            ip_scores[ip]["known_scanner"] = r["known_scanner_score"]
+            ip_scores[ip]["data"].update(r)
+            ip_scores[ip]["all_indicators"].extend(r.get("indicators", []))
+            ip_scores[ip]["all_mitre"].update(r.get("mitre_techniques", []))
+
         # Build and push composite documents
         now = datetime.now(timezone.utc).isoformat()
         bulk_body = ""
@@ -904,6 +1039,8 @@ async def run_detection_cycle():
                 + scores["anomaly"] * 0.20
                 + scores["correlation"] * 0.20
             )
+            if scores["known_scanner"] > 0:
+                composite *= KNOWN_SCANNER_DAMPING
 
             if composite < 5:
                 continue
@@ -918,6 +1055,8 @@ async def run_detection_cycle():
                 active_layers.append("protocol_anomaly")
             if scores["correlation"] > 0:
                 active_layers.append("alert_correlation")
+            if scores["known_scanner"] > 0:
+                active_layers.append("known_scanner")
 
             doc = {
                 "@timestamp": now,
@@ -927,6 +1066,7 @@ async def run_detection_cycle():
                 "dns_score": round(scores["dns"], 1),
                 "anomaly_score": round(scores["anomaly"], 1),
                 "correlation_score": round(scores["correlation"], 1),
+                "known_scanner_score": round(scores["known_scanner"], 1),
                 "threat_level": _threat_level(composite),
                 "detection_type": _primary_detection_type(scores),
                 "detection_types": active_layers,
@@ -941,9 +1081,11 @@ async def run_detection_cycle():
                         "dominant_period_sec", "peak_power", "spectral_flatness",
                         "jitter_class",
                         "avg_query_length", "avg_subdomain_entropy",
+                        "avg_subdomain_bigram_entropy", "nxdomain_ratio",
                         "unique_destinations", "unique_ports",
                         "protocol_distribution", "port_distribution",
-                        "rrtype_distribution", "alert_categories", "top_signatures"]:
+                        "rrtype_distribution", "alert_categories", "top_signatures",
+                        "scanner_categories", "scanner_signatures"]:
                 if key in scores["data"]:
                     doc[key] = scores["data"][key]
 
