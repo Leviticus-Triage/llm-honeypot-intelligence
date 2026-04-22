@@ -90,7 +90,7 @@ Launch:
 docker compose up -d
 ```
 
-Verify all 5 containers are running:
+Verify all 8 containers are running:
 
 ```bash
 docker compose ps
@@ -99,13 +99,23 @@ docker compose ps
 Expected output:
 
 ```
-NAME                         STATUS
-ollama-proxy                 Up (healthy)
-ollama-rl-scorer             Up
-ollama-rule-generator        Up
-ollama-heuristic-detector    Up
-ollama-c2-detector           Up
+NAME                              STATUS
+ollama-proxy                      Up (healthy)
+ollama-rl-scorer                  Up
+ollama-reward-aggregator          Up
+ollama-ml-runner                  Up
+ollama-rule-generator             Up
+ollama-heuristic-detector         Up
+ollama-rule-validator             Up
+ollama-adversarial-simulator      Up
 ```
+
+> **Note on `ollama-adversarial-simulator`**: Feeds the reward aggregator
+> with labelled multi-stage attacker sessions on a 12h cadence so
+> Reward-B doesn't starve on sparse organic traffic. Synthetic sources
+> use `10.99.0.0/16` and carry the `X-Synthetic-Adversary` header; filter
+> them out in ES with `NOT src_ip:10.99.0.0/16` when analysing real
+> attackers only. See OPTIMIZATION-ROADMAP Anhang M.
 
 ---
 

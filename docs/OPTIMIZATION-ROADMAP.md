@@ -894,3 +894,118 @@ Live-Tests am 22.04.2026 auf `192.168.2.116`:
   Analyzer — derselbe physische Modell-Hash, zwei Telemetrie-Labels.
   Vermutlich Telemetrie-Bug bei Ollama `tags` vs `show`. Nicht
   produktkritisch.
+
+---
+
+## Anhang M – Periodisierung Adversarial-Simulator (22.04.2026)
+
+### M.1  Motivation
+
+Der Plausibility-Analyzer (Anhang K) und der Reward-Aggregator
+starven beide bei sparsem organischem Traffic. Konkret am 22.04.2026
+beobachtet: 45 Judgements nach einem Kalendertag, 255 Judgements + 2
+Tage fehlten noch bis Gate-Öffnung. Bei organischer Ankunftsrate ≈
+15 Judgements/Tag wären das 17 Tage.
+
+Der Adversarial-Simulator (`proxy/run_adversarial_simulator.py`,
+ursprünglich für manuelles Reward-B-Smoke-Testen gebaut) lieferte die
+bewährte Persona-Abdeckung bereits — er musste nur vom Ein-mal-
+Manuell-Ausführen zu Dauerbetrieb gehoben werden.
+
+### M.2  Lösung — Compose-Sidecar mit Loop-Mode
+
+Neuer Compose-Service `adversarial-simulator`:
+
+```yaml
+adversarial-simulator:
+  container_name: ollama-adversarial-simulator
+  build: .
+  restart: unless-stopped
+  network_mode: host
+  depends_on:
+    ollama-proxy:
+      condition: service_healthy
+  environment:
+    - SIMULATOR_PROXY_URL=http://localhost:11435
+    - SIMULATOR_LOOP=1
+    - SIMULATOR_LOOP_INTERVAL=${SIMULATOR_LOOP_INTERVAL:-12h}
+    - SIMULATOR_STARTUP_DELAY=${SIMULATOR_STARTUP_DELAY:-300s}
+    - SIMULATOR_RUNS_PER_TICK=${SIMULATOR_RUNS_PER_TICK:-1}
+    - SIMULATOR_TIMEOUT=${SIMULATOR_TIMEOUT:-60}
+  volumes:
+    - ./run_adversarial_simulator.py:/app/run_adversarial_simulator.py:ro
+  entrypoint: ["python", "/app/run_adversarial_simulator.py"]
+```
+
+Das Script gewinnt einen `--loop`-Modus (via `SIMULATOR_LOOP=1`
+gegateted), der die 7 Personas (recon / download / execution /
+persistence / exfil / privesc / mixed — alle POS_CATEGORIES abgedeckt)
+auf fester Kadenz replayed. Zwischen Ticks: `SIMULATOR_LOOP_INTERVAL`,
+drift-korrigiert an tatsächlicher Elapsed-Time.
+
+### M.3  Per-Tick Jitter
+
+Ohne Jitter würden identische Prompts identische LLM-Antworten erzeugen,
+die auf `response_hash` kollabieren — kein neuer Judgement-Eintrag.
+Neues `_jitter_prompts(prompts, rng)` substituiert tick-spezifisch:
+
+- C2-IPs (8 Pool-Einträge, je 2 pro Tick)
+- Dropper-Filenames (`.kinsing` → `.xmrig` / `.sshd_worker` / …)
+- Payload-Namen (`payload.bin` → `beacon.elf` / `loader.so` / …)
+- Ports (`4444` → `443` / `8080` / `9001` / `31337` / …)
+- Tempdir-Pfade (`/tmp/` → `/dev/shm/` / `/var/tmp/` / …)
+- Pastebin-Hashes (`abc123` → random 5-char)
+
+Der Tick-Seed ist `int(time.time())`, in den per-Persona-RNG gemischt.
+Deckungsgrad: recon-Persona hat keine Jitter-Variablen (nur `uname -a`,
+`whoami`, etc.) → fällt unter semantic cache hit. Alle anderen Personas
+bekommen pro Tick frische Varianten.
+
+### M.4  Verifikation
+
+Erster automatischer Tick live beobachtet am 22.04.2026 19:22–19:25 UTC:
+
+- **45 Rounds in 176 s**, 1 Error (download-Persona, 30 s-Timeout am
+  Dropper-Scenario). 96 % Erfolgsrate.
+- Reward-B (unmasked, letzter 1 h Fenster): `avg=0.565`, `range=[0.2, 1.0]`,
+  `count=51`. Vorher ~0.15 avg → **×3.7 Uplift** auf dem Dataset, das
+  der Reward-Aggregator für Weight-Tuning sieht.
+- Alle 7 POS_CATEGORIES mit mindestens einer Persona vertreten.
+- Task-Router verarbeitet die Requests korrekt als `honeypot_response`
+  (default-match via `X-Forwarded-For=10.99.0.0/16`).
+
+### M.5  Bewusste Nicht-Entscheidungen
+
+1. **`MIN_JUDGEMENTS=300` nicht gesenkt**. Der Semantic-Cache dedupt
+   simulator-Output gegen bereits bewertete Responses — das ist
+   korrektes Verhalten: die Judge hat diese Antwort bereits gesehen,
+   ein zweites Judgement würde keine neue Information liefern. Das
+   Gate progressiert langsamer, aber korrekt. Eher organische
+   Diversität als synthetische Menge.
+2. **Kein Cache-Bypass für synthetischen Traffic**. Der Header
+   `X-Synthetic-Adversary` ist im Simulator gesetzt, aber der Proxy
+   respektiert ihn nicht (bewusst). Bypass würde ×5 LLM-Calls pro Tick
+   kosten; Upside gering (Reward B ist der Hauptgewinn, der braucht
+   keine Cache-Umgehung).
+3. **Keine zusätzlichen Personas**. Die sieben decken bereits alle
+   Reward-Kategorien; mehr Personas würden nur Ticks verlängern.
+
+### M.6  Opt-Out / Tuning
+
+- `docker compose stop adversarial-simulator` — sofortiger Stopp.
+- `SIMULATOR_LOOP_INTERVAL=24h` — seltener (halber Reward-B-Signal).
+- `SIMULATOR_RUNS_PER_TICK=2` — doppelter Durchsatz pro Tick, ~6 min
+  statt ~3 min Tick-Dauer.
+- `SIMULATOR_LOOP=0` — degradiert zu One-Shot-Verhalten (alte CLI-
+  Semantik), falls als Cron statt Sidecar gewünscht.
+
+### M.7  Synthetic-vs-Real Disambiguation
+
+Simulator-Traffic ist an **zwei unabhängigen** Attributen erkennbar:
+
+- `src_ip` in `10.99.0.0/16` (7 konkrete IPs, eine pro Persona).
+- HTTP-Header `X-Synthetic-Adversary: <persona>/<category>`.
+
+ES-Filter: `NOT src_ip:10.99.0.0/16` isoliert organischen Traffic für
+jede Analyse, falls Reward-Blend-Empfehlungen später auf echten
+Sessions validiert werden müssen.
