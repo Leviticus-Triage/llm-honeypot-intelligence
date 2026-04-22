@@ -324,7 +324,7 @@ def train_lgbm() -> dict:
     from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 
     mlb = MultiLabelBinarizer(classes=unique)
-    y = mlb.fit_transform([[l] for l in labels])
+    y = mlb.fit_transform([[lbl] for lbl in labels])
     scaler = StandardScaler()
     # Scale ONLY the numeric channel; hash features are already in [0,1] and
     # scaling them across the whole dataset would spread the zero-background

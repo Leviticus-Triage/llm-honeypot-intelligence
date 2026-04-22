@@ -7,7 +7,7 @@ from typing import Optional
 
 import httpx
 
-from .dedupe import DedupeNeighbor, RuleDedupeIndex
+from .dedupe import RuleDedupeIndex
 from .llm_judge import review_rule
 from .static_checks import CheckResult, detect_rule_type, validate_rule
 
