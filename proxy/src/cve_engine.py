@@ -12,6 +12,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Optional
 
+from .honeypot_persona import with_anchor
 from .cve_templates import (
     ALL_CVE_PROFILES,
     SSH_PROFILES,
@@ -200,26 +201,37 @@ class CVEEngine:
                 profile = better_match
                 self._stats["pattern_matches"] += 1
 
-        # Build enhanced messages
+        # Build enhanced messages. The effective system prompt is the
+        # global HONEYPOT_PERSONA_ANCHOR prepended to the CVE-specific
+        # profile text. The anchor carries the invariants (never break
+        # character, never say "honeypot"/"AI", no meta-answers,
+        # shell-formatted output) that every profile must obey, so we
+        # don't have to duplicate them in every CVE template.
+        effective_system = with_anchor(profile.system_prompt)
+
         enhanced = []
         system_replaced = False
 
         for msg in messages:
             if msg.get("role") == "system" and not system_replaced:
-                # Replace the default system prompt with CVE-specific one
+                # Replace the caller's first system message with the
+                # anchor+profile combination. The anchor on its own is
+                # strictly a subset of the invariants, so overriding a
+                # client-supplied system message is intentional — the
+                # proxy is authoritative for honeypot persona.
                 enhanced.append({
                     "role": "system",
-                    "content": profile.system_prompt,
+                    "content": effective_system,
                 })
                 system_replaced = True
             else:
                 enhanced.append(msg)
 
-        # If no system message existed, prepend one
+        # If no system message existed, prepend one.
         if not system_replaced:
             enhanced.insert(0, {
                 "role": "system",
-                "content": profile.system_prompt,
+                "content": effective_system,
             })
 
         self._stats["prompts_enhanced"] += 1

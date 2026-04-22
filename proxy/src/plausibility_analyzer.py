@@ -391,7 +391,7 @@ def _render_markdown(result: AnalysisResult) -> str:
     new_c = round(0.25 * scale, 3)
     lines.append("```python")
     lines.append(
-        f"def _total_reward(a, b, c, d):"
+        "def _total_reward(a, b, c, d):"
     )
     lines.append(
         f"    return {new_a}*a + {new_b}*b + {new_c}*c + {w}*d"

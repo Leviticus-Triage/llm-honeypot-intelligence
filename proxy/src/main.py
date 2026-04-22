@@ -7,6 +7,7 @@ Sits between honeypots and Ollama, providing:
 - Exploration vs exploitation balance
 """
 
+import asyncio
 import logging
 import os
 import time
@@ -137,6 +138,13 @@ async def lifespan(app: FastAPI):
 
     stats = get_cache_stats()
     logger.info("Cache loaded: %d prompts, %d responses", stats["total_prompts"], stats["total_responses"])
+
+    # Kick off background model warmup. This runs outside the critical path —
+    # the proxy is already serving requests while warmup progresses, so a slow
+    # first-request cold-load on honeypot_response traffic is converted into a
+    # background one-time pay. Disable with PROXY_WARMUP_ON_STARTUP=0.
+    if os.environ.get("PROXY_WARMUP_ON_STARTUP", "1") == "1":
+        asyncio.create_task(_warmup_models_background())
 
     yield
 
@@ -305,6 +313,147 @@ async def cve_profiles():
 
 
 # ---------------------------------------------------------------------------
+# Admin: model warmup
+# ---------------------------------------------------------------------------
+
+# Per-task payload used to trigger an Ollama cold-load. Responses are
+# discarded; we only care that the model gets resident in VRAM before real
+# traffic arrives. Kept tiny on purpose.
+_WARMUP_PAYLOADS: dict[str, tuple[str, dict]] = {
+    "honeypot_response": (
+        "/api/chat",
+        {
+            "stream": False,
+            "messages": [
+                {"role": "user", "content": "echo warmup"},
+            ],
+            "options": {"num_predict": 4, "temperature": 0.0},
+        },
+    ),
+    "rule_validate": (
+        "/api/chat",
+        {
+            "stream": False,
+            "messages": [
+                {"role": "user", "content": "Respond with {}"},
+            ],
+            "options": {"num_predict": 4, "temperature": 0.0, "format": "json"},
+        },
+    ),
+    "adversarial_critique": (
+        "/api/chat",
+        {
+            "stream": False,
+            "messages": [
+                {"role": "user", "content": "Respond with {}"},
+            ],
+            "options": {"num_predict": 4, "temperature": 0.0, "format": "json"},
+        },
+    ),
+    "rule_dedupe_embed": (
+        "/api/embeddings",
+        {"prompt": "warmup"},
+    ),
+}
+
+
+async def _warmup_one(task: str) -> dict:
+    """Fire a single minimal request at the model assigned to ``task``."""
+    if not task_router:
+        return {"task": task, "ok": False, "reason": "router_not_initialised"}
+    if task not in _WARMUP_PAYLOADS:
+        return {"task": task, "ok": False, "reason": "no_warmup_payload_defined"}
+
+    path, body_template = _WARMUP_PAYLOADS[task]
+    body = {**body_template}
+    # Spoof the header on the local apply() call so the router treats it as
+    # explicit (triggers model override + option merge).
+    fake_headers = {"x-llm-task": task}
+    routing = task_router.apply(fake_headers, body)
+
+    # Cold-load can take longer than the per-task runtime timeout when a
+    # VRAM swap is required (e.g. switching from llama3.1:8b to another
+    # model on a 12GB card). Use a generous warmup floor so we don't
+    # report false-positive timeouts during startup. Runtime timeouts for
+    # real traffic are unaffected — they come from routing.timeout.
+    _WARMUP_FLOOR_SECS = 240.0
+    timeout = httpx.Timeout(
+        connect=10.0,
+        read=max(_WARMUP_FLOOR_SECS, float(routing.timeout or _WARMUP_FLOOR_SECS)),
+        write=10.0,
+        pool=10.0,
+    )
+    t0 = time.time()
+    try:
+        resp = await http_client.post(path, json=body, timeout=timeout)
+        elapsed = (time.time() - t0) * 1000
+        ok = 200 <= resp.status_code < 300
+        return {
+            "task": task,
+            "model": routing.resolved_model,
+            "ok": ok,
+            "status": resp.status_code,
+            "elapsed_ms": round(elapsed, 1),
+        }
+    except Exception as e:
+        return {
+            "task": task,
+            "model": routing.resolved_model,
+            "ok": False,
+            "reason": f"{type(e).__name__}: {e or 'no message'}",
+        }
+
+
+async def _warmup_models_background() -> None:
+    """
+    Warm only the primary honeypot traffic model on startup.
+
+    Rationale: Ollama serialises all requests on a single GPU. Warming a
+    large model (e.g. llama3.1:8b, 96s cold-load) at startup would block
+    honeypot_response traffic and cause 30s timeout 502s on live
+    attackers — the exact failure mode #2 just introduced detection for.
+    Secondary models (rule_validate, adversarial_critique,
+    rule_dedupe_embed) are warmed lazily on their first real use, and
+    can be prewarmed on demand via POST /admin/warmup?task=<name>.
+    """
+    await asyncio.sleep(5.0)
+    primary = "honeypot_response"
+    logger.info("Warmup: starting background warmup for primary task=%s", primary)
+    result = await _warmup_one(primary)
+    if result.get("ok"):
+        logger.info("Warmup: %s ok model=%s elapsed=%sms",
+                    primary, result.get("model"), result.get("elapsed_ms"))
+    else:
+        logger.warning("Warmup: %s failed model=%s reason=%s",
+                       primary, result.get("model"),
+                       result.get("reason") or result.get("status"))
+
+
+@app.post("/admin/warmup")
+async def admin_warmup(request: Request):
+    """
+    Trigger model warmup on demand.
+
+    Query params:
+      ?task=<name>  — warm a single task (e.g. honeypot_response)
+      (omitted)     — warm all tasks that have a warmup payload
+
+    Returns a JSON array with one object per task showing resolved model,
+    elapsed_ms, and ok/reason. This endpoint is intentionally non-auth'd
+    but lives under /admin/* so a reverse proxy can ACL it.
+    """
+    params = dict(request.query_params)
+    task = params.get("task")
+    if task:
+        result = await _warmup_one(task)
+        return JSONResponse([result])
+    results = []
+    for t in _WARMUP_PAYLOADS:
+        results.append(await _warmup_one(t))
+    return JSONResponse(results)
+
+
+# ---------------------------------------------------------------------------
 # Ollama API: /api/chat (main cached endpoint)
 # ---------------------------------------------------------------------------
 
@@ -407,13 +556,22 @@ async def api_chat(request: Request):
     else:
         logger.debug("EXPLORE: bypassing cache for fresh generation")
 
-    # Step 3: Cache miss - forward to upstream Ollama
+    # Step 3: Cache miss - forward to upstream Ollama.
+    # Honour the task-specific read timeout from the router (e.g. 30s for
+    # honeypot_response); fall back to the shared client default (300s) so
+    # rule_validate / adversarial_critique / embeddings keep their long
+    # read window needed for cold-load recovery.
     cache._stats["misses"] += 1
-    try:
-        resp = await http_client.post(
-            "/api/chat",
-            json={**body, "stream": False},
+    post_kwargs: dict = {"json": {**body, "stream": False}}
+    if routing and routing.timeout:
+        post_kwargs["timeout"] = httpx.Timeout(
+            connect=10.0,
+            read=float(routing.timeout),
+            write=10.0,
+            pool=10.0,
         )
+    try:
+        resp = await http_client.post("/api/chat", **post_kwargs)
         resp.raise_for_status()
         data = resp.json()
     except httpx.HTTPStatusError as e:
@@ -507,7 +665,12 @@ async def api_generate(request: Request):
 
 async def _forward_direct(path: str, body: dict, routing=None) -> JSONResponse:
     """Forward a request straight to Ollama, honouring the task-specific timeout."""
-    body = {**body, "stream": False}
+    # `stream: False` is only meaningful for chat/generate. The embeddings
+    # endpoint has no stream concept; Ollama accepts extra fields in most
+    # versions, but keeping the body clean avoids unexpected side effects
+    # if the upstream is swapped for a stricter OpenAI-compatible server.
+    if path in ("/api/chat", "/api/generate"):
+        body = {**body, "stream": False}
     timeout = httpx.Timeout(
         connect=10.0,
         read=float(routing.timeout) if routing and routing.timeout else 300.0,
@@ -540,13 +703,21 @@ async def _forward_direct(path: str, body: dict, routing=None) -> JSONResponse:
 
 @app.post("/api/embeddings")
 async def api_embeddings(request: Request):
-    """Passthrough /api/embeddings."""
+    """
+    Passthrough /api/embeddings with task routing.
+
+    Router is applied for every request so that keep_alive and the
+    embedding model can be centrally configured. For the typical
+    ``rule_dedupe_embed`` caller, this also consolidates timeout and
+    resident-model policy with /api/chat. Callers that want the legacy
+    raw passthrough can simply omit the X-LLM-Task header AND send no
+    ``messages`` field — apply() is a no-op on chat-specific logic for
+    embedding bodies (no ``messages`` means the system-anchor branch is
+    skipped automatically).
+    """
     body = await request.json()
-    try:
-        resp = await http_client.post("/api/embeddings", json=body)
-        return JSONResponse(status_code=resp.status_code, content=resp.json())
-    except Exception as e:
-        return JSONResponse(status_code=502, content={"error": str(e)})
+    routing = task_router.apply(request.headers, body) if task_router else None
+    return await _forward_direct("/api/embeddings", body, routing)
 
 
 @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
