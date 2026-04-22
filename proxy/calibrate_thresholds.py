@@ -15,6 +15,12 @@ Design references (offline, no extra LLM calls required):
 - Aman's AI Journal, data-filtering primer: embedding-cosine near-duplicate
   cutoff ~0.90 (our current 0.985 is extremely conservative).
 
+Selection rule: both recommendations pick the *median* of the top-scoring
+plateau rather than the plateau edge. With sparse ground truth the precision/
+recall curve is almost always flat across a wide threshold band; an argmax-
+style pick sits on the edge and is one distribution-drift event away from
+falling off the cliff. The median keeps the validator safely in the middle.
+
 Inputs (all read-only):
 - VALIDATED_DIR/approved/**/*.issues.json
 - VALIDATED_DIR/rejected/**/*.issues.json
@@ -222,12 +228,25 @@ def _sweep_conf(samples: list[Sample]) -> list[dict]:
 
 
 def _recommend_conf(rows: list[dict]) -> Optional[float]:
-    """Pick the threshold with highest recall whose FP rate <= MAX_FP_RATE."""
+    """
+    Pick a threshold in the *middle* of the precision/recall plateau.
+
+    Among rows with fp_rate <= MAX_FP_RATE AND recall > 0, find the best
+    (recall, f1) tuple and return the median threshold of all rows tied on
+    that tuple. Sitting mid-plateau gives a safety margin against concept
+    drift and generator-model shifts — picking the plateau edge (as a naive
+    argmax does) leaves the validator one embedding-distribution-change
+    away from a recall cliff.
+    """
     feasible = [r for r in rows if r["fp_rate"] <= MAX_FP_RATE and r["recall"] > 0]
     if not feasible:
         return None
-    best = max(feasible, key=lambda r: (r["recall"], r["f1"], -r["threshold"]))
-    return best["threshold"]
+    best_score = max((r["recall"], r["f1"]) for r in feasible)
+    plateau = sorted(
+        (r for r in feasible if (r["recall"], r["f1"]) == best_score),
+        key=lambda r: r["threshold"],
+    )
+    return plateau[len(plateau) // 2]["threshold"]
 
 
 def _sweep_dedupe(samples: list[Sample]) -> list[dict]:
@@ -271,7 +290,17 @@ def _sweep_dedupe(samples: list[Sample]) -> list[dict]:
 
 
 def _recommend_dedupe(rows: list[dict]) -> Optional[float]:
-    """Lowest cutoff that still retains MIN_DEDUPE_RECALL of known dupes."""
+    """
+    Pick a dedupe cutoff in the *middle* of the full-recall plateau.
+
+    Among cutoffs where retained_dedupe_recall >= MIN_DEDUPE_RECALL AND
+    would_drop_currently_approved == 0, find the maximum retained-recall
+    value and return the median cutoff of all rows tied at that value.
+    Mid-plateau sitting avoids regressions when the rule-generator model
+    or the embedding distribution drifts — picking the lowest feasible
+    cutoff (edge) would be one drift-event away from false-merging
+    legitimate variants.
+    """
     feasible = [
         r for r in rows
         if r["retained_dedupe_recall"] >= MIN_DEDUPE_RECALL
@@ -279,7 +308,12 @@ def _recommend_dedupe(rows: list[dict]) -> Optional[float]:
     ]
     if not feasible:
         return None
-    return min(feasible, key=lambda r: r["cutoff"])["cutoff"]
+    best_recall = max(r["retained_dedupe_recall"] for r in feasible)
+    plateau = sorted(
+        (r for r in feasible if r["retained_dedupe_recall"] == best_recall),
+        key=lambda r: r["cutoff"],
+    )
+    return plateau[len(plateau) // 2]["cutoff"]
 
 
 def _render_markdown(
@@ -300,7 +334,11 @@ def _render_markdown(
         f"- MAX_FP_RATE cap: `{MAX_FP_RATE}`",
         f"- MIN_DEDUPE_RECALL floor: `{MIN_DEDUPE_RECALL}`",
         "",
-        "## Recommendations",
+        "## Recommendations (plateau-median pick)",
+        "",
+        "Both recommendations are the median of the top-scoring plateau, not the "
+        "plateau edge — this gives a safety margin against concept drift. If the "
+        "plateau collapses to a single row, the lone feasible value is returned.",
         "",
         f"- `LLM_CONF_THRESHOLD` → **{conf_rec if conf_rec is not None else 'insufficient data'}**",
         f"- `DEDUPE_THRESHOLD` → **{dedupe_rec if dedupe_rec is not None else 'insufficient data'}**",
