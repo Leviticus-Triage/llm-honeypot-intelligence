@@ -27,6 +27,7 @@ STIX-IOCs) erzeugt – mit echtem Feedback-Loop.
 | Phase 5 RL-Reward-Aggregator + Cache-Gewichtung | ✅ Live auf `<ai-workstation>`: Reward-Index aktiv (`honeypot-response-rewards`), SQLite `response_rewards` befuellt, Cache-Ranking reward-aware | `proxy/src/reward_aggregator.py`, `proxy/src/cache.py`, `proxy/src/models.py`, `proxy/run_reward_aggregator.py` |
 | Phase 6 Offline-ML Runner (IsoForest + Classifier) | ✅ Live auf `<ai-workstation>`: `ml-runner` Export/Train/Infer erfolgreich, `honeypot-cve-sessions` mit `ml_anomaly_score` + `ml_classifier_tags` angereichert | `proxy/src/ml_runner.py`, `proxy/run_ml_runner.py`, `proxy/docker-compose.yml` |
 | Phase 2.5 Threshold-Kalibrator | ✅ Offline-Replay der `*.issues.json` Sidecars, Precision/Recall/FP-Sweep über `LLM_CONF_THRESHOLD` + `DEDUPE_THRESHOLD` mit harter `MAX_FP_RATE`-Schranke (yara-gen/PMLR'25-Methodik) | `proxy/calibrate_thresholds.py` |
+| Phase 2.5 Erste Kalibrierung live angewendet | ✅ 25 Sidecars auf `<ai-workstation>` gesweept (12 labelled: 5 tp / 7 fp). Befund: `LLM_CONF_THRESHOLD=0.70` sitzt auf Precision/Recall=1.0-Plateau bis 0.80, Cliff bei 0.825 → unverändert gelassen. `DEDUPE_THRESHOLD=0.985` fing nur 2 von 6 Dupes → auf **0.93** gesenkt (retained_recall=1.0, 0 legit drops). Container recreate `failures=0`. | `proxy/docker-compose.yml`, `validated-rules/.state/calibration.{json,md}` |
 
 ---
 
