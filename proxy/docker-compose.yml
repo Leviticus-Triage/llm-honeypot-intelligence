@@ -197,6 +197,30 @@ services:
       - rules_validated:/data/ollama-proxy/validated-rules
     entrypoint: ["python", "/app/run_rule_validator.py"]
 
+  adversarial-simulator:
+    container_name: ollama-adversarial-simulator
+    build: .
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      ollama-proxy:
+        condition: service_healthy
+    environment:
+      # Feeds the reward aggregator + plausibility analyzer with labelled
+      # multi-stage attacker sessions so the readiness gate doesn't starve
+      # on sparse organic traffic. Synthetic IPs (10.99.0.0/16) and
+      # X-Synthetic-Adversary header let analysts segregate in ES at will.
+      - SIMULATOR_PROXY_URL=http://localhost:11435
+      - SIMULATOR_LOOP=1
+      - SIMULATOR_LOOP_INTERVAL=${SIMULATOR_LOOP_INTERVAL:-12h}
+      - SIMULATOR_STARTUP_DELAY=${SIMULATOR_STARTUP_DELAY:-300s}
+      - SIMULATOR_RUNS_PER_TICK=${SIMULATOR_RUNS_PER_TICK:-1}
+      - SIMULATOR_TIMEOUT=${SIMULATOR_TIMEOUT:-60}
+      - SIMULATOR_LOG_LEVEL=${SIMULATOR_LOG_LEVEL:-INFO}
+    volumes:
+      - ./run_adversarial_simulator.py:/app/run_adversarial_simulator.py:ro
+    entrypoint: ["python", "/app/run_adversarial_simulator.py"]
+
 volumes:
   proxy_data:
     name: ollama-proxy-data
