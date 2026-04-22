@@ -69,9 +69,20 @@ services:
       - JUDGE_ENABLED=${JUDGE_ENABLED:-true}
       - JUDGE_BATCH_LIMIT=${JUDGE_BATCH_LIMIT:-40}
       - JUDGE_TIMEOUT=${JUDGE_TIMEOUT:-90}
+      # Plausibility analyzer (Roadmap 3.3 follow-up): fires once per day
+      # at the configured UTC hour. The readiness gate inside the module
+      # keeps the output directory empty until enough data has accrued.
+      - PLAUSIBILITY_ANALYSIS_HOUR_UTC=${PLAUSIBILITY_ANALYSIS_HOUR_UTC:-3}
+      - PLAUSIBILITY_MIN_JUDGEMENTS=${PLAUSIBILITY_MIN_JUDGEMENTS:-300}
+      - PLAUSIBILITY_MIN_DAYS=${PLAUSIBILITY_MIN_DAYS:-3}
+      - PLAUSIBILITY_MIN_STDDEV=${PLAUSIBILITY_MIN_STDDEV:-0.10}
+      - PLAUSIBILITY_TRIAGE_TOP_N=${PLAUSIBILITY_TRIAGE_TOP_N:-20}
+      - PLAUSIBILITY_REPORT_DIR=/data/ollama-proxy/reports
+      - PLAUSIBILITY_ANALYSIS_ONESHOT=${PLAUSIBILITY_ANALYSIS_ONESHOT:-false}
     volumes:
       - proxy_data:/data/ollama-proxy
       - ./run_reward_aggregator.py:/app/run_reward_aggregator.py:ro
+      - ./src/plausibility_analyzer.py:/app/src/plausibility_analyzer.py:ro
       - rules_output:/data/ollama-proxy/generated-rules:ro
       - rules_validated:/data/ollama-proxy/validated-rules:ro
     entrypoint: ["python", "/app/run_reward_aggregator.py"]

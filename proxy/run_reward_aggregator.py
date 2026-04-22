@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 from src.models import init_db
+from src.plausibility_analyzer import run_analysis as run_plausibility_analysis
 from src.reward_aggregator import run_reward_cycle
 
 logging.basicConfig(
@@ -26,6 +27,14 @@ WINDOW_MINUTES = int(os.environ.get("REWARD_WINDOW_MINUTES", "30"))
 FULL_BACKFILL_HOUR_UTC = int(os.environ.get("REWARD_BACKFILL_HOUR_UTC", "2"))
 STATE_PATH = Path(os.environ.get("REWARD_STATE_PATH", "/data/ollama-proxy/reward_aggregator_state.json"))
 ONESHOT = os.environ.get("ONESHOT", "false").lower() in {"1", "true", "yes"}
+
+PLAUSIBILITY_ANALYSIS_HOUR_UTC = int(os.environ.get(
+    "PLAUSIBILITY_ANALYSIS_HOUR_UTC", "3"
+))
+PLAUSIBILITY_ANALYSIS_ONESHOT = os.environ.get(
+    "PLAUSIBILITY_ANALYSIS_ONESHOT", "false"
+).lower() in {"1", "true", "yes"}
+CACHE_DB = os.environ.get("CACHE_DB", "/data/ollama-proxy/cache.db")
 
 
 def _load_state() -> dict:
@@ -55,18 +64,58 @@ def _since_minutes_for_cycle() -> int:
     return WINDOW_MINUTES
 
 
+def _maybe_run_plausibility_analysis() -> None:
+    """
+    Fire the plausibility analyzer at most once per UTC day, at the
+    configured hour. Readiness gate inside the analyzer decides whether
+    it emits a full report or just a "not ready yet" log line — so this
+    is safe to call as soon as data starts flowing.
+    """
+    state = _load_state()
+    now = time.gmtime()
+    today = f"{now.tm_year:04d}-{now.tm_mon:02d}-{now.tm_mday:02d}"
+    if now.tm_hour != PLAUSIBILITY_ANALYSIS_HOUR_UTC:
+        return
+    if state.get("last_plausibility_day") == today:
+        return
+    try:
+        result = run_plausibility_analysis(CACHE_DB)
+    except Exception as e:
+        logger.error("Plausibility analysis failed: %s", e, exc_info=True)
+        return
+    state["last_plausibility_day"] = today
+    if result.report_path:
+        state["last_plausibility_report"] = result.report_path
+        state["last_plausibility_weight"] = result.recommended_weight
+    _save_state(state)
+
+
 def main() -> int:
     init_db()
     logger.info(
-        "Reward Aggregator started (interval=%ss window=%sm backfill_hour_utc=%s)",
+        "Reward Aggregator started (interval=%ss window=%sm "
+        "backfill_hour_utc=%s plausibility_hour_utc=%s)",
         INTERVAL,
         WINDOW_MINUTES,
         FULL_BACKFILL_HOUR_UTC,
+        PLAUSIBILITY_ANALYSIS_HOUR_UTC,
     )
     if ONESHOT:
         since = _since_minutes_for_cycle()
         asyncio.run(run_reward_cycle(since_minutes=since))
+        if PLAUSIBILITY_ANALYSIS_ONESHOT:
+            run_plausibility_analysis(CACHE_DB)
         return 0
+
+    # If the operator set PLAUSIBILITY_ANALYSIS_ONESHOT on start, run once
+    # immediately (useful for kicking off a first report without waiting for
+    # the UTC-hour trigger).
+    if PLAUSIBILITY_ANALYSIS_ONESHOT:
+        try:
+            run_plausibility_analysis(CACHE_DB)
+        except Exception as e:
+            logger.error("Plausibility analysis (startup oneshot) failed: %s",
+                         e, exc_info=True)
 
     while True:
         since = _since_minutes_for_cycle()
@@ -74,6 +123,11 @@ def main() -> int:
             asyncio.run(run_reward_cycle(since_minutes=since))
         except Exception as e:
             logger.error("Reward cycle failed: %s", e, exc_info=True)
+        try:
+            _maybe_run_plausibility_analysis()
+        except Exception as e:
+            logger.error("Plausibility analysis scheduler failed: %s",
+                         e, exc_info=True)
         time.sleep(INTERVAL)
 
 

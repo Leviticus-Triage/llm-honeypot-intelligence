@@ -301,12 +301,13 @@ in `proxy/src/reward_aggregator.py`):
 
 **Offene Folge-Arbeit (bewusst späteres Follow-up, nicht Teil dieses Passes)**:
 
-- Nach 3–7 Tagen Produktion: Plausibility-Verteilung analysieren,
+- ~~Nach 3–7 Tagen Produktion: Plausibility-Verteilung analysieren,
   Korrelation mit Reward A/B/C messen, dann Gewicht in `total_reward`
-  einmischen (z.B. `0.35·A + 0.30·B + 0.20·C + 0.15·D`).
-- Low-Score-Triage-Prompt-Helper (analog zu `label_rules.py`) um die
-  Low-Plausibility-Responses in ein Prompt-Template-Refinement zu
-  drehen.
+  einmischen (z.B. `0.35·A + 0.30·B + 0.20·C + 0.15·D`).~~
+  → **Automatisiert** via `plausibility_analyzer` (siehe Anhang K).
+- Low-Score-Triage-Prompt-Helper → **Teilweise automatisiert**: Analyzer-
+  Report enthält bereits die Top-N-Low-Plausibility-Liste mit Critic-
+  Reasons + Prompt/Response-Excerpts, direkt triageable.
 
 ### 3.4 Dashboards erweitern
 Drei neue Panels im CVE-Dashboard:
@@ -636,4 +637,134 @@ docker compose exec -T reward-aggregator sqlite3 /data/ollama-proxy/cache.db \
 # (starke Engagement, aber unglaubwürdige Reply = Prompt-Fix-Kandidat)
 # index=honeypot-response-rewards
 # plausibility_score:<0.5 AND reward_a_engagement:>0.3
+```
+
+---
+
+## Anhang K – Auto-Triggered Plausibility Analysis (22.04.2026)
+
+### K.1  Motivation
+
+Der Judge (Anhang J / Roadmap 3.3) sammelt Plausibility-Scores, aber
+das eigentliche Folge-Feature war bisher ein manueller Schritt:
+"Nach 3–7 Tagen Verteilung analysieren, Korrelation prüfen, Gewicht
+ins `_total_reward()` einmischen". Solange dieser Schritt manuell
+bleibt, schiebt er sich unvermeidlich hinten an und die Datenernte
+verpufft.
+
+### K.2  Lösung — Readiness-gateter Daily-Analyzer
+
+Neues Modul `proxy/src/plausibility_analyzer.py`, getriggert vom
+`run_reward_aggregator.py` einmal pro UTC-Tag (Default 03:00 UTC).
+Gleicher State-Datei-Pattern wie `REWARD_BACKFILL_HOUR_UTC` —
+einmal/Tag garantiert, kein Drift.
+
+**Kernidee: Readiness-Gate vor jeder Analyse**. Der Analyzer läuft
+täglich, produziert aber nur dann einen Report, wenn:
+
+| Gate-Kriterium              | Default | ENV-Override                 |
+|-----------------------------|---------|------------------------------|
+| Min. Judgements             | 300     | `PLAUSIBILITY_MIN_JUDGEMENTS` |
+| Min. Kalendertage Daten     | 3       | `PLAUSIBILITY_MIN_DAYS`       |
+| Min. Plausibility-StdDev    | 0.10    | `PLAUSIBILITY_MIN_STDDEV`     |
+
+Alle drei müssen erfüllt sein. Solange das Gate CLOSED ist, schreibt
+der Analyzer einen 1-Zeilen-INFO-Log (`"need 259 more judgements …"`)
+und ruht — kein Report-Spam im Dateisystem, kein noisy Dashboard.
+
+Sobald das Gate ÖFFNET, entsteht **täglich neu** ein Markdown + JSON-
+Sidecar unter `/data/ollama-proxy/reports/plausibility-YYYYMMDD-HHMMSS.md`
++ Convenience-Symlink `plausibility-latest.md`.
+
+### K.3  Report-Inhalt
+
+1. **Readiness-Status** (Werte + OK/Missing-Flags).
+2. **Coverage**: Mean + Percentiles (p10/p50/p90/p99) + Sample-Count.
+3. **Per-Honeypot-Modell Breakdown** (count / avg / min / max).
+4. **Korrelationen**: Pearson-r zwischen `plausibility_score` und
+   jedem von `reward_a/b/c` plus `total_reward`.
+5. **Empfohlenes Blend-Weight** für `plausibility_score → total_reward`.
+   Konservative Heuristik:
+   - Base 0.10 (neues Signal darf niemals auf Tag 1 dominieren).
+   - +0.05 wenn max |r| mit A/B/C < 0.60 (unabhängiges Signal).
+   - −0.05 wenn max |r| > 0.80 (redundant).
+   - Hartes Cap bei `PLAUSIBILITY_MAX_RECOMMENDED_WEIGHT` (Default 0.20).
+   - Inklusive fertigem Code-Snippet `_total_reward(a, b, c, d)` mit
+     re-skalierten A/B/C-Gewichten.
+6. **Low-Plausibility-Triage-Liste**: Top-N (Default 20) schlechteste
+   Responses inkl. Critic-Reasons und Prompt/Response-Excerpts —
+   direkt actionable für Prompt-Template-Fixes.
+
+### K.4  Design-Regel: Rechner schlägt vor, Mensch entscheidet
+
+Der Analyzer **modifiziert NIEMALS** `_total_reward()` selbst. Gleicher
+Ansatz wie `calibrate_thresholds.py` und `label_rules.py`: er schreibt
+Report + Empfehlung, Operator reviewed, Operator rebalanced die Weights
+und pusht. So bleibt RL-Loop-Stabilität garantiert, ein
+halluzinierender Critic kann den Reward-Score nicht kapern.
+
+### K.5  Live-Verifikation (22.04.2026)
+
+**Gate-geschlossen-Pfad** (Ist-Zustand: 41 Judgements, 1 Tag):
+
+```
+judgements: 41 (need 259 more), calendar_days: 1 (need 2 more),
+stddev: 0.17 (OK), ready: false, report_path: null
+```
+
+Kein Output, keine Dateien, präzise Diagnose — genau wie gewollt.
+
+**Gate-geöffnet-Pfad** (erzwungen durch temporäre Schwellwert-Absenkung):
+
+- Report geschrieben: `plausibility-20260422-145547.md`
+- **Empfohlenes Weight: 0.15** (Base 0.10 + Independence-Bonus 0.05)
+- Korrelationen: `+0.10 / +0.07 / +0.25` gegen A/B/C → maximale
+  |r|=0.25 ist deutlich < 0.60 → Plausibility trägt eindeutig
+  **neue Information** bei, daher Independence-Bonus gerechtfertigt.
+- Triage-Top-5 lieferte sofort actionable Findings:
+  - **PAN-OS Out-of-Scope-Antwort** auf `find / -perm -4000 -type f`
+    (plausibility=0.20) — Proxy sagt *"not applicable to the PAN-OS CLI"*.
+    Klarer Character-Break, direkter Prompt-Template-Fix-Kandidat.
+  - **"Unknown action 0"**-Pattern auf `curl | bash` und
+    `wget kinsing` Prompts — systemische Honeypot-Antwort, die der
+    Critic korrekt als unglaubwürdig markiert.
+  - **Model-String-Drift** (7 Rows `openchat` vs 35 `openchat:latest`)
+    als latenter Telemetrie-Bug aus dem Per-Model-Breakdown.
+
+### K.6  Geänderte Dateien
+
+```
+proxy/src/plausibility_analyzer.py   NEW — readiness gate, pearson corr,
+                                     triage, markdown/json report writer
+proxy/run_reward_aggregator.py       +_maybe_run_plausibility_analysis,
+                                     +PLAUSIBILITY_ANALYSIS_ONESHOT
+proxy/docker-compose.yml             +PLAUSIBILITY_* envs + bind-mount
+                                     of plausibility_analyzer.py
+docs/OPTIMIZATION-ROADMAP.md         Anhang K
+```
+
+### K.7  Bedienung
+
+```bash
+# Auf .116 — ein-malige Analyse jetzt ausführen (umgeht den Tages-Tick)
+cd ~/ollama-proxy
+docker compose exec -T \
+  -e PLAUSIBILITY_MIN_JUDGEMENTS=30 \
+  -e PLAUSIBILITY_MIN_DAYS=1 \
+  reward-aggregator python -c "
+from src.plausibility_analyzer import run_analysis
+r = run_analysis('/data/ollama-proxy/cache.db')
+print(r.status, r.recommended_weight, r.report_path)
+"
+
+# Letzten Report ansehen
+docker compose exec -T reward-aggregator \
+  cat /data/ollama-proxy/reports/plausibility-latest.md
+
+# Gate-Schwellwerte dauerhaft anpassen: in docker-compose.yml
+# PLAUSIBILITY_MIN_JUDGEMENTS / PLAUSIBILITY_MIN_DAYS / PLAUSIBILITY_MIN_STDDEV
+# setzen und reward-aggregator neu starten.
+
+# Daily-Tick per Compose-ENV auf andere UTC-Stunde legen:
+# PLAUSIBILITY_ANALYSIS_HOUR_UTC=3   # Default = 03:00 UTC
 ```
