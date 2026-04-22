@@ -242,11 +242,71 @@ welche Rules erzeugt.
 - Hitrate-getriebener Feedback-Loop: nach 14 Tagen Rules mit
 `hits=0 AND age>14d` automatisch in `archive/deprecated/` schieben.
 
-### 3.3 Adversarial-Testing der Honeypot-Antworten
+### 3.3 Adversarial-Testing der Honeypot-Antworten — ✅ DONE (22.04.2026)
 Wir simulieren Angreifer selbst – zweiter Ollama-Agent (klein, z. B.
 `llama3.2:3b`) bekommt Session-Kontext und prüft, ob die vom
 Haupt-Honeypot generierte Antwort „glaubwürdig" ist. Score als
 zusätzliches Signal in den RL-Loop (Absatz 2.3).
+
+**Implementierung** (`proxy/src/adversarial_judge.py`, Integration
+in `proxy/src/reward_aggregator.py`):
+
+- **Critic-Modell**: `llama3.2:3b` via neuem Task-Router-Eintrag
+  `adversarial_critique` (temp=0.0, format=json, num_ctx=4096,
+  keep_alive=10m) — siehe `proxy/src/task_router.py`.
+- **Routing**: Judge ruft den eigenen Proxy mit
+  `X-LLM-Task: adversarial_critique` → Cache-Bypass + direkter
+  Forward zum Critic-Modell.
+- **Rubrik**: Strukturiertes Prompting mit 0.0 (expliziter Honeypot-Tell)
+  bis 1.0 (ununterscheidbar von echtem Host). Zusätzlich `tells[]` Array
+  mit Short-Reasons → triagierbare Low-Scorer-Liste.
+- **Caching**: Neue SQLite-Tabelle `response_judgements` (PK
+  `response_hash`); ein (model, prompt, response)-Triple wird nur
+  **einmal** gejudget, nachfolgende Serves derselben Response sind gratis.
+- **Integration**: `reward_aggregator.run_reward_cycle()` ruft nach
+  `compute_records()` und vor Persistenz `judge_records()` auf.
+  Batch-Limit (`JUDGE_BATCH_LIMIT=40`/cycle) schützt den 15-min-Loop,
+  nicht-gejudgete Responses werden auf die nächsten Cycles verteilt.
+- **Observability**: Neues ES-Feld `plausibility_score` in
+  `honeypot-response-rewards` (float, Mapping vorab gepusht);
+  neue SQLite-Spalte `response_rewards.plausibility_score` (Migration).
+- **Sicherheitsnetz**: Judge-Modul komplett optional (`JUDGE_ENABLED=false`
+  deaktiviert den Layer ohne Code-Redeploy). Parse-Fehler / Timeouts /
+  Transport-Errors blockieren den Reward-Cycle nicht — Score bleibt dann
+  bei `-1.0` und wird im nächsten Cycle erneut versucht.
+- **Bewusste Design-Entscheidung**: Plausibility-Score fließt aktuell
+  **NICHT** in `total_reward` ein. Wir sammeln erst einige Tage Daten,
+  um das Gewicht empirisch zu kalibrieren (statt es bei Null-Info zu
+  raten). Bis dahin ist das Feld reine Observability für Kibana +
+  Cache-Re-Ranking-Experimente.
+
+**Erste Live-Verifikation (22.04.2026)**:
+
+- 24h-Oneshot: 2000 events / 14 sessions / 2000 records → judge
+  cache-miss=58, judged=39, errors=1 (JSON-Parse mit unescaped `"`),
+  deferred=18.
+- SQLite `response_judgements`: 39 Rows, avg=0.83, min=0.20, max=0.95.
+- SQLite `response_rewards` mit `plausibility_score >= 0`: **83 Rows**
+  (Propagation via `response_hash` vervielfacht 39 Scores auf 83
+  Reward-Rows → Cache-Hit-Rate steigt ab Cycle 2 exponentiell).
+- ES `honeypot-response-rewards` Aggregation: 40 Docs mit
+  `plausibility_score`, Histogram zeigt echte Streuung
+  (0.2 × 1, 0.4 × 2, 0.6 × 3, 0.8+ × Rest) — das Signal ist
+  diskriminativ, nicht flach.
+- **Qualitative Treffer**: Low-Scorer mit `"Breaks character",
+  "disclaimer", "not applicable to PAN-OS CLI"` identifiziert eine
+  Out-of-Scope-Antwort des Haupt-Modells; High-Scorer bestätigen
+  `uname` / `os-release` Antworten mit *"matches Linux distribution,
+  includes kernel version, includes architecture"*.
+
+**Offene Folge-Arbeit (bewusst späteres Follow-up, nicht Teil dieses Passes)**:
+
+- Nach 3–7 Tagen Produktion: Plausibility-Verteilung analysieren,
+  Korrelation mit Reward A/B/C messen, dann Gewicht in `total_reward`
+  einmischen (z.B. `0.35·A + 0.30·B + 0.20·C + 0.15·D`).
+- Low-Score-Triage-Prompt-Helper (analog zu `label_rules.py`) um die
+  Low-Plausibility-Responses in ein Prompt-Template-Refinement zu
+  drehen.
 
 ### 3.4 Dashboards erweitern
 Drei neue Panels im CVE-Dashboard:
@@ -500,4 +560,80 @@ Filter in ES/Kibana für synthetische Traffic (z. B. KQL):
 
 ```
 src_ip: "10.99.0.0/24"  AND synthetic: true
+```
+
+---
+
+## Anhang J – Periodisierung + Adversarial Judge (22.04.2026)
+
+### J.1  ml-runner im Loop-Modus
+
+Problem: Die neu eingebaute 1.3-ML-Fusion-Schicht im `c2-detector` zieht
+`ml_anomaly_score` aus `honeypot-cve-sessions`, aber der `ml-runner` lief
+bisher on-demand — nach 48h war das Fenster leer und die Fusion still.
+
+Fix (`proxy/run_ml_runner.py` + `proxy/docker-compose.yml`):
+
+- Neuer Command `loop` — ruft `export + train + infer` zyklisch mit
+  Jitter-safem Sleep (`max(60, interval - elapsed)`) auf.
+- Konfiguration via ENV: `ML_RUNNER_LOOP_INTERVAL=6h`
+  (Standardwert), `ML_RUNNER_STARTUP_DELAY=60s`. Parser versteht
+  `"21600"`, `"6h"`, `"30m"`, `"3600s"`.
+- Compose-Service umgestellt: `restart: unless-stopped` +
+  `entrypoint: ["python", "/app/run_ml_runner.py", "loop"]`.
+- Verifikation: Tick 1 in 10.2s durch (inkrementelles Delta seit letztem
+  manuellen Lauf), anschließend 21590s Sleep bis zum nächsten. Fusion-
+  Fenster (48h) bleibt damit dauerhaft gefüllt.
+
+### J.2  Adversarial Response Judge (Roadmap 3.3)
+
+Siehe Abschnitt **3.3 ✅ DONE** oben. Kurz-Status-Snapshot:
+
+| Komponente                        | Ort                                       | Status |
+|-----------------------------------|-------------------------------------------|--------|
+| Critic-Task-Routing               | `src/task_router.py` (`adversarial_critique`) | ✅ live |
+| Judge-Modul                       | `src/adversarial_judge.py` (neu)          | ✅ live |
+| SQLite-Schema                     | `src/models.py` (`response_judgements` + Spalte) | ✅ migriert |
+| Reward-Cycle-Integration          | `src/reward_aggregator.py::judge_records` | ✅ live |
+| ES-Mapping                        | `honeypot-response-rewards.plausibility_score` | ✅ gepusht |
+| Compose-Env (PROXY_URL, JUDGE_*)  | `docker-compose.yml::reward-aggregator`   | ✅ aktiv |
+| Erste Live-Daten                  | 39 unique judgements, avg=0.83, Spread 0.20–0.95 | ✅ validiert |
+
+### J.3  Geänderte Dateien
+
+```
+proxy/run_ml_runner.py                       +loop command, interval parser
+proxy/docker-compose.yml                     ml-runner loop, reward-aggregator PROXY_URL + JUDGE_*
+proxy/src/models.py                          response_judgements table, plausibility_score migration
+proxy/src/task_router.py                     adversarial_critique entry (4 dicts)
+proxy/src/adversarial_judge.py               NEW — critic call + SQLite cache + stats helper
+proxy/src/reward_aggregator.py               judge_records step, RewardRecord.plausibility_score,
+                                             ES mapping + upsert extension
+docs/OPTIMIZATION-ROADMAP.md                 Phase 3.3 ✅ DONE, Anhang J
+```
+
+### J.4  Wie man den Judge anstößt / debuggt
+
+```bash
+# auf .116
+cd ~/ollama-proxy
+
+# manueller 24h-Oneshot-Cycle (triggert bis zu JUDGE_BATCH_LIMIT Judges)
+docker compose exec -T reward-aggregator python -c "
+import asyncio
+from src.reward_aggregator import run_reward_cycle
+from src.adversarial_judge import judgement_stats
+print(asyncio.run(run_reward_cycle(since_minutes=1440)))
+print(judgement_stats('/data/ollama-proxy/cache.db'))
+"
+
+# Low-Plausibility-Triage (prio für Prompt-Tuning)
+docker compose exec -T reward-aggregator sqlite3 /data/ollama-proxy/cache.db \
+  "SELECT plausibility, reasons FROM response_judgements
+   WHERE plausibility < 0.5 ORDER BY plausibility ASC LIMIT 20;"
+
+# Kibana-KQL für High-Impact-Low-Plausibility-Responses
+# (starke Engagement, aber unglaubwürdige Reply = Prompt-Fix-Kandidat)
+# index=honeypot-response-rewards
+# plausibility_score:<0.5 AND reward_a_engagement:>0.3
 ```

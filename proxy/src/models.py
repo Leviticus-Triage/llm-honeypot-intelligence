@@ -82,6 +82,15 @@ def init_db():
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (response_id) REFERENCES responses(id)
         );
+
+        CREATE TABLE IF NOT EXISTS response_judgements (
+            response_hash TEXT PRIMARY KEY,
+            plausibility REAL NOT NULL DEFAULT 0.0,
+            model TEXT NOT NULL DEFAULT '',
+            reasons TEXT NOT NULL DEFAULT '',
+            critic_model TEXT NOT NULL DEFAULT '',
+            judged_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
     """)
 
     # Migrations: add columns if missing (for existing databases)
@@ -91,6 +100,8 @@ def init_db():
         ("serve_log", "cve_vendor", "ALTER TABLE serve_log ADD COLUMN cve_vendor TEXT NOT NULL DEFAULT ''"),
         ("serve_log", "cve_product", "ALTER TABLE serve_log ADD COLUMN cve_product TEXT NOT NULL DEFAULT ''"),
         ("prompt_cache", "cve_id", "ALTER TABLE prompt_cache ADD COLUMN cve_id TEXT NOT NULL DEFAULT ''"),
+        ("response_rewards", "plausibility_score",
+         "ALTER TABLE response_rewards ADD COLUMN plausibility_score REAL NOT NULL DEFAULT 0.0"),
     ]
     for table, col, sql in migrations:
         try:
@@ -112,6 +123,8 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_serve_log_ip ON serve_log(src_ip);
         CREATE INDEX IF NOT EXISTS idx_serve_log_cve ON serve_log(cve_id);
         CREATE INDEX IF NOT EXISTS idx_prompt_cache_cve ON prompt_cache(cve_id);
+        CREATE INDEX IF NOT EXISTS idx_judgements_plausibility ON response_judgements(plausibility DESC);
+        CREATE INDEX IF NOT EXISTS idx_judgements_at ON response_judgements(judged_at DESC);
     """)
     conn.commit()
     conn.close()
