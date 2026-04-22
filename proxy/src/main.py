@@ -319,6 +319,14 @@ async def cve_profiles():
 # Per-task payload used to trigger an Ollama cold-load. Responses are
 # discarded; we only care that the model gets resident in VRAM before real
 # traffic arrives. Kept tiny on purpose.
+# Cold-load can take longer than the per-task runtime timeout when a VRAM
+# swap is required (e.g. switching from llama3.1:8b to another model on a
+# 12GB card). Use a generous warmup floor so we don't report false-positive
+# timeouts during startup. Runtime timeouts for real traffic are unaffected
+# — they come from routing.timeout.
+_WARMUP_FLOOR_SECS = 240.0
+
+
 _WARMUP_PAYLOADS: dict[str, tuple[str, dict]] = {
     "honeypot_response": (
         "/api/chat",
@@ -371,12 +379,6 @@ async def _warmup_one(task: str) -> dict:
     fake_headers = {"x-llm-task": task}
     routing = task_router.apply(fake_headers, body)
 
-    # Cold-load can take longer than the per-task runtime timeout when a
-    # VRAM swap is required (e.g. switching from llama3.1:8b to another
-    # model on a 12GB card). Use a generous warmup floor so we don't
-    # report false-positive timeouts during startup. Runtime timeouts for
-    # real traffic are unaffected — they come from routing.timeout.
-    _WARMUP_FLOOR_SECS = 240.0
     timeout = httpx.Timeout(
         connect=10.0,
         read=max(_WARMUP_FLOOR_SECS, float(routing.timeout or _WARMUP_FLOOR_SECS)),
