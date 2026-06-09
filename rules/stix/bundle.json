@@ -1,13 +1,13 @@
 {
   "type": "bundle",
-  "id": "bundle--8d07afb7-8a45-4be7-9ce9-e799507c9d1e",
+  "id": "bundle--68acb763-46b3-4111-9754-acd4a4fc59b3",
   "objects": [
     {
       "type": "identity",
       "spec_version": "2.1",
       "id": "identity--582b904d-3dfe-5d57-8f75-63437d22a457",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "LLM Honeypot Intelligence Platform",
       "identity_class": "system",
       "description": "Automated threat intelligence from adaptive LLM honeypots"
@@ -15,15 +15,30 @@
     {
       "type": "attack-pattern",
       "spec_version": "2.1",
-      "id": "attack-pattern--5428ff05-03fc-5023-9559-0adefb54d3d7",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "System Information Discovery",
+      "id": "attack-pattern--75273e57-64cd-5463-84c1-ae5f57a1720d",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Private Keys",
       "external_references": [
         {
           "source_name": "mitre-attack",
-          "external_id": "T1082",
-          "url": "https://attack.mitre.org/techniques/T1082"
+          "external_id": "T1552.004",
+          "url": "https://attack.mitre.org/techniques/T1552/004"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--4ecd8df5-3ffd-5633-b26b-2d270aeae64f",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Linux File Permissions Modification",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1222.002",
+          "url": "https://attack.mitre.org/techniques/T1222/002"
         }
       ]
     },
@@ -31,8 +46,8 @@
       "type": "attack-pattern",
       "spec_version": "2.1",
       "id": "attack-pattern--3ab68329-9b17-5e0c-9c8d-9e6352b62313",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Unix Shell",
       "external_references": [
         {
@@ -46,8 +61,8 @@
       "type": "attack-pattern",
       "spec_version": "2.1",
       "id": "attack-pattern--e7b8dd5c-baf5-5e81-94a4-5067c74571ee",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Ingress Tool Transfer",
       "external_references": [
         {
@@ -58,814 +73,904 @@
       ]
     },
     {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--5428ff05-03fc-5023-9559-0adefb54d3d7",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "System Information Discovery",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1082",
+          "url": "https://attack.mitre.org/techniques/T1082"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--0f3320b6-6b4d-584f-bd0d-8f9b52b5492b",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "System Network Configuration Discovery",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1016",
+          "url": "https://attack.mitre.org/techniques/T1016"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--f6941730-3ec9-51dc-bdba-dadc7735b8b1",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Process Discovery",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1057",
+          "url": "https://attack.mitre.org/techniques/T1057"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--a068e1b1-378f-57d8-984a-1d6010758073",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Data from Local System",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1005",
+          "url": "https://attack.mitre.org/techniques/T1005"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--5668ed37-3a5d-5bfd-8f42-3630bfd38771",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Cron",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1053.003",
+          "url": "https://attack.mitre.org/techniques/T1053/003"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--4a91f349-ebca-50ff-bbbb-c92224f280fd",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "System Owner/User Discovery",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1033",
+          "url": "https://attack.mitre.org/techniques/T1033"
+        }
+      ]
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--5f8e711c-8d49-5d80-a2c7-f5c523a1226d",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 45.95.147.229",
+      "description": "Attacker IP observed 52149 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '45.95.147.229']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--93202bd5-ae7f-58a9-b356-7635c86561a9",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 160.119.76.4",
+      "description": "Attacker IP observed 18667 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '160.119.76.4']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--afa85f16-e8e9-55c7-97df-812d48649eb9",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 45.153.34.114",
+      "description": "Attacker IP observed 8644 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '45.153.34.114']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
       "type": "indicator",
       "spec_version": "2.1",
       "id": "indicator--9789fdf8-6ad5-5c9a-b2d5-be6f9112953e",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Malicious IP: 187.108.1.130",
-      "description": "Attacker IP observed 5800 times on honeypot",
+      "description": "Attacker IP observed 4138 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
       "pattern": "[ipv4-addr:value = '187.108.1.130']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--4986c46e-d07c-54bb-b346-24f2d317e40e",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 198.143.146.226",
+      "description": "Attacker IP observed 2077 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '198.143.146.226']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--3b9fd45a-3c25-51e9-ab23-20c0736ac1d0",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 172.234.162.56",
+      "description": "Attacker IP observed 1332 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '172.234.162.56']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--23b154e2-363f-537e-b3cb-4da2c2df82e6",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 80.94.95.34",
+      "description": "Attacker IP observed 899 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '80.94.95.34']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--6d47fc58-2c3d-5335-93ed-9f9e8db0190e",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 176.65.139.118",
+      "description": "Attacker IP observed 707 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '176.65.139.118']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--9759925b-cfc4-5600-ae3a-a621ada75b2c",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 87.251.64.176",
+      "description": "Attacker IP observed 588 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '87.251.64.176']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--cbda860c-8f06-5546-9553-0ebc6831b09c",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 193.32.162.145",
+      "description": "Attacker IP observed 456 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '193.32.162.145']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--70891b2d-8ade-5090-b1ac-9c091e98bc1f",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 152.42.229.216",
+      "description": "Attacker IP observed 456 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '152.42.229.216']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--8ba7571b-1a5e-535b-9931-d7f3a9489583",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 2.57.122.99",
+      "description": "Attacker IP observed 392 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '2.57.122.99']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--a1050dd8-f06e-5d73-b8e8-fc3413dffb90",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 185.16.39.100",
+      "description": "Attacker IP observed 383 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '185.16.39.100']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--6a6b4bf3-3824-532c-86a7-9c84cec4468c",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 45.198.224.18",
+      "description": "Attacker IP observed 371 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '45.198.224.18']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--45ff1bad-80fc-5da6-b35d-11648b64e3db",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 64.89.162.15",
+      "description": "Attacker IP observed 289 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '64.89.162.15']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--8e210b49-07c7-5e03-a21f-fee15d8270b0",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 89.45.222.186",
+      "description": "Attacker IP observed 250 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '89.45.222.186']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
       "id": "indicator--ded0ea79-f108-5bd4-b579-6c8950138981",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Malicious IP: 85.11.167.11",
-      "description": "Attacker IP observed 1274 times on honeypot",
+      "description": "Attacker IP observed 239 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
       "pattern": "[ipv4-addr:value = '85.11.167.11']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--85c0d21c-80b6-5b57-a5ee-5724bb451528",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 157.230.235.42",
-      "description": "Attacker IP observed 1260 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '157.230.235.42']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--23d77e2d-3963-5ba9-b2dd-cfd0d0c5b99f",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 165.245.172.231",
-      "description": "Attacker IP observed 745 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '165.245.172.231']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--476073ef-2467-5907-8f19-0da15be272de",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.45",
-      "description": "Attacker IP observed 431 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.45']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--f6923161-6bf5-5158-b353-04e97fdc2004",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 185.91.127.85",
-      "description": "Attacker IP observed 288 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '185.91.127.85']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--1b5a92a5-86a3-56a6-812c-66f2089c4235",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.13",
-      "description": "Attacker IP observed 281 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.13']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--628030c4-d9ad-5eba-bbc9-574a385c0465",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.37",
-      "description": "Attacker IP observed 258 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.37']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--53a72405-3099-582e-bc29-8a8134048c3a",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 45.205.1.110",
-      "description": "Attacker IP observed 244 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '45.205.1.110']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--f89ebe18-56ca-5fb0-8f00-a15a5c38fed6",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.41",
-      "description": "Attacker IP observed 221 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.41']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--0b759109-e96e-50a6-b1f3-7a37ecdbb346",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.40",
-      "description": "Attacker IP observed 210 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.40']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--98851b63-1484-580e-a221-e58f9c701b24",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.43",
-      "description": "Attacker IP observed 195 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.43']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
       "id": "indicator--182f1e8c-7ba1-5190-8f98-204957f543c6",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Malicious IP: 45.205.1.5",
-      "description": "Attacker IP observed 179 times on honeypot",
+      "description": "Attacker IP observed 209 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
       "pattern": "[ipv4-addr:value = '45.205.1.5']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--37b58d16-528d-5ea5-b665-8fb3ae5bfe69",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.49",
-      "description": "Attacker IP observed 159 times on honeypot",
+      "id": "indicator--ea5f5c7c-4347-585b-8992-1bfa9b9dc57a",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 87.251.64.146",
+      "description": "Attacker IP observed 186 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.217.140.49']",
+      "pattern": "[ipv4-addr:value = '87.251.64.146']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--53b23c9a-7744-58c5-94e9-86a3748a2440",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.52",
-      "description": "Attacker IP observed 148 times on honeypot",
+      "id": "indicator--30f91893-353f-5130-8e5a-b10cbe3ec09b",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 45.141.56.49",
+      "description": "Attacker IP observed 150 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.217.140.52']",
+      "pattern": "[ipv4-addr:value = '45.141.56.49']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--6c7bc9a1-e9b2-50a4-866e-6070f1c6a4de",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.29",
+      "id": "indicator--deffb8ba-841b-5bf5-bca2-6280d4bb464c",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 108.171.103.234",
       "description": "Attacker IP observed 144 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.217.140.29']",
+      "pattern": "[ipv4-addr:value = '108.171.103.234']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--de97c6d0-7380-55c3-9999-b80bdb7fe820",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 18.218.118.203",
-      "description": "Attacker IP observed 137 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '18.218.118.203']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--99de5e05-f8f4-5658-930d-83065ca5bbe0",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 16.58.56.214",
-      "description": "Attacker IP observed 134 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '16.58.56.214']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--cb8a2847-775a-53d1-b1b6-a35c08b43a41",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.48",
-      "description": "Attacker IP observed 130 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.48']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--02b31772-29d4-58a0-a1d1-3535c710e4ab",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 18.116.101.220",
-      "description": "Attacker IP observed 124 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '18.116.101.220']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--2c4338cb-a5f1-5b6b-bcc6-0dee21c37b29",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.7",
-      "description": "Attacker IP observed 122 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.7']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--cc2bfee0-1cca-53ff-97a2-c0daf25fa4a8",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.42",
-      "description": "Attacker IP observed 120 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.42']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--5e9cf086-8574-565e-b8f7-dfad18476a7d",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.46",
-      "description": "Attacker IP observed 120 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.46']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--1a3a25d1-fa22-50d3-a88d-12dee90139a5",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.39",
-      "description": "Attacker IP observed 118 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.39']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--6964d1fa-1978-53e6-a5d2-164c50d452f1",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.9",
-      "description": "Attacker IP observed 116 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.9']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--b13bc430-5b69-5de3-8f8d-858ba29467d8",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 3.132.26.232",
-      "description": "Attacker IP observed 115 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '3.132.26.232']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--d76b7ed2-ff21-5727-b851-5cc1065a3828",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 3.131.220.121",
-      "description": "Attacker IP observed 112 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '3.131.220.121']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--68638d6f-6d14-5c13-b821-01a3dde39df3",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.23",
-      "description": "Attacker IP observed 109 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.23']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--7c1cac55-fb29-57ea-8336-0b605dbef5f6",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 3.130.168.2",
-      "description": "Attacker IP observed 105 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '3.130.168.2']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--7787efbf-d0a2-59bd-8bfb-a9d7083b2f8a",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 3.129.187.38",
-      "description": "Attacker IP observed 78 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '3.129.187.38']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--ac2274f0-a100-5eec-9e98-18f53b4ee025",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.2",
-      "description": "Attacker IP observed 78 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.2']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--a1dd3f75-9829-5d91-a693-abcc53af6717",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 165.245.163.7",
-      "description": "Attacker IP observed 75 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '165.245.163.7']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--c4f4e3db-37b3-585c-9da9-6960e1dbf18d",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.10",
-      "description": "Attacker IP observed 75 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.10']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--f9831aa5-4c03-5c1f-ad74-9e299fcc0891",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.50",
-      "description": "Attacker IP observed 72 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.50']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--8df195f7-50e6-5b39-8b37-407034044fb4",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 34.62.39.11",
-      "description": "Attacker IP observed 71 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '34.62.39.11']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--3391e17c-f4f0-58d4-951e-24fa7773459e",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 34.77.105.211",
-      "description": "Attacker IP observed 71 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '34.77.105.211']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--9f3464e9-7eb4-56ba-976e-7fa8d392dd91",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 35.195.163.229",
-      "description": "Attacker IP observed 71 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '35.195.163.229']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--cc161d35-df56-5405-88c5-6b4104bf47b6",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 35.233.96.247",
-      "description": "Attacker IP observed 71 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '35.233.96.247']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
-      "confidence": 90
-    },
-    {
-      "type": "indicator",
-      "spec_version": "2.1",
-      "id": "indicator--05fad629-b916-5579-b30c-71508ef4d4cb",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.16",
-      "description": "Attacker IP observed 71 times on honeypot",
-      "indicator_types": [
-        "malicious-activity"
-      ],
-      "pattern": "[ipv4-addr:value = '85.217.140.16']",
-      "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
       "id": "indicator--7c16add8-ded8-5869-82ee-48c0beab3170",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Malicious IP: 80.66.83.80",
-      "description": "Attacker IP observed 69 times on honeypot",
+      "description": "Attacker IP observed 140 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
       "pattern": "[ipv4-addr:value = '80.66.83.80']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--7e058a9d-ce0f-534f-8815-309f54582f13",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 81.29.142.100",
-      "description": "Attacker IP observed 69 times on honeypot",
+      "id": "indicator--de97c6d0-7380-55c3-9999-b80bdb7fe820",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 18.218.118.203",
+      "description": "Attacker IP observed 125 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '81.29.142.100']",
+      "pattern": "[ipv4-addr:value = '18.218.118.203']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--6d016c22-ffaa-5c04-82fd-edbb08f2fdf5",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 91.224.92.125",
-      "description": "Attacker IP observed 64 times on honeypot",
+      "id": "indicator--18cce5a0-b91f-510c-a976-ebe572dd6c63",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 5.181.86.179",
+      "description": "Attacker IP observed 123 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '91.224.92.125']",
+      "pattern": "[ipv4-addr:value = '5.181.86.179']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--8a386721-f229-5e04-8703-fdbf0a640db2",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 92.110.87.38",
-      "description": "Attacker IP observed 63 times on honeypot",
+      "id": "indicator--788a614f-eaf2-5c7d-aa78-6b07b73770e9",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 3.143.162.210",
+      "description": "Attacker IP observed 113 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '92.110.87.38']",
+      "pattern": "[ipv4-addr:value = '3.143.162.210']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--44ba9f41-43cb-5162-921b-98100cf8f62c",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.44",
-      "description": "Attacker IP observed 57 times on honeypot",
+      "id": "indicator--f5190be8-dc7c-5e95-9365-53a535c193e8",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 5.181.86.60",
+      "description": "Attacker IP observed 112 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.217.140.44']",
+      "pattern": "[ipv4-addr:value = '5.181.86.60']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--819ec182-3b93-5786-8f9b-d46528213b55",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 92.118.39.30",
-      "description": "Attacker IP observed 56 times on honeypot",
+      "id": "indicator--5e5554d8-aa5b-5b65-ac7e-dda29e32f03b",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 62.164.177.41",
+      "description": "Attacker IP observed 108 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '92.118.39.30']",
+      "pattern": "[ipv4-addr:value = '62.164.177.41']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--790e483d-a0f3-5dd3-af52-1390d78feb90",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.8",
-      "description": "Attacker IP observed 55 times on honeypot",
+      "id": "indicator--99de5e05-f8f4-5658-930d-83065ca5bbe0",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 16.58.56.214",
+      "description": "Attacker IP observed 105 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.217.140.8']",
+      "pattern": "[ipv4-addr:value = '16.58.56.214']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--442b5f40-d8f1-51de-b883-924868dc17d7",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.217.140.51",
-      "description": "Attacker IP observed 54 times on honeypot",
+      "id": "indicator--02b31772-29d4-58a0-a1d1-3535c710e4ab",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 18.116.101.220",
+      "description": "Attacker IP observed 105 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.217.140.51']",
+      "pattern": "[ipv4-addr:value = '18.116.101.220']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--8cd92812-5e5c-5f18-b02d-d2352e726913",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 176.65.139.105",
-      "description": "Attacker IP observed 53 times on honeypot",
+      "id": "indicator--09ae5502-4196-5191-8487-1bc03dc794b9",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 78.128.112.114",
+      "description": "Attacker IP observed 104 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '176.65.139.105']",
+      "pattern": "[ipv4-addr:value = '78.128.112.114']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
-      "id": "indicator--63ea3af0-9f94-565f-af1b-b1e62103ea5c",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "name": "Malicious IP: 85.11.167.2",
-      "description": "Attacker IP observed 52 times on honeypot",
+      "id": "indicator--7787efbf-d0a2-59bd-8bfb-a9d7083b2f8a",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 3.129.187.38",
+      "description": "Attacker IP observed 95 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
-      "pattern": "[ipv4-addr:value = '85.11.167.2']",
+      "pattern": "[ipv4-addr:value = '3.129.187.38']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--28c176bf-4cd0-5c07-8df6-a9c3dee57bbd",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 2.57.122.238",
+      "description": "Attacker IP observed 92 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '2.57.122.238']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--98f161f4-53e4-5a06-8253-34c0aeec09c5",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 80.94.92.171",
+      "description": "Attacker IP observed 86 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '80.94.92.171']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--b5ad204b-bce2-5ed3-a67f-cd729d0bb2cf",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 175.165.82.187",
+      "description": "Attacker IP observed 76 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '175.165.82.187']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
     },
     {
       "type": "indicator",
       "spec_version": "2.1",
       "id": "indicator--b0076f22-e62d-5abd-a742-f01edbcd4e26",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
       "name": "Malicious IP: 46.151.178.13",
-      "description": "Attacker IP observed 51 times on honeypot",
+      "description": "Attacker IP observed 65 times on honeypot",
       "indicator_types": [
         "malicious-activity"
       ],
       "pattern": "[ipv4-addr:value = '46.151.178.13']",
       "pattern_type": "stix",
-      "valid_from": "2026-04-07T15:36:05Z",
+      "valid_from": "2026-05-22T06:53:32Z",
       "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--f8a939a6-da06-55f4-8747-81dff869dd06",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 80.66.83.43",
+      "description": "Attacker IP observed 63 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '80.66.83.43']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--571b222a-8bac-5b22-90e7-e72e104a74c4",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 92.63.197.22",
+      "description": "Attacker IP observed 58 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '92.63.197.22']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--7c1cac55-fb29-57ea-8336-0b605dbef5f6",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 3.130.168.2",
+      "description": "Attacker IP observed 56 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '3.130.168.2']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--9907d47b-109f-5555-bdf8-66ac17dacf15",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 117.187.58.5",
+      "description": "Attacker IP observed 54 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '117.187.58.5']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--b3b7cd4a-c638-5a39-8279-eda969cee3d8",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 167.99.101.91",
+      "description": "Attacker IP observed 53 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '167.99.101.91']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--767112c2-400f-5838-a554-b219b902266d",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 112.237.187.97",
+      "description": "Attacker IP observed 50 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '112.237.187.97']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--39349cf6-4c8d-5873-af8f-1ac998dc1140",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 123.130.36.60",
+      "description": "Attacker IP observed 50 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '123.130.36.60']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--433428ba-1d64-52f5-9f33-e929e2b86620",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 36.255.33.172",
+      "description": "Attacker IP observed 50 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '36.255.33.172']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--d52b4c9f-e5a8-56e2-8a28-6e2e505f96d1",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 66.167.166.156",
+      "description": "Attacker IP observed 50 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '66.167.166.156']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 90
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--d76b7ed2-ff21-5727-b851-5cc1065a3828",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 3.131.220.121",
+      "description": "Attacker IP observed 49 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '3.131.220.121']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 89
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--25ec4bbe-6333-5533-b018-187158860844",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 103.186.77.86",
+      "description": "Attacker IP observed 48 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '103.186.77.86']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 88
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--71112c9a-47dd-5b97-9a7a-13582ea2ea18",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 42.105.48.166",
+      "description": "Attacker IP observed 48 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '42.105.48.166']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 88
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--4aaed353-a0fa-5de4-9e78-f62c99074319",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 45.120.161.126",
+      "description": "Attacker IP observed 48 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '45.120.161.126']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 88
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--005cb4c4-6f1d-5933-b8a9-d9bff506bdf7",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 64.207.185.5",
+      "description": "Attacker IP observed 48 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '64.207.185.5']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 88
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--ee26afa3-ced3-5622-8f73-34ab166a516f",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "name": "Malicious IP: 103.173.7.233",
+      "description": "Attacker IP observed 46 times on honeypot",
+      "indicator_types": [
+        "malicious-activity"
+      ],
+      "pattern": "[ipv4-addr:value = '103.173.7.233']",
+      "pattern_type": "stix",
+      "valid_from": "2026-05-22T06:53:32Z",
+      "confidence": 86
     },
     {
       "type": "observed-data",
       "spec_version": "2.1",
-      "id": "observed-data--326fe86c-3068-57d3-a4ad-662fec814770",
-      "created": "2026-04-07T15:36:05Z",
-      "modified": "2026-04-07T15:36:05Z",
-      "first_observed": "2026-04-06T15:36:05Z",
-      "last_observed": "2026-04-07T15:36:05Z",
-      "number_observed": 1
+      "id": "observed-data--b1a87055-f7e6-5fb7-8892-1fca801e743e",
+      "created": "2026-05-22T06:53:32Z",
+      "modified": "2026-05-22T06:53:32Z",
+      "first_observed": "2026-05-21T06:53:32Z",
+      "last_observed": "2026-05-22T06:53:32Z",
+      "number_observed": 1000
     }
   ]
 }

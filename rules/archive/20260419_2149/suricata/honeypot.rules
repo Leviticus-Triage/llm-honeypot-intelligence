@@ -1,0 +1,5 @@
+# LLM Honeypot Intelligence Platform - Suricata Rules
+# Generated: 20260419_2149
+# 1 rules from honeypot data
+
+alert tcp any any -> $HOME_NET 22 (msg:"HONEYPOT-SSH uname -a"; flow:established,to_server; content:"uname -a"; nocase; classtype:attempted-recon; sid:9000001; rev:1; priority:3; metadata:source honeypot_intel, count 6, mitre T1082, created 2026_04_19;)

