@@ -1,127 +1,153 @@
 [
   {
-    "id": "952864fd6c25",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
-    "severity": "high",
-    "type": "anomalous_behavior",
-    "ip": "45.148.10.67",
-    "country": "The Netherlands",
-    "description": "Anomalous galah activity from 45.148.10.67",
-    "reasons": [
-      "ML anomaly (score: 0.070)",
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "recommended_action": "block"
-  },
-  {
-    "id": "ea477b06d625",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "ed3f104320b8",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "93.123.72.183",
     "country": "The Netherlands",
     "description": "Anomalous galah activity from 93.123.72.183",
     "reasons": [
-      "ML anomaly (score: 0.109)",
+      "ML anomaly (score: 0.154)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "a31159818baf",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "70ea47697049",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "45.148.10.67",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 45.148.10.67",
+    "reasons": [
+      "ML anomaly (score: 0.104)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "d20396e8139f",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "204.76.203.206",
     "country": "The Netherlands",
     "description": "Anomalous galah activity from 204.76.203.206",
     "reasons": [
-      "ML anomaly (score: 0.018)",
+      "ML anomaly (score: 0.126)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "9eede3689f8b",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "c7627eab84af",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "204.76.203.219",
     "country": "The Netherlands",
     "description": "Anomalous galah activity from 204.76.203.219",
     "reasons": [
-      "ML anomaly (score: 0.027)",
+      "ML anomaly (score: 0.090)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "88280e293618",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "a86573fbce01",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "31.59.160.12",
     "country": "United Arab Emirates",
     "description": "Anomalous galah activity from 31.59.160.12",
     "reasons": [
-      "ML anomaly (score: 0.096)",
+      "ML anomaly (score: 0.108)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "325f119b5481",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "dc2447995500",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "46.151.178.13",
     "country": "The Netherlands",
     "description": "Anomalous galah activity from 46.151.178.13",
     "reasons": [
-      "ML anomaly (score: 0.016)",
+      "ML anomaly (score: 0.064)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "9652d94b0e16",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "712c1fef1bcf",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
-    "ip": "151.243.11.35",
-    "country": "United Arab Emirates",
-    "description": "Anomalous galah activity from 151.243.11.35",
+    "ip": "45.198.224.5",
+    "country": "United States",
+    "description": "Anomalous galah activity from 45.198.224.5",
     "reasons": [
-      "ML anomaly (score: 0.004)",
+      "ML anomaly (score: 0.052)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "43bb8bc1548e",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "951d9c623857",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "45.205.1.241",
     "country": "United States",
     "description": "Anomalous galah activity from 45.205.1.241",
     "reasons": [
-      "ML anomaly (score: 0.023)",
+      "ML anomaly (score: 0.006)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "349f7bfca8d4",
-    "timestamp": "2026-06-10T11:55:40.218123+00:00",
+    "id": "2def132a073e",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
     "severity": "high",
     "type": "coordinated_campaign",
-    "ip": "63 IPs",
+    "ip": "74 IPs",
     "country": "The Netherlands, Bulgaria, Hong Kong",
-    "description": "Coordinated attack campaign (63 IPs, 76 events)",
+    "description": "Coordinated attack campaign (74 IPs, 93 events)",
     "reasons": [
       "Behavioural similarity"
     ],
     "recommended_action": "block"
+  },
+  {
+    "id": "1a42d3501b4b",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
+    "severity": "high",
+    "type": "coordinated_campaign",
+    "ip": "6 IPs",
+    "country": "The Netherlands, United Arab Emirates, United States",
+    "description": "Coordinated attack campaign (6 IPs, 23 events)",
+    "reasons": [
+      "Behavioural similarity"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "9f5021b67eb5",
+    "timestamp": "2026-06-10T15:28:27.828817+00:00",
+    "severity": "medium",
+    "type": "coordinated_campaign",
+    "ip": "5 IPs",
+    "country": "Brazil, Germany, Taiwan",
+    "description": "Coordinated attack campaign (5 IPs, 73 events)",
+    "reasons": [
+      "Behavioural similarity"
+    ],
+    "recommended_action": "alert"
   }
 ]

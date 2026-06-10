@@ -1,37 +1,41 @@
 [
   {
     "campaign_id": 3,
-    "ip_count": 63,
+    "ip_count": 74,
     "ips": [
       "45.142.154.17",
+      "8.211.9.174",
+      "102.129.143.35",
       "208.84.100.240",
       "153.126.185.31",
       "18.218.134.102",
       "18.218.180.187",
       "45.142.154.30",
-      "45.198.224.5",
+      "45.205.1.242",
       "47.88.54.220",
       "5.61.209.43",
+      "8.208.10.94",
       "89.248.173.216",
       "13.221.252.102",
       "143.244.180.70",
       "150.107.38.251",
       "159.89.1.53",
       "165.154.10.165",
-      "172.236.228.115",
-      "172.236.228.224",
-      "176.65.139.66",
-      "176.65.149.139",
-      "182.54.23.214"
+      "165.154.162.193",
+      "165.227.47.218"
     ],
     "countries": [
       "The Netherlands",
       "Bulgaria",
       "Hong Kong",
+      "Finland",
       "Japan",
       "Germany",
       "Nigeria",
+      "Portugal",
       "Russia",
+      "Switzerland",
+      "Canada",
       "United States",
       "Singapore",
       "Belgium",
@@ -57,13 +61,16 @@
       "Pfcloud UG (haftungsbeschrankt)",
       "Asahi Net",
       "Akamai Connected Cloud",
+      "Datacamp Limited",
       "CHINA UNICOM China169 Backbone",
       "Amarutu Technology Ltd",
+      "Sistemas Informaticos, S.A.",
       "Chinanet",
       "Advin Services LLC",
       "Techoff Srv Limited",
       "Hurricane Electric LLC",
       "SAKURA Internet Inc.",
+      "Telia Finland Oyj",
       "Offshore LC",
       "DigitalOcean, LLC",
       "Microsoft Corporation",
@@ -74,11 +81,42 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 76,
-    "avg_anomaly_score": -0.2698923543795819
+    "total_events": 93,
+    "avg_anomaly_score": -0.2292608053500357
   },
   {
-    "campaign_id": 2,
+    "campaign_id": 0,
+    "ip_count": 5,
+    "ips": [
+      "125.227.156.55",
+      "2.26.80.121",
+      "175.178.116.208",
+      "177.11.145.152",
+      "14.29.196.194"
+    ],
+    "countries": [
+      "Brazil",
+      "Germany",
+      "Taiwan",
+      "China"
+    ],
+    "asns": [
+      "Data Communication Business Group",
+      "Shenzhen Tencent Computer Systems Company Limited",
+      "Chinanet",
+      "Processamento de Dados e Solucoes em Interne",
+      "Play2go International Limited"
+    ],
+    "fingerprints": [
+      "e3b0c44298fc1c14"
+    ],
+    "max_threat_level": "medium",
+    "toolkits": [],
+    "total_events": 73,
+    "avg_anomaly_score": 0.085896513744666
+  },
+  {
+    "campaign_id": 1,
     "ip_count": 4,
     "ips": [
       "93.123.72.183",
@@ -100,24 +138,29 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 18,
-    "avg_anomaly_score": 0.06269686282495462
+    "total_events": 25,
+    "avg_anomaly_score": 0.11958863997937311
   },
   {
-    "campaign_id": 1,
-    "ip_count": 3,
+    "campaign_id": 2,
+    "ip_count": 6,
     "ips": [
       "45.148.10.67",
       "46.151.178.13",
-      "45.205.1.241"
+      "151.243.11.35",
+      "45.198.224.5",
+      "45.205.1.241",
+      "45.205.1.62"
     ],
     "countries": [
       "The Netherlands",
+      "United Arab Emirates",
       "United States"
     ],
     "asns": [
       "Vpsvault.host Ltd",
       "Techoff Srv Limited",
+      "LLC Vash Kredit Bank",
       "Sino Worldwide Trading Limited"
     ],
     "fingerprints": [
@@ -125,32 +168,7 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 13,
-    "avg_anomaly_score": 0.03650626977940211
-  },
-  {
-    "campaign_id": 0,
-    "ip_count": 3,
-    "ips": [
-      "175.178.116.208",
-      "177.11.145.152",
-      "14.29.196.194"
-    ],
-    "countries": [
-      "Brazil",
-      "China"
-    ],
-    "asns": [
-      "Shenzhen Tencent Computer Systems Company Limited",
-      "Processamento de Dados e Solucoes em Interne",
-      "Chinanet"
-    ],
-    "fingerprints": [
-      "e3b0c44298fc1c14"
-    ],
-    "max_threat_level": "medium",
-    "toolkits": [],
-    "total_events": 3,
-    "avg_anomaly_score": 0.09848871596486508
+    "total_events": 23,
+    "avg_anomaly_score": 0.030801546828561233
   }
 ]

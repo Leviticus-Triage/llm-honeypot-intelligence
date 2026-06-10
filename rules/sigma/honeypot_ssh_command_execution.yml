@@ -2,7 +2,7 @@ title: Honeypot - SSH Command Execution
 id: c02f6680-d344-65cf-57f5-05ea7d0f038e
 status: experimental
 level: medium
-description: Shell command execution patterns from SSH honeypot. 189 events, 2 source
+description: Shell command execution patterns from SSH honeypot. 183 events, 4 source
   IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
 date: 2026/06/10
@@ -18,21 +18,21 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - echo passwd > /tmp/d.log
-    - scp -qt "/tmp/BNJlmgJt
     - scp -qt "/var/tmp/hdDoVWiF
-    - scp -qt "/var/tmp/QVNgdjAP
-    - scp -qt "/var/tmp/BNJlmgJt
-    - echo odoo14 > /tmp/d.log
+    - echo 12345 > /tmp/d.log
+    - scp -qt "/tmp/YEssrtBj
+    - echo Passw0rd > /tmp/d.log
+    - scp -qt "/tmp/yloGCuos
+    - scp -qt "/tmp/NCXUNYAO
+    - scp -qt "/tmp/hdDoVWiF
+    - echo milad > /tmp/d.log
+    - echo node > /tmp/d.log
+    - scp -qt "/var/tmp/bMDUJtYC
     - scp -qt "/var/tmp/hyQMmwro
-    - scp -qt "/var/tmp/LWaDdmKD
-    - scp -qt "/var/tmp/HPhlkviJ
-    - echo 1234567890 > /tmp/d.log
-    - scp -qt "/tmp/qgKpOPqY
-    - scp -qt "/tmp/RkwJoufT
-    - scp -qt "/var/tmp/SOlDtuIq
-    - scp -qt "/var/tmp/yloGCuos
-    - echo abc123 > /tmp/d.log
+    - echo p@ssw0rd > /tmp/d.log
+    - echo tactical > /tmp/d.log
+    - scp -qt "/tmp/SOlDtuIq
+    - echo 123456 > /tmp/d.log
   condition: selection
 falsepositives:
 - Legitimate system administration
