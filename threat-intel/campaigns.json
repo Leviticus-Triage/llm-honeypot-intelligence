@@ -1,35 +1,37 @@
 [
   {
     "campaign_id": 0,
-    "ip_count": 24,
+    "ip_count": 39,
     "ips": [
+      "45.142.154.17",
       "153.126.185.31",
+      "18.218.134.102",
+      "18.218.180.187",
       "45.142.154.30",
       "45.198.224.5",
       "47.88.54.220",
+      "89.248.173.216",
       "13.221.252.102",
       "143.244.180.70",
+      "150.107.38.251",
       "159.89.1.53",
+      "165.154.10.165",
       "172.236.228.115",
       "172.236.228.224",
       "176.65.139.66",
+      "176.65.149.139",
+      "182.54.23.214",
       "192.109.200.204",
-      "198.235.24.182",
-      "198.235.24.73",
-      "198.235.24.78",
-      "3.82.60.21",
-      "3.91.30.209",
-      "34.156.237.98",
-      "44.220.188.16",
-      "45.205.1.241",
-      "45.205.1.244"
+      "198.235.24.182"
     ],
     "countries": [
       "Luxembourg",
       "Belgium",
       "Germany",
       "Hong Kong",
+      "China",
       "United States",
+      "Nigeria",
       "Bulgaria",
       "The Netherlands",
       "Japan"
@@ -37,15 +39,21 @@
     "asns": [
       "SAKURA Internet Inc.",
       "Offshore LC",
+      "IP Volume inc",
       "Microsoft Corporation",
+      "Pfcloud UG (haftungsbeschrankt)",
       "AGOTOZ PTE. LTD.",
-      "Sino Worldwide Trading Limited",
       "DigitalOcean, LLC",
       "Akamai Connected Cloud",
       "Vpsvault.host Ltd",
+      "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
       "Google LLC",
+      "Censys, Inc.",
       "Amazon.com, Inc.",
+      "Chinanet",
       "Alibaba (US) Technology Co., Ltd.",
+      "Asahi Net",
+      "CHINA UNICOM China169 Backbone",
       "TechTies Inc."
     ],
     "fingerprints": [
@@ -53,7 +61,33 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 28,
-    "avg_anomaly_score": -0.24648177588912948
+    "total_events": 49,
+    "avg_anomaly_score": -0.2845226650660643
+  },
+  {
+    "campaign_id": 1,
+    "ip_count": 4,
+    "ips": [
+      "204.76.203.206",
+      "93.123.72.183",
+      "204.76.203.219",
+      "31.59.160.12"
+    ],
+    "countries": [
+      "United Arab Emirates",
+      "The Netherlands"
+    ],
+    "asns": [
+      "Miteflux Technologies Ltd",
+      "Pfcloud UG (haftungsbeschrankt)",
+      "Amarutu Technology Ltd"
+    ],
+    "fingerprints": [
+      "ada5162306c8ff0c"
+    ],
+    "max_threat_level": "high",
+    "toolkits": [],
+    "total_events": 6,
+    "avg_anomaly_score": 0.030233154757180886
   }
 ]

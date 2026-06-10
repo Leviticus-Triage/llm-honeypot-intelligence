@@ -1,40 +1,68 @@
 [
   {
-    "id": "df028e8ecf9b",
-    "timestamp": "2026-06-09T23:35:01.694615+00:00",
+    "id": "efb0147b717f",
+    "timestamp": "2026-06-10T05:37:09.014021+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
     "ip": "45.148.10.67",
     "country": "The Netherlands",
     "description": "Anomalous galah activity from 45.148.10.67",
     "reasons": [
-      "ML anomaly (score: 0.085)",
+      "ML anomaly (score: 0.009)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "72dadd92dba1",
-    "timestamp": "2026-06-09T23:35:01.694615+00:00",
+    "id": "fcc878a94b64",
+    "timestamp": "2026-06-10T05:37:09.014021+00:00",
     "severity": "high",
     "type": "anomalous_behavior",
-    "ip": "151.243.11.35",
-    "country": "United Arab Emirates",
-    "description": "Anomalous galah activity from 151.243.11.35",
+    "ip": "46.151.178.13",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 46.151.178.13",
     "reasons": [
-      "ML anomaly (score: 0.010)",
+      "ML anomaly (score: 0.015)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "recommended_action": "block"
   },
   {
-    "id": "07cc0d55a7e1",
-    "timestamp": "2026-06-09T23:35:01.694615+00:00",
+    "id": "c8e32d6113cc",
+    "timestamp": "2026-06-10T05:37:09.014021+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "204.76.203.206",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 204.76.203.206",
+    "reasons": [
+      "ML anomaly (score: 0.041)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "e2311023e777",
+    "timestamp": "2026-06-10T05:37:09.014021+00:00",
+    "severity": "high",
+    "type": "anomalous_behavior",
+    "ip": "93.123.72.183",
+    "country": "The Netherlands",
+    "description": "Anomalous galah activity from 93.123.72.183",
+    "reasons": [
+      "ML anomaly (score: 0.034)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "recommended_action": "block"
+  },
+  {
+    "id": "b72ca3f924f1",
+    "timestamp": "2026-06-10T05:37:09.014021+00:00",
     "severity": "high",
     "type": "coordinated_campaign",
-    "ip": "24 IPs",
+    "ip": "39 IPs",
     "country": "Luxembourg, Belgium, Germany",
-    "description": "Coordinated attack campaign (24 IPs, 28 events)",
+    "description": "Coordinated attack campaign (39 IPs, 49 events)",
     "reasons": [
       "Behavioural similarity"
     ],
