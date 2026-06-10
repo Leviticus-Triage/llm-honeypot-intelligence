@@ -1,15 +1,17 @@
 [
   {
-    "campaign_id": 0,
-    "ip_count": 39,
+    "campaign_id": 3,
+    "ip_count": 63,
     "ips": [
       "45.142.154.17",
+      "208.84.100.240",
       "153.126.185.31",
       "18.218.134.102",
       "18.218.180.187",
       "45.142.154.30",
       "45.198.224.5",
       "47.88.54.220",
+      "5.61.209.43",
       "89.248.173.216",
       "13.221.252.102",
       "143.244.180.70",
@@ -20,66 +22,77 @@
       "172.236.228.224",
       "176.65.139.66",
       "176.65.149.139",
-      "182.54.23.214",
-      "192.109.200.204",
-      "198.235.24.182"
+      "182.54.23.214"
     ],
     "countries": [
-      "Luxembourg",
-      "Belgium",
-      "Germany",
-      "Hong Kong",
-      "China",
-      "United States",
-      "Nigeria",
-      "Bulgaria",
       "The Netherlands",
-      "Japan"
+      "Bulgaria",
+      "Hong Kong",
+      "Japan",
+      "Germany",
+      "Nigeria",
+      "Russia",
+      "United States",
+      "Singapore",
+      "Belgium",
+      "Luxembourg",
+      "United Kingdom",
+      "China",
+      "Seychelles"
     ],
     "asns": [
+      "Driftnet Ltd",
+      "TechTies Inc.",
+      "AGOTOZ PTE. LTD.",
+      "Petersburg Internet Network ltd.",
+      "Alsycon B.V.",
+      "Google LLC",
+      "Detai Prosperous Technologies Limited",
+      "Censys, Inc.",
+      "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
+      "Amazon.com, Inc.",
+      "Vpsvault.host Ltd",
+      "CariNet, Inc.",
+      "IP Volume inc",
+      "Pfcloud UG (haftungsbeschrankt)",
+      "Asahi Net",
+      "Akamai Connected Cloud",
+      "CHINA UNICOM China169 Backbone",
+      "Amarutu Technology Ltd",
+      "Chinanet",
+      "Advin Services LLC",
+      "Techoff Srv Limited",
+      "Hurricane Electric LLC",
       "SAKURA Internet Inc.",
       "Offshore LC",
-      "IP Volume inc",
-      "Microsoft Corporation",
-      "Pfcloud UG (haftungsbeschrankt)",
-      "AGOTOZ PTE. LTD.",
       "DigitalOcean, LLC",
-      "Akamai Connected Cloud",
-      "Vpsvault.host Ltd",
-      "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
-      "Google LLC",
-      "Censys, Inc.",
-      "Amazon.com, Inc.",
-      "Chinanet",
-      "Alibaba (US) Technology Co., Ltd.",
-      "Asahi Net",
-      "CHINA UNICOM China169 Backbone",
-      "TechTies Inc."
+      "Microsoft Corporation",
+      "Alibaba (US) Technology Co., Ltd."
     ],
     "fingerprints": [
       "8a5edab282632443"
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 49,
-    "avg_anomaly_score": -0.2845226650660643
+    "total_events": 76,
+    "avg_anomaly_score": -0.2698923543795819
   },
   {
-    "campaign_id": 1,
+    "campaign_id": 2,
     "ip_count": 4,
     "ips": [
-      "204.76.203.206",
       "93.123.72.183",
+      "204.76.203.206",
       "204.76.203.219",
       "31.59.160.12"
     ],
     "countries": [
-      "United Arab Emirates",
-      "The Netherlands"
+      "The Netherlands",
+      "United Arab Emirates"
     ],
     "asns": [
-      "Miteflux Technologies Ltd",
       "Pfcloud UG (haftungsbeschrankt)",
+      "Miteflux Technologies Ltd",
       "Amarutu Technology Ltd"
     ],
     "fingerprints": [
@@ -87,7 +100,57 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 6,
-    "avg_anomaly_score": 0.030233154757180886
+    "total_events": 18,
+    "avg_anomaly_score": 0.06269686282495462
+  },
+  {
+    "campaign_id": 1,
+    "ip_count": 3,
+    "ips": [
+      "45.148.10.67",
+      "46.151.178.13",
+      "45.205.1.241"
+    ],
+    "countries": [
+      "The Netherlands",
+      "United States"
+    ],
+    "asns": [
+      "Vpsvault.host Ltd",
+      "Techoff Srv Limited",
+      "Sino Worldwide Trading Limited"
+    ],
+    "fingerprints": [
+      "8a5edab282632443"
+    ],
+    "max_threat_level": "high",
+    "toolkits": [],
+    "total_events": 13,
+    "avg_anomaly_score": 0.03650626977940211
+  },
+  {
+    "campaign_id": 0,
+    "ip_count": 3,
+    "ips": [
+      "175.178.116.208",
+      "177.11.145.152",
+      "14.29.196.194"
+    ],
+    "countries": [
+      "Brazil",
+      "China"
+    ],
+    "asns": [
+      "Shenzhen Tencent Computer Systems Company Limited",
+      "Processamento de Dados e Solucoes em Interne",
+      "Chinanet"
+    ],
+    "fingerprints": [
+      "e3b0c44298fc1c14"
+    ],
+    "max_threat_level": "medium",
+    "toolkits": [],
+    "total_events": 3,
+    "avg_anomaly_score": 0.09848871596486508
   }
 ]

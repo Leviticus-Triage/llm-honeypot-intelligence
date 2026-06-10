@@ -2,39 +2,37 @@ title: Honeypot - SSH Command Execution
 id: c02f6680-d344-65cf-57f5-05ea7d0f038e
 status: experimental
 level: medium
-description: Shell command execution patterns from SSH honeypot. 73 events, 33 source
+description: Shell command execution patterns from SSH honeypot. 189 events, 2 source
   IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/05/22
+date: 2026/06/10
 references:
 - https://attack.mitre.org/
 tags:
 - attack.execution
-- attack.t1005
 - attack.t1059.004
 - attack.t1105
-- attack.t1552.004
 logsource:
   category: process_creation
   product: linux
 detection:
   selection:
     CommandLine|contains:
-    - scp -t /var/tmp/k4hpytt9p9vk4tst6uuygjcnjz
-    - echo asterisk > /tmp/d.log
-    - echo "root:UwHPQoU8g5S4
-    - scp -qt "/var/tmp/kDSAADoJ
-    - echo "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEArDp4cun2lhr4KUhBGE7VvAcwdli2a8dbnrTOrbMz1+5O73fcBOx8NVbUT0bUanUV9tJ2/9p7+vD0Ep
-    - scp -t /tmp/k4hpytt9p9vk4tst6uuygjcnjz
-    - scp -qt "/tmp/kDSAADoJ
-    - echo webmaster > /tmp/d.log
-    - rm -rf /tmp/cache /tmp/* /var/tmp/* 2>/dev/null
-    - scp -qt "/tmp/NfUJZBuw
-    - scp -qt "/var/tmp/uYkJtZaN
-    - scp -qt "/tmp/fjLaBUQT
-    - rm -rf /tmp/auth.sh
-    - echo odoo18 > /tmp/d.log
-    - scp -qt "/var/tmp/fjLaBUQT
+    - echo passwd > /tmp/d.log
+    - scp -qt "/tmp/BNJlmgJt
+    - scp -qt "/var/tmp/hdDoVWiF
+    - scp -qt "/var/tmp/QVNgdjAP
+    - scp -qt "/var/tmp/BNJlmgJt
+    - echo odoo14 > /tmp/d.log
+    - scp -qt "/var/tmp/hyQMmwro
+    - scp -qt "/var/tmp/LWaDdmKD
+    - scp -qt "/var/tmp/HPhlkviJ
+    - echo 1234567890 > /tmp/d.log
+    - scp -qt "/tmp/qgKpOPqY
+    - scp -qt "/tmp/RkwJoufT
+    - scp -qt "/var/tmp/SOlDtuIq
+    - scp -qt "/var/tmp/yloGCuos
+    - echo abc123 > /tmp/d.log
   condition: selection
 falsepositives:
 - Legitimate system administration
