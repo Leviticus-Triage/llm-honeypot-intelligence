@@ -1,109 +1,120 @@
 [
   {
-    "campaign_id": 3,
-    "ip_count": 74,
+    "campaign_id": 2,
+    "ip_count": 82,
     "ips": [
+      "45.148.10.67",
+      "46.101.173.8",
       "45.142.154.17",
+      "46.151.178.13",
       "8.211.9.174",
       "102.129.143.35",
+      "151.243.11.35",
       "208.84.100.240",
-      "153.126.185.31",
+      "45.205.1.62",
+      "62.210.142.169",
+      "176.65.139.66",
       "18.218.134.102",
       "18.218.180.187",
-      "45.142.154.30",
+      "18.226.13.203",
+      "185.242.226.106",
+      "204.76.203.81",
+      "45.148.10.200",
       "45.205.1.242",
-      "47.88.54.220",
-      "5.61.209.43",
-      "8.208.10.94",
-      "89.248.173.216",
-      "13.221.252.102",
-      "143.244.180.70",
-      "150.107.38.251",
-      "159.89.1.53",
-      "165.154.10.165",
-      "165.154.162.193",
-      "165.227.47.218"
+      "45.205.1.245",
+      "45.205.1.73"
     ],
     "countries": [
-      "The Netherlands",
-      "Bulgaria",
-      "Hong Kong",
-      "Finland",
-      "Japan",
-      "Germany",
-      "Nigeria",
-      "Portugal",
-      "Russia",
-      "Switzerland",
       "Canada",
-      "United States",
-      "Singapore",
+      "Germany",
+      "The Netherlands",
       "Belgium",
-      "Luxembourg",
+      "Portugal",
+      "France",
+      "Malaysia",
+      "Switzerland",
       "United Kingdom",
+      "United States",
       "China",
-      "Seychelles"
+      "Singapore",
+      "Seychelles",
+      "India",
+      "Russia",
+      "Finland",
+      "Luxembourg",
+      "United Arab Emirates",
+      "Japan",
+      "Hong Kong",
+      "Nigeria"
     ],
     "asns": [
-      "Driftnet Ltd",
-      "TechTies Inc.",
-      "AGOTOZ PTE. LTD.",
-      "Petersburg Internet Network ltd.",
-      "Alsycon B.V.",
-      "Google LLC",
-      "Detai Prosperous Technologies Limited",
-      "Censys, Inc.",
-      "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
-      "Amazon.com, Inc.",
-      "Vpsvault.host Ltd",
-      "CariNet, Inc.",
-      "IP Volume inc",
-      "Pfcloud UG (haftungsbeschrankt)",
-      "Asahi Net",
-      "Akamai Connected Cloud",
-      "Datacamp Limited",
-      "CHINA UNICOM China169 Backbone",
-      "Amarutu Technology Ltd",
-      "Sistemas Informaticos, S.A.",
       "Chinanet",
-      "Advin Services LLC",
+      "CHINA UNICOM China169 Backbone",
       "Techoff Srv Limited",
-      "Hurricane Electric LLC",
-      "SAKURA Internet Inc.",
-      "Telia Finland Oyj",
-      "Offshore LC",
+      "AGOTOZ PTE. LTD.",
+      "Amazon.com, Inc.",
+      "Zenlayer Inc",
+      "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
+      "Alibaba (US) Technology Co., Ltd.",
+      "Petersburg Internet Network ltd.",
+      "Vpsvault.host Ltd",
       "DigitalOcean, LLC",
+      "Alsycon B.V.",
+      "Amarutu Technology Ltd",
+      "Offshore LC",
+      "Pfcloud UG (haftungsbeschrankt)",
+      "Sistemas Informaticos, S.A.",
+      "CariNet, Inc.",
+      "Advin Services LLC",
+      "Akamai Connected Cloud",
+      "Asahi Net",
+      "Driftnet Ltd",
+      "Hurricane Electric LLC",
+      "IP Volume inc",
+      "Censys, Inc.",
+      "Detai Prosperous Technologies Limited",
       "Microsoft Corporation",
-      "Alibaba (US) Technology Co., Ltd."
+      "Scaleway SAS",
+      "Telia Finland Oyj",
+      "Beijing Tiantexin Tech. Co., Ltd.",
+      "Google LLC",
+      "Sino Worldwide Trading Limited",
+      "LLC Vash Kredit Bank",
+      "Datacamp Limited"
     ],
     "fingerprints": [
       "8a5edab282632443"
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 93,
-    "avg_anomaly_score": -0.2292608053500357
+    "total_events": 130,
+    "avg_anomaly_score": -0.20239242290368353
   },
   {
     "campaign_id": 0,
-    "ip_count": 5,
+    "ip_count": 8,
     "ips": [
-      "125.227.156.55",
+      "80.66.83.73",
+      "123.166.96.217",
+      "49.72.111.25",
       "2.26.80.121",
+      "125.227.156.55",
       "175.178.116.208",
       "177.11.145.152",
       "14.29.196.194"
     ],
     "countries": [
-      "Brazil",
       "Germany",
+      "China",
       "Taiwan",
-      "China"
+      "Brazil",
+      "Russia"
     ],
     "asns": [
+      "Chinanet",
+      "Bashinskii Vadim Ruslanovich",
       "Data Communication Business Group",
       "Shenzhen Tencent Computer Systems Company Limited",
-      "Chinanet",
       "Processamento de Dados e Solucoes em Interne",
       "Play2go International Limited"
     ],
@@ -112,63 +123,30 @@
     ],
     "max_threat_level": "medium",
     "toolkits": [],
-    "total_events": 73,
-    "avg_anomaly_score": 0.085896513744666
+    "total_events": 111,
+    "avg_anomaly_score": 0.02376730684246886
   },
   {
     "campaign_id": 1,
-    "ip_count": 4,
+    "ip_count": 3,
     "ips": [
       "93.123.72.183",
       "204.76.203.206",
-      "204.76.203.219",
-      "31.59.160.12"
+      "204.76.203.219"
     ],
     "countries": [
-      "The Netherlands",
-      "United Arab Emirates"
+      "The Netherlands"
     ],
     "asns": [
-      "Pfcloud UG (haftungsbeschrankt)",
-      "Miteflux Technologies Ltd",
-      "Amarutu Technology Ltd"
+      "Amarutu Technology Ltd",
+      "Pfcloud UG (haftungsbeschrankt)"
     ],
     "fingerprints": [
       "ada5162306c8ff0c"
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 25,
-    "avg_anomaly_score": 0.11958863997937311
-  },
-  {
-    "campaign_id": 2,
-    "ip_count": 6,
-    "ips": [
-      "45.148.10.67",
-      "46.151.178.13",
-      "151.243.11.35",
-      "45.198.224.5",
-      "45.205.1.241",
-      "45.205.1.62"
-    ],
-    "countries": [
-      "The Netherlands",
-      "United Arab Emirates",
-      "United States"
-    ],
-    "asns": [
-      "Vpsvault.host Ltd",
-      "Techoff Srv Limited",
-      "LLC Vash Kredit Bank",
-      "Sino Worldwide Trading Limited"
-    ],
-    "fingerprints": [
-      "8a5edab282632443"
-    ],
-    "max_threat_level": "high",
-    "toolkits": [],
-    "total_events": 23,
-    "avg_anomaly_score": 0.030801546828561233
+    "total_events": 35,
+    "avg_anomaly_score": 0.11475393329071852
   }
 ]
