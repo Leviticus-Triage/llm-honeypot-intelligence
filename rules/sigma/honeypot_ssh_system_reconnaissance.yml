@@ -2,10 +2,10 @@ title: Honeypot - SSH System Reconnaissance
 id: e9047edc-dc31-590c-91ce-21bda62d8a26
 status: experimental
 level: medium
-description: System reconnaissance commands observed on SSH honeypot. 965 events,
-  5 source IPs, 15 unique patterns.
+description: System reconnaissance commands observed on SSH honeypot. 926 events,
+  8 source IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/06/10
+date: 2026/06/11
 references:
 - https://attack.mitre.org/
 tags:
@@ -20,21 +20,21 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - uname -s -v -n -r -m
-    - ip route show 2>/dev/null
-    - cat /proc/cpuinfo
-    - uname -s -m
-    - nproc
-    - kill -9 $pid 2>/dev/null
-    - lspci
     - uname -r
-    - uname -m
     - ps aux
-    - hostname
     - uptime
-    - nvidia-smi -q
+    - uname -a
+    - cat /proc/cpuinfo
+    - ip addr show 2>/dev/null
+    - uname -m
     - cat /proc/version 2>/dev/null
     - uname -n
+    - uname -s -m
+    - whoami
+    - nvidia-smi -q
+    - nproc
+    - lscpu
+    - ps -ef
   condition: selection
 falsepositives:
 - Legitimate system administration

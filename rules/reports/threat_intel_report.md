@@ -1,6 +1,6 @@
 # Threat Intelligence Report
 
-**Generated**: 2026-06-10 15:23 UTC  
+**Generated**: 2026-06-11 02:09 UTC  
 **Source**: LLM Honeypot Intelligence Platform  
 **Window**: Last 24 hours  
 **Classification**: TLP:AMBER
@@ -9,19 +9,19 @@
 
 ## Executive Summary
 
-In the past 24 hours, the honeypot platform observed **1,025 events** from **561 unique source IPs** across **32 countries** and **47 autonomous systems**.
+In the past 24 hours, the honeypot platform observed **1,043 events** from **570 unique source IPs** across **32 countries** and **48 autonomous systems**.
 
 | Metric | Value |
 |--------|-------|
 | SSH Events (Beelzebub) | 1,000 |
-| HTTP Events (Galah) | 25 |
-| Unique Attacker IPs | 561 |
-| Atomic Attack Patterns | 2109 |
+| HTTP Events (Galah) | 43 |
+| Unique Attacker IPs | 570 |
+| Atomic Attack Patterns | 2028 |
 | MITRE ATT&CK Techniques | 9 |
 | Generated Sigma Rules | 5 |
 | Generated YARA Rules | 4 |
 | Generated Suricata Rules | 31 |
-| Blocked IPs (Firewall) | 499 |
+| Blocked IPs (Firewall) | 503 |
 
 ---
 
@@ -29,23 +29,23 @@ In the past 24 hours, the honeypot platform observed **1,025 events** from **561
 
 | Technique | Name | Count |
 |-----------|------|-------|
-| T1082 (System Information Discovery) | | 775 |
-| T1059.004 (Unix Shell) | | 183 |
-| T1105 (Ingress Tool Transfer) | | 161 |
-| T1033 (System Owner/User Discovery) | | 118 |
-| T1057 (Process Discovery) | | 74 |
-| T1053.003 (Cron) | | 36 |
-| T1016 (System Network Configuration Discovery) | | 4 |
-| T1552.001 (Credentials In Files) | | 4 |
-| T1543.002 (Systemd Service) | | 2 |
+| T1082 (System Information Discovery) | | 750 |
+| T1059.004 (Unix Shell) | | 175 |
+| T1105 (Ingress Tool Transfer) | | 158 |
+| T1033 (System Owner/User Discovery) | | 111 |
+| T1057 (Process Discovery) | | 68 |
+| T1053.003 (Cron) | | 32 |
+| T1552.001 (Credentials In Files) | | 6 |
+| T1016 (System Network Configuration Discovery) | | 6 |
+| T1543.002 (Systemd Service) | | 3 |
 
 ### Tactics Distribution
 
-- **discovery**: 971 events ████████████████████████████████████████
-- **execution**: 183 events ████████████████████████████████████████
-- **command_and_control**: 161 events ████████████████████████████████████████
-- **persistence**: 38 events ███████████████████
-- **credential_access**: 4 events ██
+- **discovery**: 935 events ████████████████████████████████████████
+- **execution**: 175 events ████████████████████████████████████████
+- **command_and_control**: 158 events ████████████████████████████████████████
+- **persistence**: 35 events █████████████████
+- **credential_access**: 6 events ███
 
 ---
 
@@ -55,41 +55,41 @@ In the past 24 hours, the honeypot platform observed **1,025 events** from **561
 
 | Country | Events |
 |---------|--------|
-| Germany | 11,082 |
-| Bulgaria | 9,229 |
-| United States | 7,941 |
-| France | 3,638 |
-| Taiwan | 2,811 |
-| China | 775 |
-| Pakistan | 594 |
-| Singapore | 350 |
-| The Netherlands | 341 |
-| United Kingdom | 268 |
+| Germany | 11,168 |
+| United States | 7,461 |
+| The Netherlands | 7,198 |
+| France | 5,933 |
+| Taiwan | 2,959 |
+| China | 1,491 |
+| Bulgaria | 1,321 |
+| Romania | 458 |
+| Singapore | 442 |
+| Pakistan | 278 |
+| Luxembourg | 237 |
 | Belgium | 234 |
-| Luxembourg | 230 |
-| India | 148 |
-| Japan | 143 |
-| Hong Kong | 133 |
+| Russia | 205 |
+| United Kingdom | 190 |
+| Hong Kong | 167 |
 
 ### Top ASNs (Autonomous Systems)
 
 | ASN | Events |
 |-----|--------|
-| Pfcloud UG (haftungsbeschrankt) | 10,821 |
-| LLC Vash Kredit Bank | 9,063 |
-| ReliableSite.Net LLC | 3,614 |
-| Modat B.V. | 3,200 |
-| Feo Prest SRL | 2,801 |
-| Google LLC | 992 |
-| ONYPHE SAS | 934 |
-| Amazon.com, Inc. | 665 |
-| Vpsvault.host Ltd | 618 |
-| Alibaba (US) Technology Co., Ltd. | 560 |
-| DigitalOcean, LLC | 547 |
-| Censys, Inc. | 409 |
-| CHINA UNICOM China169 Backbone | 392 |
-| Cyber Internet Services (Pvt) Ltd. | 351 |
-| Microsoft Corporation | 314 |
+| Pfcloud UG (haftungsbeschrankt) | 17,662 |
+| Modat B.V. | 5,419 |
+| Feo Prest SRL | 2,954 |
+| ReliableSite.Net LLC | 2,815 |
+| LLC Vash Kredit Bank | 1,228 |
+| ONYPHE SAS | 1,106 |
+| Google LLC | 963 |
+| Chinanet | 872 |
+| Vpsvault.host Ltd | 785 |
+| Amazon.com, Inc. | 742 |
+| Alibaba (US) Technology Co., Ltd. | 592 |
+| DigitalOcean, LLC | 571 |
+| Censys, Inc. | 479 |
+| Media Sat Srl | 444 |
+| Microsoft Corporation | 351 |
 
 ---
 
@@ -98,25 +98,25 @@ In the past 24 hours, the honeypot platform observed **1,025 events** from **561
 | IP | Hits | Category |
 |----|----- |----------|
 | `176.65.132.129` | 10,708 | Attacker |
-| `91.92.42.227` | 7,764 | Attacker |
-| `213.209.159.115` | 2,801 | Attacker |
-| `185.150.191.236` | 1,265 | Attacker |
-| `104.243.43.7` | 1,018 | Attacker |
-| `104.243.35.94` | 967 | Attacker |
-| `85.11.167.11` | 918 | Attacker |
+| `45.153.34.235` | 6,794 | Attacker |
+| `213.209.159.115` | 2,953 | Attacker |
+| `185.150.191.236` | 944 | Attacker |
+| `104.243.43.7` | 900 | Attacker |
+| `104.243.35.94` | 898 | Attacker |
+| `85.11.167.11` | 860 | Attacker |
+| `218.67.82.174` | 779 | Attacker |
+| `85.217.140.42` | 511 | Attacker |
+| `85.217.140.16` | 498 | Attacker |
+| `85.217.140.10` | 457 | Attacker |
+| `86.107.235.218` | 444 | Attacker |
 | `85.217.140.39` | 411 | Attacker |
-| `85.11.167.7` | 341 | Attacker |
-| `175.149.183.33` | 323 | Attacker |
-| `85.217.140.42` | 321 | Attacker |
-| `85.217.140.13` | 320 | Attacker |
-| `45.198.224.18` | 301 | Attacker |
-| `188.166.223.76` | 249 | Attacker |
-| `85.217.140.43` | 235 | Attacker |
-| `85.217.140.37` | 216 | Attacker |
-| `85.217.140.5` | 184 | Attacker |
-| `176.65.139.41` | 182 | Attacker |
-| `85.217.140.30` | 178 | Attacker |
-| `85.217.140.12` | 160 | Attacker |
+| `85.217.140.19` | 359 | Attacker |
+| `45.198.224.18` | 348 | Attacker |
+| `85.217.140.13` | 321 | Attacker |
+| `85.11.167.7` | 314 | Attacker |
+| `188.166.223.76` | 306 | Attacker |
+| `85.217.140.43` | 294 | Attacker |
+| `85.217.140.5` | 268 | Attacker |
 
 ---
 
@@ -124,11 +124,11 @@ In the past 24 hours, the honeypot platform observed **1,025 events** from **561
 
 | Type | Count |
 |------|-------|
-| IPv4 Addresses | 561 |
-| URLs | 1 |
+| IPv4 Addresses | 570 |
+| URLs | 0 |
 | Domains | 0 |
 | SHA256 Hashes | 0 |
-| File Paths | 78 |
+| File Paths | 79 |
 
 ### Targeted File Paths
 
@@ -138,57 +138,54 @@ In the past 24 hours, the honeypot platform observed **1,025 events** from **561
 - `/etc/shadow`
 - `/etc/sysconfig/network-scripts`
 - `/tmp/.`
-- `/tmp/BNJlmgJt`
-- `/tmp/BUQpxVoz`
-- `/tmp/ERULxxVH`
-- `/tmp/EudxNXcS`
-- `/tmp/HwCXCjiW`
-- `/tmp/ICBGCYCR`
-- `/tmp/LWaDdmKD`
-- `/tmp/MqmuOTsZ`
-- `/tmp/NCXUNYAO`
-- `/tmp/ODERQJus`
-- `/tmp/QVNgdjAP`
-- `/tmp/RkwJoufT`
-- `/tmp/SOlDtuIq`
-- `/tmp/VPSiCabe`
-
-### Extracted URLs
-
-- `https://80.27.83.195/sh`
+- `/tmp/AQmZULGJ`
+- `/tmp/LijMNGmc`
+- `/tmp/OmCCGYFf`
+- `/tmp/QKpRzdfK`
+- `/tmp/QxdtihDT`
+- `/tmp/SzviIgNp`
+- `/tmp/TiRkqsNn`
+- `/tmp/UFhAUzbP`
+- `/tmp/XPrKPXZl`
+- `/tmp/ZZvOKcrk`
+- `/tmp/aUsfEEVb`
+- `/tmp/cHRzStnQ`
+- `/tmp/cache`
+- `/tmp/ckVUlPbQ`
 
 ---
 
 ## Top Attack Patterns (SSH)
 
-- [187x] `lspci`
-- [144x] `xargs rm -f 2>/dev/null`
-- [123x] `egrep VGA`
-- [122x] `nvidia-smi -q`
-- [122x] `grep "Product Name`
-- [108x] `kill -9 $pid 2>/dev/null`
-- [74x] `ps aux`
-- [72x] `$11 !~ /sshd/ {print $2}`
-- [71x] `uptime`
-- [70x] `uname -s -v -n -r -m`
-- [69x] `grep -ohe 'up .*`
-- [67x] `uname -m`
-- [66x] `nproc`
-- [64x] `grep 3D`
-- [64x] `lscpu`
+- [182x] `lspci`
+- [128x] `xargs rm -f 2>/dev/null`
+- [121x] `egrep VGA`
+- [121x] `nvidia-smi -q`
+- [121x] `grep "Product Name`
+- [96x] `kill -9 $pid 2>/dev/null`
+- [67x] `ps aux`
+- [64x] `uptime`
+- [64x] `$11 !~ /sshd/ {print $2}`
+- [63x] `uname -r`
+- [61x] `uname -m`
+- [61x] `lscpu`
+- [61x] `egrep "Model name:`
+- [61x] `uname -s -v -n -r -m`
+- [61x] `grep -ohe 'up .*`
 
 ## Top Attack Patterns (HTTP)
 
 | URI | Hits | Category |
 |-----|------|----------|
-| `/SDK/webLanguage` | 25 | Web Scan |
+| `/SDK/webLanguage` | 43 | Web Scan |
 
 ### HTTP Methods
 
-- **GET**: 132
+- **GET**: 179
 - **PROPFIND**: 6
+- **HEAD**: 3
 - **POST**: 2
-- **HEAD**: 1
+- **CONNECT**: 1
 
 ---
 
@@ -201,7 +198,7 @@ All rules are stored in: `/data/ollama-proxy/generated-rules/`
 | Sigma (SIEM) | 5 | `sigma/*.yml` |
 | YARA (Payload) | 4 | `yara/*.yar` |
 | Suricata (IDS/IPS) | 31 | `suricata/honeypot.rules` |
-| Firewall (iptables) | 499 IPs | `firewall/blocklist_*.sh` |
+| Firewall (iptables) | 503 IPs | `firewall/blocklist_*.sh` |
 | STIX 2.1 Bundle | 1 | `stix/bundle.json` |
 | IOC List | 1 | `iocs/ioc_list.json` |
 

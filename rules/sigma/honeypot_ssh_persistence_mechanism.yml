@@ -2,10 +2,10 @@ title: Honeypot - SSH Persistence Mechanism
 id: cb60232e-9739-e401-a4c7-397a62820407
 status: experimental
 level: high
-description: Persistence setup commands from SSH honeypot. 38 events, 2 source IPs,
+description: Persistence setup commands from SSH honeypot. 35 events, 2 source IPs,
   2 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/06/10
+date: 2026/06/11
 references:
 - https://attack.mitre.org/
 tags:

@@ -2,10 +2,10 @@ title: Honeypot - SSH Command Execution
 id: c02f6680-d344-65cf-57f5-05ea7d0f038e
 status: experimental
 level: medium
-description: Shell command execution patterns from SSH honeypot. 183 events, 4 source
+description: Shell command execution patterns from SSH honeypot. 175 events, 5 source
   IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/06/10
+date: 2026/06/11
 references:
 - https://attack.mitre.org/
 tags:
@@ -18,21 +18,21 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - scp -qt "/var/tmp/hdDoVWiF
-    - echo 12345 > /tmp/d.log
-    - scp -qt "/tmp/YEssrtBj
-    - echo Passw0rd > /tmp/d.log
-    - scp -qt "/tmp/yloGCuos
-    - scp -qt "/tmp/NCXUNYAO
-    - scp -qt "/tmp/hdDoVWiF
-    - echo milad > /tmp/d.log
-    - echo node > /tmp/d.log
-    - scp -qt "/var/tmp/bMDUJtYC
-    - scp -qt "/var/tmp/hyQMmwro
-    - echo p@ssw0rd > /tmp/d.log
-    - echo tactical > /tmp/d.log
-    - scp -qt "/tmp/SOlDtuIq
-    - echo 123456 > /tmp/d.log
+    - echo 12345678 > /tmp/d.log
+    - echo ftpuser123 > /tmp/d.log
+    - scp -qt "/tmp/hllDiTEh
+    - scp -qt "/tmp/uiyZliqG
+    - scp -qt "/var/tmp/LijMNGmc
+    - echo deploy > /tmp/d.log
+    - scp -qt "/tmp/mTaAcjOR
+    - scp -qt "/tmp/gegrlQPR
+    - scp -qt "/var/tmp/XPrKPXZl
+    - scp -qt "/tmp/zgkSAUeC
+    - scp -qt "/var/tmp/iABBYIfE
+    - scp -qt "/var/tmp/jltHvVFt
+    - scp -qt "/tmp/ptmgvGbk
+    - echo 'test' > /tmp/test_1781111816
+    - echo dolphinscheduler > /tmp/d.log
   condition: selection
 falsepositives:
 - Legitimate system administration

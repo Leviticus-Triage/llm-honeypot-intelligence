@@ -1,28 +1,28 @@
 [
   {
-    "campaign_id": 2,
-    "ip_count": 82,
+    "campaign_id": 1,
+    "ip_count": 93,
     "ips": [
       "45.148.10.67",
+      "167.94.146.52",
       "46.101.173.8",
-      "45.142.154.17",
       "46.151.178.13",
+      "3.21.34.231",
+      "45.205.1.62",
       "8.211.9.174",
       "102.129.143.35",
       "151.243.11.35",
+      "204.76.203.81",
       "208.84.100.240",
-      "45.205.1.62",
+      "45.198.224.5",
       "62.210.142.169",
       "176.65.139.66",
-      "18.218.134.102",
-      "18.218.180.187",
       "18.226.13.203",
       "185.242.226.106",
-      "204.76.203.81",
       "45.148.10.200",
       "45.205.1.242",
-      "45.205.1.245",
-      "45.205.1.73"
+      "45.205.1.73",
+      "47.251.96.168"
     ],
     "countries": [
       "Canada",
@@ -34,6 +34,7 @@
       "Malaysia",
       "Switzerland",
       "United Kingdom",
+      "South Korea",
       "United States",
       "China",
       "Singapore",
@@ -43,15 +44,11 @@
       "Finland",
       "Luxembourg",
       "United Arab Emirates",
-      "Japan",
-      "Hong Kong",
-      "Nigeria"
+      "Japan"
     ],
     "asns": [
-      "Chinanet",
-      "CHINA UNICOM China169 Backbone",
+      "Korea Telecom",
       "Techoff Srv Limited",
-      "AGOTOZ PTE. LTD.",
       "Amazon.com, Inc.",
       "Zenlayer Inc",
       "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
@@ -59,17 +56,19 @@
       "Petersburg Internet Network ltd.",
       "Vpsvault.host Ltd",
       "DigitalOcean, LLC",
+      "ONYPHE SAS",
       "Alsycon B.V.",
       "Amarutu Technology Ltd",
       "Offshore LC",
+      "LG POWERCOMM",
       "Pfcloud UG (haftungsbeschrankt)",
       "Sistemas Informaticos, S.A.",
       "CariNet, Inc.",
       "Advin Services LLC",
       "Akamai Connected Cloud",
-      "Asahi Net",
       "Driftnet Ltd",
       "Hurricane Electric LLC",
+      "Black HOST Ltd",
       "IP Volume inc",
       "Censys, Inc.",
       "Detai Prosperous Technologies Limited",
@@ -87,47 +86,11 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 130,
-    "avg_anomaly_score": -0.20239242290368353
+    "total_events": 149,
+    "avg_anomaly_score": -0.15227693045751917
   },
   {
     "campaign_id": 0,
-    "ip_count": 8,
-    "ips": [
-      "80.66.83.73",
-      "123.166.96.217",
-      "49.72.111.25",
-      "2.26.80.121",
-      "125.227.156.55",
-      "175.178.116.208",
-      "177.11.145.152",
-      "14.29.196.194"
-    ],
-    "countries": [
-      "Germany",
-      "China",
-      "Taiwan",
-      "Brazil",
-      "Russia"
-    ],
-    "asns": [
-      "Chinanet",
-      "Bashinskii Vadim Ruslanovich",
-      "Data Communication Business Group",
-      "Shenzhen Tencent Computer Systems Company Limited",
-      "Processamento de Dados e Solucoes em Interne",
-      "Play2go International Limited"
-    ],
-    "fingerprints": [
-      "e3b0c44298fc1c14"
-    ],
-    "max_threat_level": "medium",
-    "toolkits": [],
-    "total_events": 111,
-    "avg_anomaly_score": 0.02376730684246886
-  },
-  {
-    "campaign_id": 1,
     "ip_count": 3,
     "ips": [
       "93.123.72.183",
@@ -147,6 +110,6 @@
     "max_threat_level": "high",
     "toolkits": [],
     "total_events": 35,
-    "avg_anomaly_score": 0.11475393329071852
+    "avg_anomaly_score": 0.17871131111680685
   }
 ]
