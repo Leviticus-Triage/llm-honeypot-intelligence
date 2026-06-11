@@ -2,7 +2,7 @@ title: Honeypot - SSH Tool Download/C2
 id: fd95910a-efe3-a7c5-fcfd-5c41dda23e91
 status: experimental
 level: critical
-description: Tool download or C2 related commands from SSH honeypot. 93 events, 1
+description: Tool download or C2 related commands from SSH honeypot. 96 events, 1
   source IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
 date: 2026/06/11
@@ -17,21 +17,21 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - scp -qt "/dev/shm/aUsfEEVb
+    - scp -qt "/dev/shm/fulgDKwU
+    - scp -qt "/dev/shm/WYapxxyu
     - curl ipinfo.io/org
-    - scp -qt "/dev/shm/ckVUlPbQ
-    - scp -qt "/dev/shm/mTaAcjOR
-    - scp -qt "/dev/shm/pQPemtbL
-    - scp -qt "/dev/shm/QKpRzdfK
-    - scp -qt "/dev/shm/eNuRgfKy
-    - scp -qt "/dev/shm/TiRkqsNn
-    - scp -qt "/dev/shm/eXxsacJw
-    - scp -qt "/dev/shm/sQxeAikl
-    - scp -qt "/dev/shm/XPrKPXZl
-    - scp -qt "/dev/shm/QxdtihDT
-    - scp -qt "/dev/shm/xcbQjJQl
-    - scp -qt "/dev/shm/zgkSAUeC
-    - scp -qt "/dev/shm/gegrlQPR
+    - scp -qt "/dev/shm/FDQFSWqU
+    - scp -qt "/dev/shm/ZnwuAQGi
+    - scp -qt "/dev/shm/cjWesWdE
+    - scp -qt "/dev/shm/hhNXNRSh
+    - scp -qt "/dev/shm/uQKhLBsT
+    - scp -qt "/dev/shm/rFsjWJKC
+    - scp -qt "/dev/shm/puVVyWSc
+    - scp -qt "/dev/shm/ZHqZKpXP
+    - scp -qt "/dev/shm/bnvNKYGu
+    - scp -qt "/dev/shm/isAjkxaK
+    - scp -qt "/dev/shm/fZaoNBwM
+    - scp -qt "/dev/shm/AeFfgkWv
   condition: selection
 falsepositives:
 - Legitimate system administration

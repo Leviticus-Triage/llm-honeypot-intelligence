@@ -1,5 +1,5 @@
 // LLM Honeypot Intelligence Platform - YARA Rules
-// Generated: 20260611_0209
+// Generated: 20260611_0809
 // Source: Elasticsearch honeypot data (24h window)
 
 rule Honeypot_CredentialTheft {
@@ -25,7 +25,7 @@ rule Honeypot_SystemRecon {
         date = "2026-06-11"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "926"
+        event_count = "927"
         unique_patterns = "12"
     strings:
         $s0 = "uname -r" ascii nocase
@@ -51,7 +51,7 @@ rule Honeypot_Persistence {
         date = "2026-06-11"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "35"
+        event_count = "21"
         unique_patterns = "2"
     strings:
         $s0 = "crontab -r" ascii nocase
@@ -67,21 +67,21 @@ rule Honeypot_ToolDownload {
         date = "2026-06-11"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "158"
+        event_count = "125"
         unique_patterns = "12"
     strings:
-        $s0 = "scp -qt \"/tmp/hllDiTEh" ascii nocase
-        $s1 = "scp -qt \"/tmp/uiyZliqG" ascii nocase
-        $s2 = "scp -qt \"/var/tmp/LijMNGmc" ascii nocase
-        $s3 = "scp -qt \"/tmp/mTaAcjOR" ascii nocase
-        $s4 = "scp -qt \"/tmp/gegrlQPR" ascii nocase
-        $s5 = "scp -qt \"/var/tmp/XPrKPXZl" ascii nocase
-        $s6 = "scp -qt \"/dev/shm/QKpRzdfK" ascii nocase
-        $s7 = "scp -qt \"/tmp/zgkSAUeC" ascii nocase
-        $s8 = "scp -qt \"/var/tmp/iABBYIfE" ascii nocase
-        $s9 = "scp -qt \"/var/tmp/jltHvVFt" ascii nocase
-        $s10 = "scp -qt \"/dev/shm/sQxeAikl" ascii nocase
-        $s11 = "scp -qt \"/tmp/ptmgvGbk" ascii nocase
+        $s0 = "scp -qt \"/var/tmp/isAjkxaK" ascii nocase
+        $s1 = "scp -qt \"/var/tmp/uQKhLBsT" ascii nocase
+        $s2 = "scp -qt \"/dev/shm/WYapxxyu" ascii nocase
+        $s3 = "curl ipinfo.io/org" ascii nocase
+        $s4 = "scp -qt \"/tmp/isAjkxaK" ascii nocase
+        $s5 = "scp -qt \"/var/tmp/bnvNKYGu" ascii nocase
+        $s6 = "scp -qt \"/var/tmp/XUAcnsJa" ascii nocase
+        $s7 = "scp -qt \"/var/tmp/rlZfzyaT" ascii nocase
+        $s8 = "scp -qt \"/dev/shm/cjWesWdE" ascii nocase
+        $s9 = "scp -qt \"/dev/shm/hhNXNRSh" ascii nocase
+        $s10 = "scp -qt \"/dev/shm/puVVyWSc" ascii nocase
+        $s11 = "scp -qt \"/dev/shm/bnvNKYGu" ascii nocase
     condition:
         any of them
 }

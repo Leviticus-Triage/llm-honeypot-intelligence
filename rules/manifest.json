@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-06-11T02:09:37.337612+00:00",
+  "generated_at": "2026-06-11T08:09:58.085557+00:00",
   "source": "LLM Honeypot Intelligence Platform",
   "version": "2.0",
   "window_hours": 24,
   "input_events": {
     "beelzebub": 1000,
-    "galah": 43,
-    "unique_ips": 570,
-    "normalised_commands": 2028,
+    "galah": 35,
+    "unique_ips": 566,
+    "normalised_commands": 1922,
     "countries": 32,
     "asns": 48
   },
@@ -17,7 +17,7 @@
     "suricata": 31,
     "firewall_ips": 503,
     "stix_objects": 61,
-    "iocs": 279,
+    "iocs": 243,
     "report": 1
   },
   "files": [

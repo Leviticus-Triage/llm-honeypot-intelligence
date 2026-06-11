@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-06-11T02:09:37.340259+00:00",
+  "timestamp": "2026-06-11T08:09:58.087624+00:00",
   "counts": {
     "sigma": 5,
     "yara": 4,
     "suricata": 31,
     "firewall_ips": 503,
     "stix_objects": 61,
-    "iocs": 279,
+    "iocs": 243,
     "report": 1
   },
   "files": [

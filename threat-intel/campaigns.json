@@ -1,26 +1,26 @@
 [
   {
     "campaign_id": 1,
-    "ip_count": 93,
+    "ip_count": 87,
     "ips": [
       "45.148.10.67",
       "167.94.146.52",
       "46.101.173.8",
       "46.151.178.13",
+      "151.243.11.35",
       "3.21.34.231",
+      "45.198.224.5",
       "45.205.1.62",
       "8.211.9.174",
       "102.129.143.35",
-      "151.243.11.35",
+      "185.242.226.106",
       "204.76.203.81",
-      "208.84.100.240",
-      "45.198.224.5",
       "62.210.142.169",
+      "104.248.202.187",
       "176.65.139.66",
       "18.226.13.203",
-      "185.242.226.106",
-      "45.148.10.200",
       "45.205.1.242",
+      "45.205.1.246",
       "45.205.1.73",
       "47.251.96.168"
     ],
@@ -57,14 +57,12 @@
       "Vpsvault.host Ltd",
       "DigitalOcean, LLC",
       "ONYPHE SAS",
-      "Alsycon B.V.",
       "Amarutu Technology Ltd",
       "Offshore LC",
       "LG POWERCOMM",
       "Pfcloud UG (haftungsbeschrankt)",
       "Sistemas Informaticos, S.A.",
       "CariNet, Inc.",
-      "Advin Services LLC",
       "Akamai Connected Cloud",
       "Driftnet Ltd",
       "Hurricane Electric LLC",
@@ -86,8 +84,8 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 149,
-    "avg_anomaly_score": -0.15227693045751917
+    "total_events": 147,
+    "avg_anomaly_score": -0.15273918794308247
   },
   {
     "campaign_id": 0,
@@ -109,7 +107,7 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 35,
-    "avg_anomaly_score": 0.17871131111680685
+    "total_events": 28,
+    "avg_anomaly_score": 0.16701671823230982
   }
 ]
