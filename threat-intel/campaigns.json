@@ -1,28 +1,28 @@
 [
   {
-    "campaign_id": 1,
-    "ip_count": 88,
+    "campaign_id": 0,
+    "ip_count": 95,
     "ips": [
       "45.148.10.67",
-      "167.94.146.52",
-      "46.101.173.8",
-      "46.151.178.13",
       "151.243.11.35",
-      "178.62.209.206",
-      "204.76.203.81",
-      "3.21.34.231",
+      "167.94.146.52",
       "45.205.1.62",
+      "46.151.178.13",
+      "178.62.209.206",
+      "3.21.34.231",
+      "159.65.195.89",
+      "204.76.203.81",
       "45.198.224.5",
-      "45.205.1.73",
       "62.210.142.169",
       "104.248.202.187",
       "13.140.162.236",
-      "18.226.13.203",
+      "167.71.71.11",
+      "167.94.146.56",
+      "176.65.139.66",
+      "18.222.198.216",
       "185.242.226.106",
-      "45.205.1.243",
-      "45.205.1.246",
-      "47.251.96.168",
-      "66.132.172.176"
+      "20.64.105.47",
+      "3.145.5.130"
     ],
     "countries": [
       "Canada",
@@ -31,19 +31,19 @@
       "Belgium",
       "Portugal",
       "France",
+      "Iran",
       "United Kingdom",
       "Thailand",
       "South Korea",
       "United States",
-      "China",
-      "Singapore",
       "India",
       "Norway",
       "Czechia",
       "Luxembourg",
       "Sweden",
       "United Arab Emirates",
-      "Japan"
+      "Japan",
+      "Hong Kong"
     ],
     "asns": [
       "Korea Telecom",
@@ -51,6 +51,8 @@
       "Internet Vikings International AB",
       "Amazon.com, Inc.",
       "Zenlayer Inc",
+      "Cipher Operations Doo Beograd - Novi Beograd",
+      "SYNLINQ",
       "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
       "Alibaba (US) Technology Co., Ltd.",
       "Vpsvault.host Ltd",
@@ -72,7 +74,6 @@
       "Detai Prosperous Technologies Limited",
       "Microsoft Corporation",
       "Scaleway SAS",
-      "Beijing Tiantexin Tech. Co., Ltd.",
       "Google LLC",
       "Sino Worldwide Trading Limited",
       "LLC Vash Kredit Bank"
@@ -82,11 +83,11 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 142,
-    "avg_anomaly_score": -0.17079760926938514
+    "total_events": 153,
+    "avg_anomaly_score": -0.1421401522409726
   },
   {
-    "campaign_id": 2,
+    "campaign_id": 1,
     "ip_count": 3,
     "ips": [
       "93.123.72.183",
@@ -105,35 +106,7 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 16,
-    "avg_anomaly_score": 0.18380270662558407
-  },
-  {
-    "campaign_id": 0,
-    "ip_count": 4,
-    "ips": [
-      "213.209.159.158",
-      "20.160.252.86",
-      "106.225.218.61",
-      "106.13.10.111"
-    ],
-    "countries": [
-      "The Netherlands",
-      "China",
-      "Taiwan"
-    ],
-    "asns": [
-      "CHINANET Jiangx province IDC network",
-      "Microsoft Corporation",
-      "Beijing Baidu Netcom Science and Technology Co., Ltd.",
-      "Feo Prest SRL"
-    ],
-    "fingerprints": [
-      "e3b0c44298fc1c14"
-    ],
-    "max_threat_level": "medium",
-    "toolkits": [],
-    "total_events": 4,
-    "avg_anomaly_score": 0.14645209157864436
+    "total_events": 8,
+    "avg_anomaly_score": 0.20746831597026583
   }
 ]

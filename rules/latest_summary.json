@@ -1,20 +1,13 @@
 {
-  "timestamp": "2026-06-11T14:10:02.293674+00:00",
+  "timestamp": "2026-06-11T20:10:39.087837+00:00",
   "counts": {
-    "sigma": 4,
-    "yara": 3,
-    "suricata": 30,
-    "firewall_ips": 504,
-    "stix_objects": 58,
-    "iocs": 238,
+    "suricata": 1,
+    "firewall_ips": 506,
+    "stix_objects": 52,
+    "iocs": 200,
     "report": 1
   },
   "files": [
-    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_system_reconnaissance.yml",
-    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_tool_download_c2.yml",
-    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_command_execution.yml",
-    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_persistence_mechanism.yml",
-    "/data/ollama-proxy/generated-rules/yara/honeypot_rules.yar",
     "/data/ollama-proxy/generated-rules/suricata/honeypot.rules",
     "/data/ollama-proxy/generated-rules/firewall/blocklist_iptables.sh",
     "/data/ollama-proxy/generated-rules/firewall/blocklist_nftables.nft",

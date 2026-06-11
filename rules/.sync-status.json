@@ -1,0 +1,9 @@
+{
+  "last_sync_utc": "2026-06-11T22:42:14Z",
+  "suricata_files": 4,
+  "sigma_files": 12,
+  "yara_files": 2,
+  "iocs": "0",
+  "source_host": "ai-workstation",
+  "trigger": "systemd-timer"
+}

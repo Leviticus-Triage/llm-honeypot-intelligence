@@ -1,73 +1,32 @@
 {
-  "213.209.159.158": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "medium",
-    "reasons": [
-      "ML anomaly (score: 0.146)"
-    ],
-    "country": "Taiwan",
-    "asn": "Feo Prest SRL",
-    "fingerprint": "e3b0c44298fc1c14",
-    "campaign_id": 0,
-    "events": 1,
-    "honeypot": "beelzebub"
-  },
-  "20.160.252.86": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "medium",
-    "reasons": [
-      "ML anomaly (score: 0.146)"
-    ],
-    "country": "The Netherlands",
-    "asn": "Microsoft Corporation",
-    "fingerprint": "e3b0c44298fc1c14",
-    "campaign_id": 0,
-    "events": 1,
-    "honeypot": "beelzebub"
-  },
-  "106.225.218.61": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "medium",
-    "reasons": [
-      "ML anomaly (score: 0.146)"
-    ],
-    "country": "China",
-    "asn": "CHINANET Jiangx province IDC network",
-    "fingerprint": "e3b0c44298fc1c14",
-    "campaign_id": 0,
-    "events": 1,
-    "honeypot": "beelzebub"
-  },
-  "106.13.10.111": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "medium",
-    "reasons": [
-      "ML anomaly (score: 0.146)"
-    ],
-    "country": "China",
-    "asn": "Beijing Baidu Netcom Science and Technology Co., Ltd.",
-    "fingerprint": "e3b0c44298fc1c14",
-    "campaign_id": 0,
-    "events": 1,
-    "honeypot": "beelzebub"
-  },
-  "45.153.34.235": {
+  "45.156.87.147": {
     "score": 85,
     "action": "block",
     "threat_level": "medium",
     "reasons": [
-      "ML anomaly (score: 0.278)",
+      "ML anomaly (score: 0.297)",
       "Mass scanner pattern"
     ],
     "country": "The Netherlands",
     "asn": "Pfcloud UG (haftungsbeschrankt)",
     "fingerprint": "e3b0c44298fc1c14",
     "campaign_id": -1,
-    "events": 4996,
+    "events": 3503,
+    "honeypot": "beelzebub"
+  },
+  "91.92.42.19": {
+    "score": 85,
+    "action": "block",
+    "threat_level": "medium",
+    "reasons": [
+      "ML anomaly (score: 0.291)",
+      "Mass scanner pattern"
+    ],
+    "country": "Bulgaria",
+    "asn": "LLC Vash Kredit Bank",
+    "fingerprint": "e3b0c44298fc1c14",
+    "campaign_id": -1,
+    "events": 1497,
     "honeypot": "beelzebub"
   },
   "45.148.10.67": {
@@ -75,67 +34,57 @@
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.150)",
+      "ML anomaly (score: 0.169)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "country": "The Netherlands",
     "asn": "Techoff Srv Limited",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 10,
+    "campaign_id": 0,
+    "events": 9,
     "honeypot": "galah"
   },
-  "93.123.72.183": {
+  "151.243.11.35": {
     "score": 95,
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.187)",
+      "ML anomaly (score: 0.099)",
       "Sophisticated attacker (high diversity, long session)"
     ],
-    "country": "The Netherlands",
-    "asn": "Amarutu Technology Ltd",
-    "fingerprint": "ada5162306c8ff0c",
-    "campaign_id": 2,
-    "events": 7,
+    "country": "United Arab Emirates",
+    "asn": "LLC Vash Kredit Bank",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 5,
     "honeypot": "galah"
   },
   "167.94.146.52": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
+    "score": 80,
+    "action": "block",
+    "threat_level": "medium",
+    "reasons": [
+      "ML anomaly (score: 0.027)"
+    ],
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 5,
     "honeypot": "galah"
   },
-  "204.76.203.206": {
+  "45.205.1.62": {
     "score": 95,
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.172)",
+      "ML anomaly (score: 0.057)",
       "Sophisticated attacker (high diversity, long session)"
     ],
-    "country": "The Netherlands",
-    "asn": "Pfcloud UG (haftungsbeschrankt)",
-    "fingerprint": "ada5162306c8ff0c",
-    "campaign_id": 2,
-    "events": 5,
-    "honeypot": "galah"
-  },
-  "46.101.173.8": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "Germany",
-    "asn": "DigitalOcean, LLC",
+    "country": "United States",
+    "asn": "Vpsvault.host Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 5,
     "honeypot": "galah"
   },
@@ -144,28 +93,14 @@
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.049)",
+      "ML anomaly (score: 0.058)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "country": "The Netherlands",
     "asn": "Sino Worldwide Trading Limited",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 5,
-    "honeypot": "galah"
-  },
-  "151.243.11.35": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "high",
-    "reasons": [
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "country": "United Arab Emirates",
-    "asn": "LLC Vash Kredit Bank",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 4,
     "honeypot": "galah"
   },
   "178.62.209.206": {
@@ -178,23 +113,50 @@
     "country": "The Netherlands",
     "asn": "DigitalOcean, LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 4,
     "honeypot": "galah"
   },
-  "204.76.203.219": {
+  "3.21.34.231": {
     "score": 95,
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.192)",
+      "ML anomaly (score: 0.009)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "United States",
+    "asn": "Amazon.com, Inc.",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 4,
+    "honeypot": "galah"
+  },
+  "93.123.72.183": {
+    "score": 95,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "ML anomaly (score: 0.235)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "country": "The Netherlands",
-    "asn": "Pfcloud UG (haftungsbeschrankt)",
+    "asn": "Amarutu Technology Ltd",
     "fingerprint": "ada5162306c8ff0c",
-    "campaign_id": 2,
+    "campaign_id": 1,
     "events": 4,
+    "honeypot": "galah"
+  },
+  "159.65.195.89": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "The Netherlands",
+    "asn": "DigitalOcean, LLC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 3,
     "honeypot": "galah"
   },
   "204.76.203.81": {
@@ -202,42 +164,14 @@
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.018)",
+      "ML anomaly (score: 0.040)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "country": "The Netherlands",
     "asn": "Pfcloud UG (haftungsbeschrankt)",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 4,
-    "honeypot": "galah"
-  },
-  "3.21.34.231": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "high",
-    "reasons": [
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "country": "United States",
-    "asn": "Amazon.com, Inc.",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 4,
-    "honeypot": "galah"
-  },
-  "45.205.1.62": {
-    "score": 80,
-    "action": "block",
-    "threat_level": "high",
-    "reasons": [
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "country": "United States",
-    "asn": "Vpsvault.host Ltd",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 4,
+    "campaign_id": 0,
+    "events": 3,
     "honeypot": "galah"
   },
   "45.198.224.5": {
@@ -245,40 +179,27 @@
     "action": "block",
     "threat_level": "high",
     "reasons": [
-      "ML anomaly (score: 0.004)",
+      "ML anomaly (score: 0.024)",
       "Sophisticated attacker (high diversity, long session)"
     ],
     "country": "United States",
     "asn": "Vpsvault.host Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 3,
-    "honeypot": "galah"
-  },
-  "45.205.1.73": {
-    "score": 95,
-    "action": "block",
-    "threat_level": "high",
-    "reasons": [
-      "ML anomaly (score: 0.083)",
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "country": "United States",
-    "asn": "Vpsvault.host Ltd",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 3,
     "honeypot": "galah"
   },
   "62.210.142.169": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
     "country": "France",
     "asn": "Scaleway SAS",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 3,
     "honeypot": "galah"
   },
@@ -292,7 +213,7 @@
     "country": "The Netherlands",
     "asn": "DigitalOcean, LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -304,11 +225,52 @@
     "country": "France",
     "asn": "Contabo GmbH",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
-  "18.226.13.203": {
+  "167.71.71.11": {
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "The Netherlands",
+    "asn": "DigitalOcean, LLC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "167.94.146.56": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "United States",
+    "asn": "Censys, Inc.",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "176.65.139.66": {
+    "score": 95,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "ML anomaly (score: 0.115)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "Luxembourg",
+    "asn": "Offshore LC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "18.222.198.216": {
     "score": 80,
     "action": "block",
     "threat_level": "high",
@@ -318,7 +280,7 @@
     "country": "United States",
     "asn": "Amazon.com, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -332,49 +294,119 @@
     "country": "United States",
     "asn": "IP Volume inc",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
-  "45.205.1.243": {
-    "score": 95,
-    "action": "block",
-    "threat_level": "high",
-    "reasons": [
-      "ML anomaly (score: 0.009)",
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "country": "United States",
-    "asn": "Vpsvault.host Ltd",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 2,
-    "honeypot": "galah"
-  },
-  "45.205.1.246": {
-    "score": 95,
-    "action": "block",
-    "threat_level": "high",
-    "reasons": [
-      "ML anomaly (score: 0.000)",
-      "Sophisticated attacker (high diversity, long session)"
-    ],
-    "country": "United States",
-    "asn": "Vpsvault.host Ltd",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 2,
-    "honeypot": "galah"
-  },
-  "47.251.96.168": {
+  "20.64.105.47": {
     "score": 55,
     "action": "watch",
     "threat_level": "low",
     "reasons": [],
     "country": "United States",
-    "asn": "Alibaba (US) Technology Co., Ltd.",
+    "asn": "Microsoft Corporation",
     "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "204.76.203.206": {
+    "score": 95,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "ML anomaly (score: 0.188)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "The Netherlands",
+    "asn": "Pfcloud UG (haftungsbeschrankt)",
+    "fingerprint": "ada5162306c8ff0c",
     "campaign_id": 1,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "204.76.203.219": {
+    "score": 95,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "ML anomaly (score: 0.199)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "The Netherlands",
+    "asn": "Pfcloud UG (haftungsbeschrankt)",
+    "fingerprint": "ada5162306c8ff0c",
+    "campaign_id": 1,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "3.145.5.130": {
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "United States",
+    "asn": "Amazon.com, Inc.",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "45.205.1.243": {
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "United States",
+    "asn": "Vpsvault.host Ltd",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "45.205.1.246": {
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "United States",
+    "asn": "Vpsvault.host Ltd",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "45.205.1.73": {
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "United States",
+    "asn": "Vpsvault.host Ltd",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "52.15.74.178": {
+    "score": 80,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "United States",
+    "asn": "Amazon.com, Inc.",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -386,7 +418,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -398,7 +430,19 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "66.132.195.45": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "United States",
+    "asn": "Censys, Inc.",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -410,7 +454,7 @@
     "country": "Japan",
     "asn": "Alibaba (US) Technology Co., Ltd.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -422,7 +466,7 @@
     "country": "Japan",
     "asn": "Alibaba (US) Technology Co., Ltd.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
@@ -434,19 +478,46 @@
     "country": "Japan",
     "asn": "Alibaba (US) Technology Co., Ltd.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 2,
     "honeypot": "galah"
   },
-  "103.203.59.1": {
+  "93.174.93.12": {
+    "score": 95,
+    "action": "block",
+    "threat_level": "high",
+    "reasons": [
+      "ML anomaly (score: 0.003)",
+      "Sophisticated attacker (high diversity, long session)"
+    ],
+    "country": "The Netherlands",
+    "asn": "IP Volume inc",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
+    "events": 2,
+    "honeypot": "galah"
+  },
+  "103.218.243.246": {
     "score": 55,
     "action": "watch",
     "threat_level": "low",
     "reasons": [],
-    "country": "China",
-    "asn": "Beijing Tiantexin Tech. Co., Ltd.",
+    "country": "Hong Kong",
+    "asn": "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "109.105.210.105": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "Portugal",
+    "asn": "Zenlayer Inc",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -458,7 +529,7 @@
     "country": "Portugal",
     "asn": "Zenlayer Inc",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -470,7 +541,7 @@
     "country": "Thailand",
     "asn": "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -482,7 +553,7 @@
     "country": "South Korea",
     "asn": "LG POWERCOMM",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -494,7 +565,7 @@
     "country": "United Kingdom",
     "asn": "Microsoft Corporation",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -506,7 +577,7 @@
     "country": "United Kingdom",
     "asn": "DigitalOcean, LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -518,19 +589,19 @@
     "country": "United Arab Emirates",
     "asn": "LLC Vash Kredit Bank",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
-  "161.35.74.94": {
+  "159.203.47.240": {
     "score": 55,
     "action": "watch",
     "threat_level": "low",
     "reasons": [],
-    "country": "Germany",
+    "country": "Canada",
     "asn": "DigitalOcean, LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -542,19 +613,7 @@
     "country": "United States",
     "asn": "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "167.71.71.11": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "The Netherlands",
-    "asn": "DigitalOcean, LLC",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -566,7 +625,7 @@
     "country": "India",
     "asn": "Akamai Connected Cloud",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -578,31 +637,7 @@
     "country": "United Kingdom",
     "asn": "Akamai Connected Cloud",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "176.65.139.66": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "Luxembourg",
-    "asn": "Offshore LC",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "178.128.84.187": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "Singapore",
-    "asn": "DigitalOcean, LLC",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -614,7 +649,19 @@
     "country": "United States",
     "asn": "Amazon.com, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "183.97.209.119": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "South Korea",
+    "asn": "Korea Telecom",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -626,7 +673,7 @@
     "country": "Sweden",
     "asn": "Internet Vikings International AB",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -638,7 +685,7 @@
     "country": "Portugal",
     "asn": "Zenlayer Inc",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -650,7 +697,7 @@
     "country": "Portugal",
     "asn": "Zenlayer Inc",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -662,7 +709,7 @@
     "country": "United Kingdom",
     "asn": "Driftnet Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -674,7 +721,7 @@
     "country": "Sweden",
     "asn": "Internet Vikings International AB",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -686,7 +733,7 @@
     "country": "Norway",
     "asn": "Internet Vikings International AB",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -698,7 +745,7 @@
     "country": "United States",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -710,7 +757,7 @@
     "country": "United States",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -722,19 +769,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "205.210.31.106": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "United States",
-    "asn": "Google LLC",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -746,11 +781,11 @@
     "country": "United States",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
-  "205.210.31.207": {
+  "205.210.31.241": {
     "score": 55,
     "action": "watch",
     "threat_level": "low",
@@ -758,7 +793,19 @@
     "country": "United States",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "205.210.31.97": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "United States",
+    "asn": "Google LLC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -770,7 +817,19 @@
     "country": "United States",
     "asn": "DigitalOcean, LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "220.125.231.22": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "South Korea",
+    "asn": "Korea Telecom",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -782,7 +841,7 @@
     "country": "South Korea",
     "asn": "Korea Telecom",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -794,7 +853,7 @@
     "country": "South Korea",
     "asn": "Korea Telecom",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -806,7 +865,19 @@
     "country": "United States",
     "asn": "Amazon.com, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "34.62.197.208": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "Belgium",
+    "asn": "Google LLC",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -818,7 +889,7 @@
     "country": "Belgium",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -830,7 +901,7 @@
     "country": "Belgium",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -842,19 +913,7 @@
     "country": "Belgium",
     "asn": "Google LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "45.148.10.200": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "The Netherlands",
-    "asn": "Techoff Srv Limited",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -866,7 +925,7 @@
     "country": "Portugal",
     "asn": "Sistemas Informaticos, S.A.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -878,7 +937,7 @@
     "country": "Portugal",
     "asn": "Sistemas Informaticos, S.A.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -890,19 +949,7 @@
     "country": "Portugal",
     "asn": "Sistemas Informaticos, S.A.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "45.156.129.56": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "Portugal",
-    "asn": "Sistemas Informaticos, S.A.",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -914,7 +961,7 @@
     "country": "United States",
     "asn": "Vpsvault.host Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -926,7 +973,7 @@
     "country": "United States",
     "asn": "Vpsvault.host Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -938,7 +985,7 @@
     "country": "Germany",
     "asn": "Detai Prosperous Technologies Limited",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -950,7 +997,7 @@
     "country": "Japan",
     "asn": "Alibaba (US) Technology Co., Ltd.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -962,7 +1009,7 @@
     "country": "France",
     "asn": "Scaleway SAS",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -974,7 +1021,7 @@
     "country": "United States",
     "asn": "Amazon.com, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -986,7 +1033,19 @@
     "country": "United States",
     "asn": "Microsoft Corporation",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "62.60.130.237": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "Iran",
+    "asn": "Cipher Operations Doo Beograd - Novi Beograd",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -998,7 +1057,7 @@
     "country": "Germany",
     "asn": "DigitalOcean, LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1010,7 +1069,7 @@
     "country": "United States",
     "asn": "Hurricane Electric LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1022,7 +1081,7 @@
     "country": "United States",
     "asn": "Hurricane Electric LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1034,7 +1093,7 @@
     "country": "United States",
     "asn": "Hurricane Electric LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1046,7 +1105,7 @@
     "country": "United States",
     "asn": "Hurricane Electric LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1058,7 +1117,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1070,7 +1129,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1082,7 +1141,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1094,7 +1153,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1106,7 +1165,7 @@
     "country": "United States",
     "asn": "Censys, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1118,7 +1177,7 @@
     "country": "United States",
     "asn": "CariNet, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1130,7 +1189,7 @@
     "country": "United States",
     "asn": "CariNet, Inc.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1142,7 +1201,7 @@
     "country": "Japan",
     "asn": "Alibaba (US) Technology Co., Ltd.",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1154,7 +1213,7 @@
     "country": "Canada",
     "asn": "Black HOST Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1166,7 +1225,19 @@
     "country": "United Kingdom",
     "asn": "Driftnet Ltd",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
+    "events": 1,
+    "honeypot": "galah"
+  },
+  "91.218.66.47": {
+    "score": 55,
+    "action": "watch",
+    "threat_level": "low",
+    "reasons": [],
+    "country": "Germany",
+    "asn": "SYNLINQ",
+    "fingerprint": "8a5edab282632443",
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1178,19 +1249,7 @@
     "country": "United States",
     "asn": "ONYPHE SAS",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
-    "events": 1,
-    "honeypot": "galah"
-  },
-  "93.174.93.12": {
-    "score": 55,
-    "action": "watch",
-    "threat_level": "low",
-    "reasons": [],
-    "country": "The Netherlands",
-    "asn": "IP Volume inc",
-    "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   },
@@ -1202,7 +1261,7 @@
     "country": "Czechia",
     "asn": "Neon Core Network LLC",
     "fingerprint": "8a5edab282632443",
-    "campaign_id": 1,
+    "campaign_id": 0,
     "events": 1,
     "honeypot": "galah"
   }
