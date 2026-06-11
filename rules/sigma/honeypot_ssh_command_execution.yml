@@ -2,7 +2,7 @@ title: Honeypot - SSH Command Execution
 id: c02f6680-d344-65cf-57f5-05ea7d0f038e
 status: experimental
 level: medium
-description: Shell command execution patterns from SSH honeypot. 95 events, 5 source
+description: Shell command execution patterns from SSH honeypot. 89 events, 1 source
   IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
 date: 2026/06/11
@@ -10,6 +10,7 @@ references:
 - https://attack.mitre.org/
 tags:
 - attack.execution
+- attack.t1033
 - attack.t1059.004
 - attack.t1105
 logsource:
@@ -21,10 +22,8 @@ detection:
     - scp -qt "/var/tmp/isAjkxaK
     - scp -qt "/var/tmp/uQKhLBsT
     - echo 12345678 > /tmp/d.log
-    - rm -f /tmp/test
     - scp -qt "/tmp/isAjkxaK
     - echo gateway > /tmp/d.log
-    - echo 'test' > /tmp/test_1781095381
     - scp -qt "/var/tmp/bnvNKYGu
     - scp -qt "/var/tmp/XUAcnsJa
     - scp -qt "/var/tmp/rlZfzyaT
@@ -33,6 +32,8 @@ detection:
     - scp -qt "/var/tmp/ZnwuAQGi
     - scp -qt "/tmp/cjWesWdE
     - echo 1 > /tmp/d.log
+    - scp -qt "/tmp/WXokeHMD
+    - echo work > /tmp/d.log
   condition: selection
 falsepositives:
 - Legitimate system administration

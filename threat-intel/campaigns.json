@@ -1,28 +1,28 @@
 [
   {
     "campaign_id": 1,
-    "ip_count": 87,
+    "ip_count": 88,
     "ips": [
       "45.148.10.67",
       "167.94.146.52",
       "46.101.173.8",
       "46.151.178.13",
       "151.243.11.35",
-      "3.21.34.231",
-      "45.198.224.5",
-      "45.205.1.62",
-      "8.211.9.174",
-      "102.129.143.35",
-      "185.242.226.106",
+      "178.62.209.206",
       "204.76.203.81",
+      "3.21.34.231",
+      "45.205.1.62",
+      "45.198.224.5",
+      "45.205.1.73",
       "62.210.142.169",
       "104.248.202.187",
-      "176.65.139.66",
+      "13.140.162.236",
       "18.226.13.203",
-      "45.205.1.242",
+      "185.242.226.106",
+      "45.205.1.243",
       "45.205.1.246",
-      "45.205.1.73",
-      "47.251.96.168"
+      "47.251.96.168",
+      "66.132.172.176"
     ],
     "countries": [
       "Canada",
@@ -31,64 +31,62 @@
       "Belgium",
       "Portugal",
       "France",
-      "Malaysia",
-      "Switzerland",
       "United Kingdom",
+      "Thailand",
       "South Korea",
       "United States",
       "China",
       "Singapore",
-      "Seychelles",
       "India",
-      "Russia",
-      "Finland",
+      "Norway",
+      "Czechia",
       "Luxembourg",
+      "Sweden",
       "United Arab Emirates",
       "Japan"
     ],
     "asns": [
       "Korea Telecom",
       "Techoff Srv Limited",
+      "Internet Vikings International AB",
       "Amazon.com, Inc.",
       "Zenlayer Inc",
       "UCLOUD INFORMATION TECHNOLOGY (HK) LIMITED",
       "Alibaba (US) Technology Co., Ltd.",
-      "Petersburg Internet Network ltd.",
       "Vpsvault.host Ltd",
       "DigitalOcean, LLC",
       "ONYPHE SAS",
-      "Amarutu Technology Ltd",
       "Offshore LC",
       "LG POWERCOMM",
       "Pfcloud UG (haftungsbeschrankt)",
       "Sistemas Informaticos, S.A.",
       "CariNet, Inc.",
+      "Contabo GmbH",
       "Akamai Connected Cloud",
       "Driftnet Ltd",
       "Hurricane Electric LLC",
+      "Neon Core Network LLC",
       "Black HOST Ltd",
       "IP Volume inc",
       "Censys, Inc.",
       "Detai Prosperous Technologies Limited",
       "Microsoft Corporation",
       "Scaleway SAS",
-      "Telia Finland Oyj",
       "Beijing Tiantexin Tech. Co., Ltd.",
       "Google LLC",
       "Sino Worldwide Trading Limited",
-      "LLC Vash Kredit Bank",
-      "Datacamp Limited"
+      "LLC Vash Kredit Bank"
     ],
     "fingerprints": [
       "8a5edab282632443"
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 147,
-    "avg_anomaly_score": -0.15273918794308247
+    "total_events": 142,
+    "avg_anomaly_score": -0.17079760926938514
   },
   {
-    "campaign_id": 0,
+    "campaign_id": 2,
     "ip_count": 3,
     "ips": [
       "93.123.72.183",
@@ -107,7 +105,35 @@
     ],
     "max_threat_level": "high",
     "toolkits": [],
-    "total_events": 28,
-    "avg_anomaly_score": 0.16701671823230982
+    "total_events": 16,
+    "avg_anomaly_score": 0.18380270662558407
+  },
+  {
+    "campaign_id": 0,
+    "ip_count": 4,
+    "ips": [
+      "213.209.159.158",
+      "20.160.252.86",
+      "106.225.218.61",
+      "106.13.10.111"
+    ],
+    "countries": [
+      "The Netherlands",
+      "China",
+      "Taiwan"
+    ],
+    "asns": [
+      "CHINANET Jiangx province IDC network",
+      "Microsoft Corporation",
+      "Beijing Baidu Netcom Science and Technology Co., Ltd.",
+      "Feo Prest SRL"
+    ],
+    "fingerprints": [
+      "e3b0c44298fc1c14"
+    ],
+    "max_threat_level": "medium",
+    "toolkits": [],
+    "total_events": 4,
+    "avg_anomaly_score": 0.14645209157864436
   }
 ]

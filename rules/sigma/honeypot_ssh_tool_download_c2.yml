@@ -2,7 +2,7 @@ title: Honeypot - SSH Tool Download/C2
 id: fd95910a-efe3-a7c5-fcfd-5c41dda23e91
 status: experimental
 level: critical
-description: Tool download or C2 related commands from SSH honeypot. 96 events, 1
+description: Tool download or C2 related commands from SSH honeypot. 103 events, 1
   source IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
 date: 2026/06/11
@@ -20,7 +20,9 @@ detection:
     - scp -qt "/dev/shm/fulgDKwU
     - scp -qt "/dev/shm/WYapxxyu
     - curl ipinfo.io/org
+    - scp -qt "/dev/shm/WXokeHMD
     - scp -qt "/dev/shm/FDQFSWqU
+    - scp -qt "/dev/shm/zJICTzVj
     - scp -qt "/dev/shm/ZnwuAQGi
     - scp -qt "/dev/shm/cjWesWdE
     - scp -qt "/dev/shm/hhNXNRSh
@@ -30,8 +32,6 @@ detection:
     - scp -qt "/dev/shm/ZHqZKpXP
     - scp -qt "/dev/shm/bnvNKYGu
     - scp -qt "/dev/shm/isAjkxaK
-    - scp -qt "/dev/shm/fZaoNBwM
-    - scp -qt "/dev/shm/AeFfgkWv
   condition: selection
 falsepositives:
 - Legitimate system administration

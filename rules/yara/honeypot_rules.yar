@@ -1,22 +1,6 @@
 // LLM Honeypot Intelligence Platform - YARA Rules
-// Generated: 20260611_0809
+// Generated: 20260611_1410
 // Source: Elasticsearch honeypot data (24h window)
-
-rule Honeypot_CredentialTheft {
-    meta:
-        description = "LLM Honeypot Intelligence - CredentialTheft pattern detection"
-        author = "LLM Honeypot Intelligence Platform"
-        date = "2026-06-11"
-        source = "honeypot_auto_generated"
-        confidence = "high"
-        event_count = "6"
-        unique_patterns = "2"
-    strings:
-        $s0 = "cat /etc/passwd 2>/dev/null" ascii nocase
-        $s1 = "cat /etc/shadow 2>/dev/null" ascii nocase
-    condition:
-        any of them
-}
 
 rule Honeypot_SystemRecon {
     meta:
@@ -25,21 +9,21 @@ rule Honeypot_SystemRecon {
         date = "2026-06-11"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "927"
+        event_count = "996"
         unique_patterns = "12"
     strings:
-        $s0 = "uname -r" ascii nocase
-        $s1 = "ps aux" ascii nocase
-        $s2 = "uptime" ascii nocase
-        $s3 = "uname -a" ascii nocase
-        $s4 = "cat /proc/cpuinfo" ascii nocase
-        $s5 = "ip addr show 2>/dev/null" ascii nocase
-        $s6 = "uname -m" ascii nocase
-        $s7 = "cat /proc/version 2>/dev/null" ascii nocase
-        $s8 = "uname -n" ascii nocase
-        $s9 = "uname -s -m" ascii nocase
-        $s10 = "whoami" ascii nocase
-        $s11 = "nvidia-smi -q" ascii nocase
+        $s0 = "lspci" ascii nocase
+        $s1 = "uname -r" ascii nocase
+        $s2 = "uname -m" ascii nocase
+        $s3 = "nvidia-smi -q" ascii nocase
+        $s4 = "echo cw > /tmp/d.log" ascii nocase
+        $s5 = "ps aux" ascii nocase
+        $s6 = "uptime" ascii nocase
+        $s7 = "nproc" ascii nocase
+        $s8 = "uname -a" ascii nocase
+        $s9 = "lscpu" ascii nocase
+        $s10 = "kill -9 $pid 2>/dev/null" ascii nocase
+        $s11 = "uname -n" ascii nocase
     condition:
         any of them
 }
@@ -51,11 +35,10 @@ rule Honeypot_Persistence {
         date = "2026-06-11"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "21"
-        unique_patterns = "2"
+        event_count = "19"
+        unique_patterns = "1"
     strings:
         $s0 = "crontab -r" ascii nocase
-        $s1 = "systemctl list-units --type=service --state=running 2>/dev/null" ascii nocase
     condition:
         any of them
 }
@@ -67,7 +50,7 @@ rule Honeypot_ToolDownload {
         date = "2026-06-11"
         source = "honeypot_auto_generated"
         confidence = "high"
-        event_count = "125"
+        event_count = "136"
         unique_patterns = "12"
     strings:
         $s0 = "scp -qt \"/var/tmp/isAjkxaK" ascii nocase
