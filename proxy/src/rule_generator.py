@@ -20,7 +20,6 @@ v2 improvements:
 - Proper Sigma/YARA/Suricata syntax (no oversized patterns)
 """
 
-import hashlib
 import json
 import logging
 import os
