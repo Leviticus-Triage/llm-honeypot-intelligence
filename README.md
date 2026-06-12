@@ -4,11 +4,14 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/downloads/)
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational.svg)](#requirements)
 [![Auto-Sync](https://img.shields.io/badge/rules-auto--synced%20every%206h-brightgreen.svg)](#auto-synced-threat-intelligence)
+[![Live kiosk](https://img.shields.io/badge/🔴_Live_Threat_View-kiosk-0d1117?style=flat-square)](https://exodus-hensen.site/kiosk/)
 
 **Distributed honeypot intelligence platform** that combines LLM-powered adaptive honeypots with reinforcement learning, automated SIEM rule generation, ML-based anomaly detection, and behavioral C2/covert channel detection -- processing **55M+ attack events** from **22,000+ unique attacker IPs** across **122 countries**.
 
 > **Target audience:** SOC analysts, threat intelligence teams, CERT/CSIRT operators, and security researchers.
 > Built on [T-Pot](https://github.com/telekom-security/tpotce) with custom extensions for LLM-driven deception and automated detection engineering.
+
+**See it live:** [**exodus-hensen.site/kiosk/**](https://exodus-hensen.site/kiosk/) — read-only attack map + LLM / CVE / C2 dashboards (refreshed ~every minute, no internal infrastructure exposed). [Embed on your site](docs/LIVE-KIOSK.md#embed-on-your-site) · [Full kiosk docs](docs/LIVE-KIOSK.md)
 
 ---
 
@@ -18,6 +21,7 @@
 - [Architecture](#architecture)
 - [Components](#components)
 - [Live metrics](#live-metrics)
+- [Live threat kiosk](#live-threat-kiosk)
 - [Auto-synced threat intelligence](#auto-synced-threat-intelligence)
 - [MITRE ATT\&CK mapping](#mitre-attck-mapping)
 - [Generated rules](#generated-rules)
@@ -172,9 +176,35 @@ flowchart TB
 
 ---
 
+## Live threat kiosk
+
+Public, read-only view of the running deployment — no Kibana login, no honeypot access, no stack fingerprinting.
+
+| | |
+|---|---|
+| **Open** | [**https://exodus-hensen.site/kiosk/**](https://exodus-hensen.site/kiosk/) |
+| **Panels** | Global attack map · LLM honeypot intelligence · CVE sessions · C2 / covert channels |
+| **Refresh** | Screenshots + attack counters every few seconds |
+| **Docs** | [docs/LIVE-KIOSK.md](docs/LIVE-KIOSK.md) · embed snippet: [docs/embed/kiosk-embed.html](docs/embed/kiosk-embed.html) |
+
+The kiosk captures the same Kibana dashboards exported under [`dashboards/`](dashboards/) (e.g. `llm-honeypot-intelligence.ndjson`, `cve-dashboard.ndjson`, `c2-dashboard.ndjson`), sanitizes labels and metadata, and publishes static PNGs to the public edge.
+
+```html
+<!-- Minimal embed — see docs/LIVE-KIOSK.md for CSP notes -->
+<iframe
+  src="https://exodus-hensen.site/kiosk/"
+  title="Live Threat Intelligence"
+  width="100%" height="920"
+  style="border:0;border-radius:12px;background:#07090d;"
+  loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts"
+></iframe>
+```
+
+---
+
 ## Auto-synced threat intelligence
 
-The `rules/` and `threat-intel/` directories are **automatically updated every 6 hours** from the live honeypot infrastructure. A cron job on the host reads Docker volume outputs, sanitizes internal infrastructure details, and pushes to this repository.
+The `rules/` and `threat-intel/` directories are **automatically updated every 6 hours** from the live honeypot infrastructure. A scheduled job on the host (a persistent **systemd user timer** with downtime catch-up — see [`deploy/systemd/`](deploy/systemd/)) reads Docker volume outputs, sanitizes internal infrastructure details, and pushes to this repository.
 
 **Rules layout**
 
@@ -361,6 +391,8 @@ llm-honeypot-intelligence/
 │   └── lint.yml                    # CI: ruff linting
 ├── docs/
 │   ├── architecture.md             # Design rationale and data flow
+│   ├── LIVE-KIOSK.md               # Public live view + embed guide
+│   ├── embed/kiosk-embed.html      # Copy-paste iframe for websites
 │   ├── results.md                  # Operational results and analysis
 │   ├── setup-guide.md              # Full deployment walkthrough
 │   └── mitre-attack-mapping.md     # Detailed ATT&CK coverage
@@ -405,7 +437,7 @@ llm-honeypot-intelligence/
 │   ├── campaigns.json              # Clustered attack campaigns
 │   ├── dynamic-blocklist.txt       # Active threat IPs
 │   └── alerts.json                 # High-confidence threat alerts
-├── dashboards/                     # Kibana dashboard exports
+├── dashboards/                     # Kibana dashboard exports (also shown in live kiosk)
 │   ├── llm-honeypot-intelligence.ndjson
 │   ├── c2-dashboard.ndjson
 │   ├── cve-dashboard.ndjson
@@ -430,9 +462,11 @@ llm-honeypot-intelligence/
 
 | Document | Description |
 |----------|-------------|
+| [docs/LIVE-KIOSK.md](docs/LIVE-KIOSK.md) | Public live view at [exodus-hensen.site/kiosk/](https://exodus-hensen.site/kiosk/), security model, embed |
 | [docs/architecture.md](docs/architecture.md) | System design, data flow, component interaction |
 | [docs/results.md](docs/results.md) | Operational results, attack statistics, campaign analysis |
 | [docs/setup-guide.md](docs/setup-guide.md) | Full deployment guide with prerequisites and troubleshooting |
+| [docs/CURSOR-CLOUD-AGENT-CVE-SYNC.md](docs/CURSOR-CLOUD-AGENT-CVE-SYNC.md) | Cursor Cloud Agent + trickest-cve MCP for automated `cve_templates.py` updates |
 | [docs/mitre-attack-mapping.md](docs/mitre-attack-mapping.md) | Detailed MITRE ATT&CK technique coverage |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |

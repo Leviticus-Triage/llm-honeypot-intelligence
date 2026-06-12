@@ -2,6 +2,8 @@
 
 Complete deployment guide for the LLM Honeypot Intelligence platform.
 
+**Production reference:** [Live threat kiosk](https://exodus-hensen.site/kiosk/) — read-only view of the attack map and dashboards described in this guide. Details: [LIVE-KIOSK.md](LIVE-KIOSK.md).
+
 ---
 
 ## Prerequisites
