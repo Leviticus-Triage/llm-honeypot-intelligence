@@ -130,6 +130,21 @@ fi
 
 touch "$RULES_DEST/.last-sync"
 
+# ---------- Machine-readable sync status (committed → visible in repo) ----------
+# Lets `list-timers` / dashboards / the public repo show sync liveness without
+# shell access. Counts are best-effort snapshots of the current rule tree.
+cat > "$RULES_DEST/.sync-status.json" <<JSON
+{
+  "last_sync_utc": "$TIMESTAMP",
+  "suricata_files": ${suricata_count:-0},
+  "sigma_files": ${sigma_count:-0},
+  "yara_files": ${yara_count:-0},
+  "iocs": "${ioc_count:-0}",
+  "source_host": "$(hostname -s 2>/dev/null || echo unknown)",
+  "trigger": "${SYNC_TRIGGER:-systemd-timer}"
+}
+JSON
+
 # ---------- Git commit and push ----------
 
 changes=$(git status --porcelain 2>/dev/null | wc -l)

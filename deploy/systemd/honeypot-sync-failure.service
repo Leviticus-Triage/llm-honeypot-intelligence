@@ -1,0 +1,10 @@
+[Unit]
+Description=LLM-Honeypot: record a sync failure heartbeat
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+
+[Service]
+Type=oneshot
+# Triggered via OnFailure= from honeypot-sync.service. Leaves a durable
+# breadcrumb (timestamp + log line) so `systemctl --user list-timers` plus
+# the ~/.honeypot-sync.last-* files form a complete success/failure ledger.
+ExecStart=/bin/sh -c 'date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > %h/.honeypot-sync.last-failure; printf "[sync %%s] ERROR: honeypot-sync.service failed (see: journalctl --user -u honeypot-sync.service)\n" "$(date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ)" >> %h/honeypot-sync.log'

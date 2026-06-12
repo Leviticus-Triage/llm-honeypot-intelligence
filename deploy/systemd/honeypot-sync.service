@@ -1,0 +1,23 @@
+[Unit]
+Description=LLM-Honeypot: sync generated rules + threat-intel to GitHub
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+Wants=network-online.target
+After=network-online.target docker.service
+# On failure, record a failure heartbeat so a silently-broken sync is visible.
+OnFailure=honeypot-sync-failure.service
+
+[Service]
+Type=oneshot
+# systemd user services start with a minimal environment; the sync script
+# shells out to docker/git/rsync/python3, so pin an explicit PATH.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=<repo-checkout-path>/Sec-Systems/llm-honeypot-intelligence/scripts/sync-to-github.sh
+# Keep the familiar human-readable log file alive (in addition to journald).
+StandardOutput=append:%h/honeypot-sync.log
+StandardError=append:%h/honeypot-sync.log
+# Success heartbeat: written only when ExecStart exits 0.
+ExecStartPost=/bin/sh -c 'date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > %h/.honeypot-sync.last-success'
+TimeoutStartSec=900
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

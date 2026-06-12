@@ -1,0 +1,17 @@
+[Unit]
+Description=LLM-Honeypot: run rule/threat-intel sync every 6h (with downtime catch-up)
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+
+[Timer]
+# 00:00, 06:00, 12:00, 18:00 UTC-local — same cadence as the previous cron job.
+OnCalendar=*-*-* 00,06,12,18:00:00
+# Persistent=true is the key upgrade over cron: if the host was powered off
+# (or asleep) during a scheduled run, the sync fires once on the next boot
+# instead of being silently skipped. The honeypot never loses a rule batch.
+Persistent=true
+# Spread load / avoid hammering GitHub on the exact second.
+RandomizedDelaySec=120
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
