@@ -4,6 +4,7 @@ Hybrid cache: exact hash lookup + semantic similarity fallback.
 
 import hashlib
 import logging
+import os
 import random
 import struct
 from datetime import datetime
@@ -17,6 +18,14 @@ logger = logging.getLogger("ollama-proxy.cache")
 
 SIMILARITY_WEIGHT = 0.70
 REWARD_WEIGHT = 0.30
+
+# Upper bound on embeddings scanned per semantic lookup. The lookup is an
+# in-process O(N) cosine sweep; the honeypot prompt space is bounded (commands
+# repeat), but cap candidate growth so a runaway cache can never turn every
+# cache-miss into a multi-second full-table deserialize. Most-recent prompts
+# are scanned first (attacker tooling reuses recent payloads). Default is far
+# above the current live row count (~1.6k) so today's behaviour is unchanged.
+SEMANTIC_CANDIDATE_LIMIT = int(os.environ.get("CACHE_SEMANTIC_CANDIDATE_LIMIT", "5000"))
 
 
 def compute_prompt_hash(messages: list, model: str) -> str:
@@ -122,8 +131,9 @@ class HybridCache:
                     "LEFT JOIN responses r ON r.prompt_cache_id = pc.id "
                     "LEFT JOIN response_rewards rr ON rr.response_id = r.id "
                     "WHERE pc.prompt_embedding IS NOT NULL AND pc.cve_id = ? "
-                    "GROUP BY pc.id, pc.prompt_hash, pc.prompt_embedding",
-                    (cve_id,),
+                    "GROUP BY pc.id, pc.prompt_hash, pc.prompt_embedding "
+                    "ORDER BY pc.id DESC LIMIT ?",
+                    (cve_id, SEMANTIC_CANDIDATE_LIMIT),
                 ).fetchall()
             else:
                 rows = conn.execute(
@@ -134,7 +144,9 @@ class HybridCache:
                     "LEFT JOIN response_rewards rr ON rr.response_id = r.id "
                     "WHERE pc.prompt_embedding IS NOT NULL "
                     "  AND (pc.cve_id = '' OR pc.cve_id IS NULL) "
-                    "GROUP BY pc.id, pc.prompt_hash, pc.prompt_embedding"
+                    "GROUP BY pc.id, pc.prompt_hash, pc.prompt_embedding "
+                    "ORDER BY pc.id DESC LIMIT ?",
+                    (SEMANTIC_CANDIDATE_LIMIT,),
                 ).fetchall()
 
         best_combined = 0.0
