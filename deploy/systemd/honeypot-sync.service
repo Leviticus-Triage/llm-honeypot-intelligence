@@ -11,7 +11,7 @@ Type=oneshot
 # systemd user services start with a minimal environment; the sync script
 # shells out to docker/git/rsync/python3, so pin an explicit PATH.
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=<repo-checkout-path>/Sec-Systems/llm-honeypot-intelligence/scripts/sync-to-github.sh
+ExecStart=%h/cursor-Projekts/Sec-Systems/llm-honeypot-intelligence/scripts/sync-to-github.sh
 # Keep the familiar human-readable log file alive (in addition to journald).
 StandardOutput=append:%h/honeypot-sync.log
 StandardError=append:%h/honeypot-sync.log

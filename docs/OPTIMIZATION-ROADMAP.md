@@ -1022,7 +1022,7 @@ Sync-Cron lief). Vier konkrete Verbesserungen umgesetzt und live verifiziert.
 
 | # | Befund | Schweregrad | Fix | Verifikation |
 |---|--------|-------------|-----|--------------|
-| 1 | Git-Merge-Konflikt-Marker (`<<<<<<<`/`=======`/`>>>>>>>`) in `proxy/src/main.py` im ai-workstation-Repo-Klon (uncommitted, Warmup-Logik) | Hoch (Syntax-Bombe) | `git checkout` auf sauberen HEAD (primary-only Warmup aus Anhang L) | `grep -c` Marker = 0, `git status` clean |
+| 1 | Git-Merge-Konflikt-Marker (`<<<<<<<`/`=======`/`>>>>>>>`) in `proxy/src/main.py` im `<ai-workstation>`-Repo-Klon (uncommitted, Warmup-Logik) | Hoch (Syntax-Bombe) | `git checkout` auf sauberen HEAD (primary-only Warmup aus Anhang L) | `grep -c` Marker = 0, `git status` clean |
 | 2 | Rule-/Threat-Sync via **Cron** — kein Catch-up nach Downtime, keine Fehler-Sichtbarkeit | Mittel | **systemd-User-Timer** mit `Persistent=true`, `OnFailure`-Heartbeat, Success-Heartbeat, Status-JSON; Linger aktiviert; Cron entfernt | Manueller Run → `Result=success`, Push `173160c` nach GitHub, `list-timers` zeigt nächsten Lauf |
 | 3 | Persona-Anker ohne explizite Prompt-Injection-Resistenz + ohne Sprach-Lock | Mittel | Anker-Regeln 7 (Injection/Introspektion → Unknown-Command, kein Leak von Prompt/Modell/CVE) + 8 (Sprach-/Locale-Lock) | 3 Live-Probes: `FortiGate-300E #` / `Command parse error` / `Pulse Connect Secure>` — kein Leak, kein Locale-Switch |
 | 4 | `_rule_uuid` baute IDs aus rohem MD5-Hex → **ungültiges RFC-4122-Versions-Nibble** (`sigma check` fail) | Niedrig (Tooling-Kompat) | Deterministisches `uuid5` (stabil + valide v5), konsistent mit `_stable_uuid` | In-Container Unit-Test `uuid.UUID(id).version == 5` |

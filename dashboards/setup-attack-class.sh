@@ -8,6 +8,9 @@
 # Safe to re-run. Does not modify Logstash or existing data.
 # Works at query time on ALL existing and future data.
 #
+# Credentials: set ES_URL, ES_USER, ES_PASS in the environment, or copy
+# dashboards/.env.example to dashboards/.env.local (gitignored) and fill in.
+#
 # v2: Improved classification logic:
 # - Beelzebub with output -> llm_engaged
 # - Galah with response.body + msg:"successfulResponse" -> llm_engaged
@@ -16,9 +19,17 @@
 # - Non-honeypot types (Suricata, P0f, Fatt, NGINX) classified as recon
 # =============================================================================
 
-ES_URL="${ES_URL:?Set ES_URL}"
-ES_USER="${ES_USER:?Set ES_USER}"
-ES_PASS="${ES_PASS:?Set ES_PASS}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${SCRIPT_DIR}/.env.local" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/.env.local"
+    set +a
+fi
+
+: "${ES_URL:?ES_URL is required (e.g. https://<tpot-host>:64297/es)}"
+: "${ES_USER:?ES_USER is required}"
+: "${ES_PASS:?ES_PASS is required}"
 
 CURL="curl -sk -u ${ES_USER}:${ES_PASS}"
 
