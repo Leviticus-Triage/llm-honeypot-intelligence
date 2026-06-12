@@ -1617,8 +1617,12 @@ def _render_cve_stub_rule(cve_id: str, sessions: int, samples: list[str]) -> str
 
 
 def _rule_uuid(seed: str) -> str:
-    h = hashlib.md5(seed.encode()).hexdigest()
-    return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
+    # Deterministic, RFC-4122-valid UUIDv5 so strict Sigma tooling
+    # (`sigma check`) accepts the `id:` field and the same logical rule keeps
+    # a stable identifier across regeneration runs (clean SIEM versioning).
+    # The previous md5-hex slice emitted an invalid version nibble (e.g.
+    # `...-a64b-...`), which fails RFC-4122 validation.
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"honeypot-rule:{seed}"))
 
 def _stable_uuid(seed: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"honeypot:{seed}"))
