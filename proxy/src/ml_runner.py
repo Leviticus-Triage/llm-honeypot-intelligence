@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+
+from .es_client import es_client_kwargs
 import numpy as np
 import zlib
 
@@ -113,10 +115,6 @@ def _hash_features(text: str, n_dims: int = HASH_DIMS) -> np.ndarray:
     return vec
 
 
-def _auth():
-    return (ES_USER, ES_PASS) if ES_USER else None
-
-
 def _entropy(text: str) -> float:
     if not text:
         return 0.0
@@ -193,7 +191,7 @@ def _hash_matrix(rows: list[dict[str, Any]], n_dims: int = HASH_DIMS) -> np.ndar
 
 
 async def _es_search(index: str, body: dict[str, Any]) -> dict[str, Any]:
-    async with httpx.AsyncClient(timeout=60.0, verify=False, auth=_auth()) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(60.0)) as client:
         resp = await client.post(f"{ES_URL}/{index}/_search", json=body)
         if resp.status_code != 200:
             logger.warning("ES search failed on %s: %s", index, resp.text[:200])
@@ -516,7 +514,7 @@ async def infer_and_update(*, since_hours: int = INFER_HOURS, max_docs: int = MA
     # under 1 MB even with top_k and ml_classifier_top objects.
     chunk_size_pairs = int(os.environ.get("ML_BULK_CHUNK_PAIRS", "1000"))
     updated = 0
-    async with httpx.AsyncClient(timeout=120.0, verify=False, auth=_auth()) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(120.0)) as client:
         for start in range(0, len(lines), chunk_size_pairs * 2):
             chunk = lines[start: start + chunk_size_pairs * 2]
             payload = "\n".join(chunk) + "\n"

@@ -16,6 +16,8 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import numpy as np
 
+from ..es_client import es_client_kwargs
+
 logger = logging.getLogger("c2-detection")
 
 PRIVATE_IP_PREFIXES = (
@@ -62,10 +64,6 @@ KNOWN_SCANNER_KEYWORDS = (
     "shodan",
     "internet scanner",
 )
-
-
-def _auth():
-    return (ES_USER, ES_PASS) if ES_USER else None
 
 
 async def _es_search(client: httpx.AsyncClient, index: str, body: dict) -> dict:
@@ -1067,8 +1065,7 @@ async def run_detection_cycle():
     """Run one complete C2 detection cycle across all layers."""
     logger.info("Starting C2 detection cycle (window: %dm)", WINDOW_MINUTES)
 
-    auth = _auth()
-    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=auth) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(30.0)) as client:
         await _ensure_index(client)
 
         # DNS traffic into the honeypot is scarce; widen the DNS window

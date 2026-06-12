@@ -21,6 +21,8 @@ from typing import Iterable
 
 import httpx
 
+from .es_client import es_client_kwargs
+
 from . import adversarial_judge as aj
 
 logger = logging.getLogger("reward-aggregator")
@@ -185,10 +187,6 @@ class RewardRecord:
         return doc
 
 
-def _auth():
-    return (ES_USER, ES_PASS) if ES_USER else None
-
-
 def _clamp01(v: float) -> float:
     return max(0.0, min(1.0, v))
 
@@ -295,7 +293,7 @@ def _lookup_local_response(serve_log_id: int) -> tuple[int | None, str, str, str
 
 
 async def _es_search(index: str, body: dict) -> dict:
-    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=_auth()) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(30.0)) as client:
         resp = await client.post(f"{ES_URL}/{index}/_search", json=body)
         if resp.status_code != 200:
             logger.warning("ES search failed on %s: %s", index, resp.text[:200])
@@ -322,7 +320,7 @@ async def _ensure_reward_index() -> None:
             }
         }
     }
-    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=_auth()) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(30.0)) as client:
         head = await client.head(f"{ES_URL}/{REWARD_INDEX}")
         if head.status_code == 200:
             return
@@ -538,7 +536,7 @@ async def push_rewards_to_es(records: list[RewardRecord]) -> int:
         bulk.append(json.dumps({"index": {"_index": REWARD_INDEX, "_id": doc_id}}))
         bulk.append(json.dumps(r.to_es_doc()))
     payload = "\n".join(bulk) + "\n"
-    async with httpx.AsyncClient(timeout=60.0, verify=False, auth=_auth()) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(60.0)) as client:
         resp = await client.post(
             f"{ES_URL}/_bulk",
             content=payload,

@@ -21,6 +21,8 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
+from .es_client import es_client_kwargs
+
 logger = logging.getLogger("ollama-proxy.rl_scorer")
 
 ES_URL = os.environ.get("ES_URL", "https://localhost:64297/es")
@@ -86,8 +88,7 @@ async def fetch_beelzebub_sessions(
             "output", "message", "@timestamp", "status",
         ],
     }
-    auth = (ES_USER, ES_PASS) if ES_USER else None
-    async with httpx.AsyncClient(timeout=15.0, verify=False, auth=auth) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(15.0)) as client:
         resp = await client.post(
             f"{es_url}/logstash-*/_search",
             json=query,
@@ -126,8 +127,7 @@ async def fetch_galah_sessions(
             "@timestamp", "session",
         ],
     }
-    auth = (ES_USER, ES_PASS) if ES_USER else None
-    async with httpx.AsyncClient(timeout=15.0, verify=False, auth=auth) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(15.0)) as client:
         resp = await client.post(
             f"{es_url}/logstash-*/_search",
             json=query,
@@ -166,8 +166,7 @@ async def fetch_galah_llm_events(
             "response.body", "@timestamp",
         ],
     }
-    auth = (ES_USER, ES_PASS) if ES_USER else None
-    async with httpx.AsyncClient(timeout=15.0, verify=False, auth=auth) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(15.0)) as client:
         resp = await client.post(
             f"{es_url}/logstash-*/_search",
             json=query,
@@ -595,9 +594,8 @@ async def _resolve_real_ip_from_es(es_url: str, prompt_text: str, served_at: str
             "_source": ["src_ip"],
         }
 
-    auth = (ES_USER, ES_PASS) if ES_USER else None
     try:
-        async with httpx.AsyncClient(timeout=10.0, verify=False, auth=auth) as client:
+        async with httpx.AsyncClient(**es_client_kwargs(10.0)) as client:
             resp = await client.post(f"{es_url}/logstash-*/_search", json=query)
             if resp.status_code == 200:
                 hits = resp.json().get("hits", {}).get("hits", [])
@@ -643,7 +641,6 @@ async def push_cve_sessions_to_es(es_url: str, since_minutes: int = 60):
 
     from .cve_templates import CVE_BY_ID
 
-    auth = (ES_USER, ES_PASS) if ES_USER else None
     bulk_body = ""
     count = 0
     vm_ip_resolved = 0
@@ -696,7 +693,7 @@ async def push_cve_sessions_to_es(es_url: str, since_minutes: int = 60):
     if not bulk_body:
         return 0
 
-    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=auth) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(30.0)) as client:
         resp = await client.post(
             f"{es_url}/_bulk",
             content=bulk_body,

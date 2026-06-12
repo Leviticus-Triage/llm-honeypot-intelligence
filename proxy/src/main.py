@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 import yaml
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from .cache import HybridCache, compute_prompt_hash, extract_user_prompt
@@ -722,9 +722,25 @@ async def api_embeddings(request: Request):
     return await _forward_direct("/api/embeddings", body, routing)
 
 
+# Ollama API segments allowed through the catch-all proxy (SSRF guard).
+_ALLOWED_OLLAMA_API_ROOTS = frozenset({
+    "bearer", "chat", "copy", "create", "delete", "embed", "embeddings",
+    "generate", "ps", "pull", "push", "show", "tags", "version",
+})
+
+
+def _validate_ollama_api_path(path: str) -> None:
+    if not path or path.startswith(("/", ".")) or ".." in path:
+        raise HTTPException(status_code=400, detail="invalid api path")
+    root = path.split("/", 1)[0]
+    if root not in _ALLOWED_OLLAMA_API_ROOTS:
+        raise HTTPException(status_code=404, detail="api path not allowed")
+
+
 @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def api_passthrough(request: Request, path: str):
-    """Passthrough for any other /api/* endpoints."""
+    """Passthrough for allowlisted Ollama /api/* endpoints only."""
+    _validate_ollama_api_path(path)
     method = request.method
     try:
         if method in ("POST", "PUT"):

@@ -32,6 +32,8 @@ from typing import Optional
 
 import httpx
 
+from .es_client import es_client_kwargs
+
 logger = logging.getLogger("ollama-proxy.rule_generator")
 
 ES_URL = os.environ.get("ES_URL", "https://localhost:64297/es")
@@ -346,7 +348,6 @@ def extract_iocs(data: dict) -> dict:
 async def fetch_attack_data(since_hours: int = SINCE_HOURS) -> dict:
     """Fetch all honeypot events from Elasticsearch for rule generation."""
     since = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).isoformat()
-    auth = (ES_USER, ES_PASS) if ES_USER else None
 
     result = {
         "beelzebub": [],
@@ -359,7 +360,7 @@ async def fetch_attack_data(since_hours: int = SINCE_HOURS) -> dict:
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-    async with httpx.AsyncClient(timeout=30.0, verify=False, auth=auth) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(30.0)) as client:
         # ─ Beelzebub SSH events ─
         bee_query = {
             "size": 1000,
@@ -1517,7 +1518,6 @@ async def fetch_top_cves_from_sessions(since_hours: int,
     return a per-CVE summary with a small sample of attacker commands.
     Degrades gracefully: if ES is unavailable, returns [].
     """
-    auth = (ES_USER, ES_PASS) if ES_USER else None
     since = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).isoformat()
     body = {
         "size": 0,
@@ -1540,7 +1540,7 @@ async def fetch_top_cves_from_sessions(since_hours: int,
         }
     }
     try:
-        async with httpx.AsyncClient(timeout=45.0, verify=False, auth=auth) as client:
+        async with httpx.AsyncClient(**es_client_kwargs(45.0)) as client:
             resp = await client.post(
                 f"{ES_URL}/honeypot-cve-sessions/_search",
                 json=body,

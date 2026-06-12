@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+
+from .es_client import es_client_kwargs
 import numpy as np
 
 logger = logging.getLogger("ollama-proxy.heuristic_detector")
@@ -71,7 +73,7 @@ def _es_auth():
 
 async def fetch_sessions(since_hours: int = SINCE_HOURS) -> dict:
     """Fetch attack session data from Elasticsearch."""
-    async with httpx.AsyncClient(verify=False, timeout=30) as client:
+    async with httpx.AsyncClient(**es_client_kwargs(30.0)) as client:
         # Fetch Beelzebub SSH sessions with full commands
         bee_query = {
             "size": 5000,

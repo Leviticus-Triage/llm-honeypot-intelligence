@@ -40,6 +40,7 @@ import time
 from dataclasses import dataclass
 from typing import Iterable
 
+import certifi
 import httpx
 
 LOG = logging.getLogger("adv-sim")
@@ -353,7 +354,7 @@ async def run_all(
         tick_seed = int(time.time())
 
     all_results: list[PersonaResult] = []
-    async with httpx.AsyncClient(timeout=timeout, verify=False) as client:
+    async with httpx.AsyncClient(timeout=timeout, verify=certifi.where()) as client:
         for run_idx in range(1, runs + 1):
             LOG.info("=== Run %d/%d (tick_seed=%d) ===", run_idx, runs, tick_seed)
             for persona in chosen:

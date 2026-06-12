@@ -214,3 +214,15 @@ async def test_api_embeddings_forwards_through_router(main_client: httpx.AsyncCl
     data = resp.json()
     assert "embedding" in data
     assert isinstance(data["embedding"], list)
+
+
+@pytest.mark.asyncio
+async def test_api_passthrough_rejects_unknown_paths(main_client: httpx.AsyncClient):
+    resp = await main_client.get("/api/../../etc/passwd")
+    assert resp.status_code in (400, 404)
+
+
+@pytest.mark.asyncio
+async def test_api_passthrough_allows_tags(main_client: httpx.AsyncClient):
+    resp = await main_client.get("/api/tags")
+    assert resp.status_code == 200
