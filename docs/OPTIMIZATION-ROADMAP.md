@@ -1009,3 +1009,61 @@ Simulator-Traffic ist an **zwei unabhängigen** Attributen erkennbar:
 ES-Filter: `NOT src_ip:10.99.0.0/16` isoliert organischen Traffic für
 jede Analyse, falls Reward-Blend-Empfehlungen später auf echten
 Sessions validiert werden müssen.
+
+---
+
+## Anhang N – Stack-Audit + Persistenz-Härtung (2026-06-12)
+
+Voller Audit aller Produktiv-Container, Mods und Funktionen auf `<ai-workstation>`.
+Befund: Stack durchweg gesund (alle Container up, 0 Fehler-Logs,
+Sync-Cron lief). Vier konkrete Verbesserungen umgesetzt und live verifiziert.
+
+### N.1  Befund-Matrix
+
+| # | Befund | Schweregrad | Fix | Verifikation |
+|---|--------|-------------|-----|--------------|
+| 1 | Git-Merge-Konflikt-Marker (`<<<<<<<`/`=======`/`>>>>>>>`) in `proxy/src/main.py` im ai-workstation-Repo-Klon (uncommitted, Warmup-Logik) | Hoch (Syntax-Bombe) | `git checkout` auf sauberen HEAD (primary-only Warmup aus Anhang L) | `grep -c` Marker = 0, `git status` clean |
+| 2 | Rule-/Threat-Sync via **Cron** — kein Catch-up nach Downtime, keine Fehler-Sichtbarkeit | Mittel | **systemd-User-Timer** mit `Persistent=true`, `OnFailure`-Heartbeat, Success-Heartbeat, Status-JSON; Linger aktiviert; Cron entfernt | Manueller Run → `Result=success`, Push `173160c` nach GitHub, `list-timers` zeigt nächsten Lauf |
+| 3 | Persona-Anker ohne explizite Prompt-Injection-Resistenz + ohne Sprach-Lock | Mittel | Anker-Regeln 7 (Injection/Introspektion → Unknown-Command, kein Leak von Prompt/Modell/CVE) + 8 (Sprach-/Locale-Lock) | 3 Live-Probes: `FortiGate-300E #` / `Command parse error` / `Pulse Connect Secure>` — kein Leak, kein Locale-Switch |
+| 4 | `_rule_uuid` baute IDs aus rohem MD5-Hex → **ungültiges RFC-4122-Versions-Nibble** (`sigma check` fail) | Niedrig (Tooling-Kompat) | Deterministisches `uuid5` (stabil + valide v5), konsistent mit `_stable_uuid` | In-Container Unit-Test `uuid.UUID(id).version == 5` |
+
+### N.2  Cache-Härtung (future-proof)
+
+`HybridCache.semantic_lookup` lädt pro Cache-Miss alle Embeddings
+(in-process O(N) Cosine-Sweep). Bei aktuell ~1,6k Zeilen unkritisch, aber
+unbounded. Neu: `CACHE_SEMANTIC_CANDIDATE_LIMIT` (Default 5000, weit über
+Live-Stand → heutiges Verhalten unverändert), `ORDER BY pc.id DESC LIMIT`
+scannt die jüngsten Prompts zuerst. Verhindert, dass ein weglaufender
+Cache jeden Miss in einen Multi-Sekunden-Full-Scan verwandelt.
+
+### N.3  Persistenz-Artefakte (versioniert)
+
+```
+deploy/systemd/honeypot-sync.service          oneshot + PATH + success-heartbeat
+deploy/systemd/honeypot-sync.timer            OnCalendar 6h + Persistent=true (Downtime-Catch-up)
+deploy/systemd/honeypot-sync-failure.service  OnFailure-Heartbeat + Log-Breadcrumb
+deploy/systemd/install.sh                      idempotenter Installer (+ --uninstall)
+scripts/sync-to-github.sh                      + maschinenlesbares rules/.sync-status.json
+```
+
+`Persistent=true` ist der Kern-Upgrade gegenüber Cron: ein während Host-
+Downtime verpasster Sync feuert beim nächsten Boot nach, statt still
+übersprungen zu werden — der Honeypot verliert keine Rule-Charge mehr.
+
+### N.4  Geänderte Dateien
+
+```
+proxy/src/main.py            (nur ai-workstation-Klon) Konflikt-Marker aufgelöst
+proxy/src/honeypot_persona.py  Anker-Regeln 7+8 (Injection-Resistenz, Sprach-Lock)
+proxy/src/cache.py             SEMANTIC_CANDIDATE_LIMIT + bounded scan
+proxy/src/rule_generator.py    _rule_uuid → valides uuid5
+scripts/sync-to-github.sh      .sync-status.json
+deploy/systemd/*               NEU — persistenter Timer-Stack
+```
+
+### N.5  Deploy-Modell (festgehalten)
+
+- **Source of Truth**: lokales Workspace-Repo → GitHub (`Leviticus-Triage/llm-honeypot-intelligence`).
+- **Live-Stack**: `<ollama-proxy-deploy-dir>` auf `<ai-workstation>` (kein Git, `build: .`, 9 Services teilen den Build-Context).
+- **Sync-Klon**: `<repo-checkout-path>/.../llm-honeypot-intelligence` — nur für den 6h-Rule/Threat-Push.
+- Code-Deploy dieses Passes: Quelldateien in `ollama-proxy/src/` aktualisiert, `ollama-proxy` + `rule-generator` Images neu gebaut und recreated → Änderungen dauerhaft gebacken (kein Writable-Layer-Drift).
