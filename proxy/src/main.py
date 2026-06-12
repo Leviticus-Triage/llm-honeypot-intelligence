@@ -397,12 +397,13 @@ async def _warmup_one(task: str) -> dict:
             "status": resp.status_code,
             "elapsed_ms": round(elapsed, 1),
         }
-    except Exception as e:
+    except Exception:
+        logger.exception("Warmup failed for task %s", task)
         return {
             "task": task,
             "model": routing.resolved_model,
             "ok": False,
-            "reason": f"{type(e).__name__}: {e or 'no message'}",
+            "reason": "upstream_unavailable",
         }
 
 
@@ -582,8 +583,8 @@ async def api_chat(request: Request):
             status_code=e.response.status_code,
             content={"error": f"Upstream Ollama error: {e.response.status_code}"},
         )
-    except Exception as e:
-        logger.error("Upstream connection failed: %s", e)
+    except Exception:
+        logger.exception("Upstream connection failed for /api/chat")
         # Fallback: try cache even during exploration if upstream is down
         cached = cache.exact_lookup(prompt_hash, cve_meta=cve_meta)
         if cached:
@@ -591,7 +592,7 @@ async def api_chat(request: Request):
             return _build_chat_response(cached["response_text"], model)
         return JSONResponse(
             status_code=502,
-            content={"error": f"Upstream Ollama unavailable: {str(e)}"},
+            content={"error": "upstream unavailable"},
         )
 
     # Extract response text
@@ -692,15 +693,12 @@ async def _forward_direct(path: str, body: dict, routing=None) -> JSONResponse:
             status_code=e.response.status_code,
             content={"error": f"Upstream Ollama error: {e.response.status_code}"},
         )
-    except httpx.TimeoutException as e:
-        # Empty str(e) on some httpx timeout subclasses — include the class name.
-        msg = f"{type(e).__name__}: {e or 'no message'}"
-        logger.error("Upstream timeout on %s: %s", path, msg)
-        return JSONResponse(status_code=504, content={"error": f"Upstream timeout: {msg}"})
-    except Exception as e:
-        msg = f"{type(e).__name__}: {e or 'no message'}"
-        logger.error("Upstream connection failed on %s: %s", path, msg)
-        return JSONResponse(status_code=502, content={"error": msg})
+    except httpx.TimeoutException:
+        logger.exception("Upstream timeout on %s", path)
+        return JSONResponse(status_code=504, content={"error": "upstream timeout"})
+    except Exception:
+        logger.exception("Upstream connection failed on %s", path)
+        return JSONResponse(status_code=502, content={"error": "upstream unavailable"})
 
 
 @app.post("/api/embeddings")
@@ -722,40 +720,55 @@ async def api_embeddings(request: Request):
     return await _forward_direct("/api/embeddings", body, routing)
 
 
-# Ollama API segments allowed through the catch-all proxy (SSRF guard).
-_ALLOWED_OLLAMA_API_ROOTS = frozenset({
-    "bearer", "chat", "copy", "create", "delete", "embed", "embeddings",
-    "generate", "ps", "pull", "push", "show", "tags", "version",
-})
+# Fixed upstream paths for allowlisted Ollama /api/* segments (no user input in URL).
+_OLLAMA_UPSTREAM_BY_SEGMENT: dict[str, str] = {
+    "bearer": "/api/bearer",
+    "chat": "/api/chat",
+    "copy": "/api/copy",
+    "create": "/api/create",
+    "delete": "/api/delete",
+    "embed": "/api/embed",
+    "embeddings": "/api/embeddings",
+    "generate": "/api/generate",
+    "ps": "/api/ps",
+    "pull": "/api/pull",
+    "push": "/api/push",
+    "show": "/api/show",
+    "tags": "/api/tags",
+    "version": "/api/version",
+}
 
 
-def _validate_ollama_api_path(path: str) -> None:
-    if not path or path.startswith(("/", ".")) or ".." in path:
+def _resolve_ollama_upstream(segment: str) -> str:
+    if not segment or segment != segment.strip() or "/" in segment or ".." in segment:
         raise HTTPException(status_code=400, detail="invalid api path")
-    root = path.split("/", 1)[0]
-    if root not in _ALLOWED_OLLAMA_API_ROOTS:
+    upstream = _OLLAMA_UPSTREAM_BY_SEGMENT.get(segment)
+    if upstream is None:
         raise HTTPException(status_code=404, detail="api path not allowed")
+    return upstream
 
 
-@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def api_passthrough(request: Request, path: str):
-    """Passthrough for allowlisted Ollama /api/* endpoints only."""
-    _validate_ollama_api_path(path)
+@app.api_route("/api/{segment}", methods=["GET", "POST", "PUT", "DELETE"])
+async def api_passthrough(request: Request, segment: str):
+    """Passthrough for allowlisted single-segment Ollama /api/* endpoints only."""
+    upstream = _resolve_ollama_upstream(segment)
     method = request.method
     try:
         if method in ("POST", "PUT"):
             body = await request.body()
             resp = await http_client.request(
-                method, f"/api/{path}",
+                method,
+                upstream,
                 content=body,
                 headers={"Content-Type": request.headers.get("Content-Type", "application/json")},
             )
         else:
-            resp = await http_client.request(method, f"/api/{path}")
+            resp = await http_client.request(method, upstream)
         return Response(
             content=resp.content,
             status_code=resp.status_code,
             media_type=resp.headers.get("content-type"),
         )
-    except Exception as e:
-        return JSONResponse(status_code=502, content={"error": str(e)})
+    except Exception:
+        logger.exception("Upstream passthrough failed for %s", upstream)
+        return JSONResponse(status_code=502, content={"error": "upstream unavailable"})
