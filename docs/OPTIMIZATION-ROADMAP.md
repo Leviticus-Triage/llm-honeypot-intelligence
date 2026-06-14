@@ -1239,3 +1239,17 @@ synchronisiert:
 
 Offen: **24h-Spareffekt messen** (`free -h` auf VM 400, Größe `logstash-noise-*`
 vs. `logstash-*`).
+
+### P.7  SpiderFoot Toolbox auf VM 200 (2026-06-14 Nacht)
+
+Dedizierter SpiderFoot mit allen CLI-Tool-Modulen — Scan-Last und Tool-Binaries
+**nicht** auf dem Laptop und **nicht** im schmalen T-Pot-Alpine-Container.
+
+- **URL:** `http://192.168.2.116:5001/spiderfoot/` (T-Pot-UI auf VM 400 unverändert)
+- **Repo:** `spiderfoot-toolbox/` (Custom Debian-Image, Tool-Pfade via `entrypoint.sh`)
+- **12/13 Tools** installiert + in DB gesetzt: Nmap, nbtscan, onesixtyone, WhatWeb,
+  Nuclei v2.9.15 + Templates, testssl.sh, DNSTwist, wafw00f, snallygaster,
+  TruffleHog v2, CMSeeK, Retire.js
+- **Wappalyzer:** kein öffentliches `cli.js` mehr — Modul deaktivieren bis Adapter
+- **Deploy VM 200:** `cd ~/spiderfoot-toolbox && docker compose up -d --build`
+

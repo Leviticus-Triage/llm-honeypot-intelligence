@@ -1,0 +1,50 @@
+# SpiderFoot runtime deps for a from-scratch pip install on Debian/Python 3.12.
+#
+# The fork's own requirements.txt only lists 12 packages (with ranges); the rest
+# are installed via apk in the upstream Alpine image. We reproduce the full set
+# here. The Alpine-pinned versions (e.g. numpy 1.25.2) have no cp312 wheels and
+# fail to build, so the scientific stack uses py3.12-safe lower bounds (wheels),
+# while the fork-core packages keep their API-compatibility ranges.
+
+# --- fork core (ranges matter: major bumps change APIs) ---
+adblockparser>=0.7,<1
+CherryPy>=18.6.1,<19
+cherrypy-cors>=1.6,<2
+ipwhois>=1.1.0,<1.2.0
+pygexf>=0.2.2,<0.3
+python-whois>=0.7.3,<0.8
+secure>=0.3.0,<0.4.0
+python-docx>=0.8.11,<0.9
+python-pptx>=0.6.21,<0.7
+publicsuffixlist>=0.7.9,<0.8
+openpyxl>=3.0.9,<4
+PyPDF2>=1.28.6,<2
+
+# --- additional runtime deps (apk in upstream image) ---
+netaddr
+cryptography
+pyOpenSSL
+dnspython
+beautifulsoup4
+lxml>=5
+phonenumbers
+ExifRead
+httpagentparser
+Mako
+PySocks
+python-dateutil
+pytz
+PyYAML
+requests
+XlsxWriter
+future
+ipaddr
+networkx
+
+# --- scientific stack: lower bounds chosen so cp312 wheels exist ---
+Pillow>=10.1
+numpy>=1.26,<2
+pandas>=2.1
+scipy>=1.11.4
+matplotlib>=3.8
+pycairo

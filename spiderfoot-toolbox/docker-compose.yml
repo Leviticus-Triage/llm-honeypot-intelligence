@@ -1,0 +1,27 @@
+# Dedicated, tool-equipped SpiderFoot on VM 200 (ai-workstation).
+# Separate from the T-Pot SpiderFoot so scanning load/traffic stays off the
+# honeypot VM. UI: http://192.168.2.116:5001
+#
+#   docker compose up -d --build
+#
+services:
+  spiderfoot:
+    container_name: spiderfoot-toolbox
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spiderfoot-toolbox:local
+    restart: unless-stopped
+    # nmap raw-socket scans as the non-root spiderfoot user (binary has file caps).
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    ports:
+      - "5001:5001"
+    volumes:
+      - spiderfoot_data:/var/lib/spiderfoot
+    # SpiderFoot 4 has no built-in auth by default. This binds on the LAN; keep it
+    # on a trusted network or front it with auth/reverse-proxy before wider exposure.
+
+volumes:
+  spiderfoot_data:
