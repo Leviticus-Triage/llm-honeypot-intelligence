@@ -39,6 +39,7 @@ services:
       - ES_URL=${ES_URL}
       - ES_USER=${ES_USER}
       - ES_PASS=${ES_PASS}
+      - ES_INSECURE=${ES_INSECURE:-1}
       - TPOT_VM_IP=${TPOT_VM_IP}
       - SCORER_INTERVAL=300
     volumes:
@@ -56,6 +57,7 @@ services:
       - ES_URL=${ES_URL}
       - ES_USER=${ES_USER}
       - ES_PASS=${ES_PASS}
+      - ES_INSECURE=${ES_INSECURE:-1}
       - REWARD_INTERVAL=900
       - REWARD_WINDOW_MINUTES=30
       - REWARD_BACKFILL_HOUR_UTC=2
@@ -96,6 +98,7 @@ services:
       - ES_URL=${ES_URL}
       - ES_USER=${ES_USER}
       - ES_PASS=${ES_PASS}
+      - ES_INSECURE=${ES_INSECURE:-1}
       - DATASET_DIR=/data/ml-runner/datasets
       - MODEL_DIR=/data/ml-runner/models
       - ML_SOURCE_INDEX=honeypot-cve-sessions
@@ -123,6 +126,7 @@ services:
       - ES_URL=${ES_URL}
       - ES_USER=${ES_USER}
       - ES_PASS=${ES_PASS}
+      - ES_INSECURE=${ES_INSECURE:-1}
       - RULES_DIR=/data/ollama-proxy/generated-rules
       - RULEGEN_INTERVAL=21600
       - RULEGEN_SINCE_HOURS=24
@@ -142,6 +146,7 @@ services:
       - ES_URL=${ES_URL}
       - ES_USER=${ES_USER}
       - ES_PASS=${ES_PASS}
+      - ES_INSECURE=${ES_INSECURE:-1}
       - THREAT_DIR=/data/ollama-proxy/threat-intel
       - HEURISTIC_INTERVAL=1800
       - HEURISTIC_SINCE_HOURS=24
@@ -160,6 +165,7 @@ services:
       - ES_URL=${ES_URL}
       - ES_USER=${ES_USER}
       - ES_PASS=${ES_PASS}
+      - ES_INSECURE=${ES_INSECURE:-1}
       - C2_INTERVAL=300
       - C2_WINDOW=60
     volumes:
