@@ -4,7 +4,7 @@ Footprint Orchestrator runner — triggers SpiderFoot OSINT scans for
 clearly malicious targeted attackers and feeds results into threat-intel/.
 
 Runs after heuristic detector output is available (ip_reputation.json).
-Default interval: 30 minutes (aligned with heuristic detector).
+Default interval: 15 minutes (aligned with heuristic detector).
 """
 import asyncio
 import logging
@@ -22,7 +22,7 @@ init_db()
 
 from src.footprint_orchestrator import run_footprint_cycle  # noqa: E402
 
-INTERVAL = int(os.environ.get("FOOTPRINT_INTERVAL", "1800"))
+INTERVAL = int(os.environ.get("FOOTPRINT_INTERVAL", "900"))
 
 
 def main():

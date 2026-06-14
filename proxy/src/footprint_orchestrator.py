@@ -62,6 +62,24 @@ ACTIVE_SCAN_TIMEOUT = float(os.environ.get("FOOTPRINT_ACTIVE_SCAN_TIMEOUT", "720
 POLL_INTERVAL = float(os.environ.get("FOOTPRINT_POLL_INTERVAL", "30"))
 MIN_BLOCK_SCORE = int(os.environ.get("FOOTPRINT_MIN_SCORE", "80"))
 
+# Stuck-scan recovery — prevents CREATED/STARTING limbo from blocking concurrency slots.
+STUCK_CREATED_MINUTES = int(os.environ.get("FOOTPRINT_STUCK_CREATED_MINUTES", "10"))
+STUCK_STARTING_MINUTES = int(os.environ.get("FOOTPRINT_STUCK_STARTING_MINUTES", "10"))
+STUCK_PASSIVE_RUNNING_MINUTES = int(
+    os.environ.get("FOOTPRINT_STUCK_PASSIVE_RUNNING_MINUTES", "30")
+)
+STUCK_ACTIVE_RUNNING_MINUTES = int(
+    os.environ.get(
+        "FOOTPRINT_STUCK_ACTIVE_RUNNING_MINUTES",
+        str(max(60, int(ACTIVE_SCAN_TIMEOUT / 60))),
+    )
+)
+
+# SpiderFoot statuses that may block concurrency slots until resolved.
+_STUCK_PRONE_STATUSES = frozenset({
+    "CREATED", "STARTING", "INITIALIZING", "RUNNING",
+})
+
 ScanTier = Literal["passive", "active"]
 
 # Reasons that justify escalating to active tooling (Nmap/Nuclei).
@@ -136,6 +154,153 @@ def _set_tier_entry(state: dict, ip: str, tier: ScanTier, entry: dict | None) ->
     state["scans"][ip][tier] = entry
 
 
+def _entry_age_minutes(entry: dict) -> float | None:
+    """Minutes since scan entry was started (UTC)."""
+    started = entry.get("started_at")
+    if not started:
+        return None
+    try:
+        ts = datetime.fromisoformat(str(started).replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - ts).total_seconds() / 60
+    except Exception:
+        return None
+
+
+def _running_stuck_limit_minutes(tier: ScanTier) -> int:
+    return (
+        STUCK_ACTIVE_RUNNING_MINUTES
+        if tier == "active"
+        else STUCK_PASSIVE_RUNNING_MINUTES
+    )
+
+
+def _mark_scan_failed(
+    entry: dict,
+    summary: dict,
+    reason: str,
+    *,
+    was_running: bool = False,
+) -> None:
+    entry["status"] = "FAILED"
+    entry["error"] = reason
+    entry["failed_at"] = datetime.now(timezone.utc).isoformat()
+    summary["failed"] += 1
+    if was_running and summary.get("still_running", 0) > 0:
+        summary["still_running"] -= 1
+
+
+async def _abort_stuck_scan(
+    client: SpiderFootClient,
+    scan_id: str,
+    entry: dict,
+    summary: dict,
+    reason: str,
+) -> None:
+    try:
+        await client.stop_scan(scan_id)
+    except Exception as exc:
+        logger.debug("stop_scan %s failed (may already be dead): %s", scan_id, exc)
+    _mark_scan_failed(entry, summary, reason, was_running=True)
+    logger.warning("Scan %s marked failed: %s", scan_id, reason)
+
+
+def _stuck_reason(status: str, age_mins: float | None, tier: ScanTier) -> str | None:
+    """Return failure reason when a RUNNING entry is stuck, else None."""
+    if age_mins is None:
+        return None
+
+    if status == "CREATED" and age_mins >= STUCK_CREATED_MINUTES:
+        return f"stuck_created_{STUCK_CREATED_MINUTES}m"
+
+    if status == "STARTING" and age_mins >= STUCK_STARTING_MINUTES:
+        return f"stuck_starting_{STUCK_STARTING_MINUTES}m"
+
+    if status in ("RUNNING", "INITIALIZING"):
+        limit = _running_stuck_limit_minutes(tier)
+        if age_mins >= limit:
+            return f"stuck_{status.lower()}_{limit}m"
+
+    if status == "UNKNOWN" and age_mins >= STUCK_STARTING_MINUTES:
+        return "stuck_unknown"
+
+    return None
+
+
+async def _poll_running_scan(
+    client: SpiderFootClient,
+    ip: str,
+    tier: ScanTier,
+    entry: dict,
+    reputation: dict,
+    state: dict,
+    summary: dict,
+) -> None:
+    """Poll SpiderFoot for one orchestrator RUNNING entry; finalize or fail it."""
+    scan_id = entry.get("scan_id")
+    if not scan_id or len(str(scan_id)) != 8:
+        _mark_scan_failed(entry, summary, "invalid scan_id")
+        return
+
+    try:
+        raw = await client.scan_status(scan_id)
+        parsed = client.parse_scan_status(raw)
+        status = str(parsed.get("status", "UNKNOWN")).upper()
+        entry["last_checked"] = datetime.now(timezone.utc).isoformat()
+        entry["spiderfoot_status"] = status
+        age_mins = _entry_age_minutes(entry)
+
+        if status in ("FINISHED", "FINISHED-ERROR"):
+            await _finalize_scan(
+                client, ip, scan_id, entry, reputation.get(ip, {}), tier,
+            )
+            entry["status"] = "COMPLETED"
+            entry["completed_at"] = datetime.now(timezone.utc).isoformat()
+            summary["completed"] += 1
+            key = f"{tier}_completed"
+            state["stats"][key] = state["stats"].get(key, 0) + 1
+            logger.info("Scan %s %s/%s completed", scan_id, ip, tier)
+            return
+
+        if status.startswith("ERROR") or status.startswith("ABORT"):
+            _mark_scan_failed(entry, summary, status)
+            return
+
+        stuck_reason = _stuck_reason(status, age_mins, tier)
+        if stuck_reason:
+            await _abort_stuck_scan(client, scan_id, entry, summary, stuck_reason)
+            return
+
+        if status in _STUCK_PRONE_STATUSES or status == "UNKNOWN":
+            summary["still_running"] += 1
+            return
+
+        logger.warning(
+            "Scan %s %s has unexpected status %s — failing",
+            scan_id, ip, status,
+        )
+        await _abort_stuck_scan(
+            client, scan_id, entry, summary, f"unexpected_status:{status}",
+        )
+
+    except SpiderFootError as exc:
+        entry["last_checked"] = datetime.now(timezone.utc).isoformat()
+        age_mins = _entry_age_minutes(entry)
+        err = str(exc).lower()
+        if "http 404" in err or "not found" in err:
+            _mark_scan_failed(entry, summary, "scan_lost", was_running=True)
+            logger.warning("Scan %s %s lost in SpiderFoot: %s", scan_id, ip, exc)
+            return
+        if age_mins is not None and age_mins >= STUCK_STARTING_MINUTES:
+            await _abort_stuck_scan(
+                client, scan_id, entry, summary, f"poll_error:{exc}",
+            )
+            return
+        logger.warning("Poll %s/%s failed (will retry): %s", ip, tier, exc)
+        summary["still_running"] += 1
+
+
 def _in_cooldown(entry: dict | None, hours: int) -> bool:
     if not entry:
         return False
@@ -143,7 +308,7 @@ def _in_cooldown(entry: dict | None, hours: int) -> bool:
     if not last:
         return False
     try:
-        ts = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        ts = datetime.fromisoformat(str(last).replace("Z", "+00:00"))
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
         return datetime.now(timezone.utc) - ts < timedelta(hours=hours)
@@ -381,59 +546,9 @@ async def run_footprint_cycle() -> dict:
             entry = slot.get(tier)
             if not entry or entry.get("status") != "RUNNING":
                 continue
-            scan_id = entry.get("scan_id")
-            if not scan_id or len(str(scan_id)) != 8:
-                entry["status"] = "FAILED"
-                entry["error"] = "invalid scan_id"
-                summary["failed"] += 1
-                continue
-            try:
-                status = await client.get_scan_status(scan_id)
-                entry["last_checked"] = datetime.now(timezone.utc).isoformat()
-                if status in ("FINISHED", "FINISHED-ERROR"):
-                    await _finalize_scan(
-                        client, ip, scan_id, entry,
-                        reputation.get(ip, {}), tier,
-                    )
-                    entry["status"] = "COMPLETED"
-                    entry["completed_at"] = datetime.now(timezone.utc).isoformat()
-                    summary["completed"] += 1
-                    key = f"{tier}_completed"
-                    state["stats"][key] = state["stats"].get(key, 0) + 1
-                    logger.info("Scan %s %s/%s completed", scan_id, ip, tier)
-                elif status.startswith("ERROR") or status.startswith("ABORT"):
-                    entry["status"] = "FAILED"
-                    entry["error"] = status
-                    summary["failed"] += 1
-                elif status in ("STARTING", "RUNNING", "INITIALIZING"):
-                    summary["still_running"] += 1
-                    started = entry.get("started_at")
-                    if started and status == "STARTING":
-                        try:
-                            ts = datetime.fromisoformat(
-                                started.replace("Z", "+00:00")
-                            )
-                            if ts.tzinfo is None:
-                                ts = ts.replace(tzinfo=timezone.utc)
-                            stuck_mins = (
-                                datetime.now(timezone.utc) - ts
-                            ).total_seconds() / 60
-                            if stuck_mins > 15:
-                                logger.warning(
-                                    "Scan %s stuck STARTING %.0fm — aborting",
-                                    scan_id, stuck_mins,
-                                )
-                                await client.stop_scan(scan_id)
-                                entry["status"] = "FAILED"
-                                entry["error"] = "stuck_starting"
-                                summary["failed"] += 1
-                                summary["still_running"] -= 1
-                        except Exception:
-                            pass
-                else:
-                    summary["still_running"] += 1
-            except SpiderFootError as exc:
-                logger.warning("Poll %s/%s failed: %s", ip, tier, exc)
+            await _poll_running_scan(
+                client, ip, tier, entry, reputation, state, summary,
+            )
 
     # ── Start passive scans ──
     summary["new_passive"] = await _start_scans(
@@ -533,7 +648,10 @@ async def _start_scans(
                 summary["skipped_cooldown"] += 1
                 continue
 
-        scan_name = f"honeypot-{tier}-{ip}-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
+        scan_name = (
+            f"honeypot-{tier}-{ip}-"
+            f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        )
         try:
             scan_id = await client.start_scan(ip, scan_name, usecase=usecase)
             entry = {
