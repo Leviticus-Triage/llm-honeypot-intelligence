@@ -101,6 +101,9 @@ async def main_client(tmp_path: Path, mock_upstream_app: FastAPI):
 
     os.environ["CONFIG_PATH"] = str(cfg_path)
     os.environ["CACHE_DB"] = str(db_path)
+    # Cache tests must reach upstream + persist to SQLite; noise filter treats
+    # short probes like "hello" as junk and never stores them.
+    os.environ["NOISE_FILTER_ENABLED"] = "0"
 
     reloaded = importlib.reload(main_mod)
     models_mod.DB_PATH = str(db_path)
@@ -181,7 +184,7 @@ async def test_api_chat_routes_through_cache_and_returns_ollama_shape(main_clien
     payload = {
         "model": "openchat",
         "stream": False,
-        "messages": [{"role": "user", "content": "hello"}],
+        "messages": [{"role": "user", "content": "uname -a"}],
     }
 
     first = await main_client.post("/api/chat", json=payload)
