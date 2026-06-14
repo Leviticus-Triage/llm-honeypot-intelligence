@@ -1,39 +1,39 @@
 title: Honeypot - SSH Command Execution
-id: c02f6680-d344-65cf-57f5-05ea7d0f038e
+id: 93481763-4251-5a39-aebb-bb9c42624d5b
 status: experimental
 level: medium
-description: Shell command execution patterns from SSH honeypot. 89 events, 1 source
+description: Shell command execution patterns from SSH honeypot. 817 events, 2 source
   IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
-date: 2026/06/11
+date: 2026/06/14
 references:
 - https://attack.mitre.org/
 tags:
 - attack.execution
 - attack.t1033
 - attack.t1059.004
-- attack.t1105
+- attack.t1082
 logsource:
   category: process_creation
   product: linux
 detection:
   selection:
     CommandLine|contains:
-    - scp -qt "/var/tmp/isAjkxaK
-    - scp -qt "/var/tmp/uQKhLBsT
-    - echo 12345678 > /tmp/d.log
-    - scp -qt "/tmp/isAjkxaK
-    - echo gateway > /tmp/d.log
-    - scp -qt "/var/tmp/bnvNKYGu
-    - scp -qt "/var/tmp/XUAcnsJa
-    - scp -qt "/var/tmp/rlZfzyaT
-    - echo hamed > /tmp/d.log
-    - echo 12345 > /tmp/d.log
-    - scp -qt "/var/tmp/ZnwuAQGi
-    - scp -qt "/tmp/cjWesWdE
-    - echo 1 > /tmp/d.log
-    - scp -qt "/tmp/WXokeHMD
-    - echo work > /tmp/d.log
+    - echo "GPU:$gpu_info
+    - echo 'missing:ps
+    - echo 'unknown
+    - echo 'missing:netstat
+    - echo "LS_HELP:$ls_help
+    - echo "UPTIME:$uptime
+    - echo "CAT_HELP:$cat_help
+    - echo "ARCH:$arch
+    - echo 'missing:cat
+    - echo "CPUS:$cpus
+    - echo '1
+    - echo 'missing:ls
+    - echo 'N/A
+    - echo '---END---
+    - echo "LAST:$last_output
   condition: selection
 falsepositives:
 - Legitimate system administration

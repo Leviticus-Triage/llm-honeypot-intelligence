@@ -1,29 +1,18 @@
 # ML-generated dynamic blocklist
-# Generated: 2026-06-11T22:19:42
-# Total: 26 IPs
-45.148.10.67  # score=95 level=high ML anomaly (score: 0.169),Sophisticated attacker (high diversity, long session)
-151.243.11.35  # score=95 level=high ML anomaly (score: 0.099),Sophisticated attacker (high diversity, long session)
-45.205.1.62  # score=95 level=high ML anomaly (score: 0.057),Sophisticated attacker (high diversity, long session)
-46.151.178.13  # score=95 level=high ML anomaly (score: 0.058),Sophisticated attacker (high diversity, long session)
-3.21.34.231  # score=95 level=high ML anomaly (score: 0.009),Sophisticated attacker (high diversity, long session)
-93.123.72.183  # score=95 level=high ML anomaly (score: 0.235),Sophisticated attacker (high diversity, long session)
-204.76.203.81  # score=95 level=high ML anomaly (score: 0.040),Sophisticated attacker (high diversity, long session)
-45.198.224.5  # score=95 level=high ML anomaly (score: 0.024),Sophisticated attacker (high diversity, long session)
-176.65.139.66  # score=95 level=high ML anomaly (score: 0.115),Sophisticated attacker (high diversity, long session)
-204.76.203.206  # score=95 level=high ML anomaly (score: 0.188),Sophisticated attacker (high diversity, long session)
-204.76.203.219  # score=95 level=high ML anomaly (score: 0.199),Sophisticated attacker (high diversity, long session)
-93.174.93.12  # score=95 level=high ML anomaly (score: 0.003),Sophisticated attacker (high diversity, long session)
-45.156.87.147  # score=85 level=medium ML anomaly (score: 0.297),Mass scanner pattern
-91.92.42.19  # score=85 level=medium ML anomaly (score: 0.291),Mass scanner pattern
-167.94.146.52  # score=80 level=medium ML anomaly (score: 0.027)
-178.62.209.206  # score=80 level=high Sophisticated attacker (high diversity, long session)
-62.210.142.169  # score=80 level=high Sophisticated attacker (high diversity, long session)
-104.248.202.187  # score=80 level=high Sophisticated attacker (high diversity, long session)
-167.71.71.11  # score=80 level=high Sophisticated attacker (high diversity, long session)
-18.222.198.216  # score=80 level=high Sophisticated attacker (high diversity, long session)
-185.242.226.106  # score=80 level=high Sophisticated attacker (high diversity, long session)
-3.145.5.130  # score=80 level=high Sophisticated attacker (high diversity, long session)
-45.205.1.243  # score=80 level=high Sophisticated attacker (high diversity, long session)
-45.205.1.246  # score=80 level=high Sophisticated attacker (high diversity, long session)
-45.205.1.73  # score=80 level=high Sophisticated attacker (high diversity, long session)
-52.15.74.178  # score=80 level=high Sophisticated attacker (high diversity, long session)
+# Generated: 2026-06-14T12:10:46
+# Total: 15 IPs
+45.148.10.67  # score=95 level=high ML anomaly (score: 0.226),Sophisticated attacker (high diversity, long session)
+151.243.11.35  # score=95 level=high ML anomaly (score: 0.117),Sophisticated attacker (high diversity, long session)
+45.205.1.62  # score=95 level=high ML anomaly (score: 0.112),Sophisticated attacker (high diversity, long session)
+34.11.73.195  # score=95 level=high ML anomaly (score: 0.105),Sophisticated attacker (high diversity, long session)
+46.151.178.13  # score=95 level=high ML anomaly (score: 0.111),Sophisticated attacker (high diversity, long session)
+80.87.206.169  # score=95 level=high ML anomaly (score: 0.042),Sophisticated attacker (high diversity, long session)
+216.180.246.69  # score=95 level=high ML anomaly (score: 0.000),Sophisticated attacker (high diversity, long session)
+45.205.1.241  # score=95 level=high ML anomaly (score: 0.132),Sophisticated attacker (high diversity, long session)
+45.205.1.73  # score=95 level=high ML anomaly (score: 0.044),Sophisticated attacker (high diversity, long session)
+45.205.1.76  # score=95 level=high ML anomaly (score: 0.061),Sophisticated attacker (high diversity, long session)
+85.217.140.52  # score=95 level=high ML anomaly (score: 0.027),Sophisticated attacker (high diversity, long session)
+93.174.93.12  # score=95 level=high ML anomaly (score: 0.064),Sophisticated attacker (high diversity, long session)
+176.65.132.22  # score=85 level=medium ML anomaly (score: 0.314),Mass scanner pattern
+216.180.246.246  # score=80 level=high Sophisticated attacker (high diversity, long session)
+3.133.85.132  # score=80 level=high Sophisticated attacker (high diversity, long session)
