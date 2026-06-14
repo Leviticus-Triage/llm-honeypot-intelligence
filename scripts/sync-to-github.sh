@@ -163,8 +163,25 @@ EOF
 )" --quiet
 
 if git remote get-url origin &>/dev/null; then
-    git push --quiet
-    log "Pushed to GitHub."
+    branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+    # Reconcile with the remote before pushing. Code fixes pushed from another
+    # clone (e.g. the laptop) otherwise cause a non-fast-forward rejection and
+    # the auto-sync silently stops landing on GitHub. Generated rule artifacts
+    # are reproducible, so on conflict we keep our freshly generated snapshot
+    # (-X theirs = the local commits being replayed) while still absorbing any
+    # upstream code/doc changes.
+    git fetch --quiet origin "$branch" 2>/dev/null || true
+    if ! git rebase -X theirs --quiet "origin/$branch" 2>/dev/null; then
+        git rebase --abort 2>/dev/null || true
+        log "WARN: rebase onto origin/$branch failed; falling back to merge (prefer local artifacts)."
+        git merge -X theirs --no-edit --quiet "origin/$branch" 2>/dev/null || true
+    fi
+    if git push --quiet; then
+        log "Pushed to GitHub."
+    else
+        log "ERROR: git push failed after reconcile with origin/$branch (manual check needed)."
+        exit 1
+    fi
 else
     log "No remote configured, commit only (local)."
 fi
