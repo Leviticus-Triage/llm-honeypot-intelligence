@@ -184,6 +184,7 @@ services:
     volumes:
       - proxy_data:/data/ollama-proxy
       - ./run_footprint_orchestrator.py:/app/run_footprint_orchestrator.py:ro
+      - ./src/footprint_orchestrator.py:/app/src/footprint_orchestrator.py:ro
       - threat_output:/data/ollama-proxy/threat-intel
     entrypoint: ["python", "/app/run_footprint_orchestrator.py"]
 

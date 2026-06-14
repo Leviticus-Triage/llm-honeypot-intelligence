@@ -63,7 +63,7 @@ POLL_INTERVAL = float(os.environ.get("FOOTPRINT_POLL_INTERVAL", "30"))
 MIN_BLOCK_SCORE = int(os.environ.get("FOOTPRINT_MIN_SCORE", "80"))
 
 # Stuck-scan recovery — prevents CREATED/STARTING limbo from blocking concurrency slots.
-STUCK_CREATED_MINUTES = int(os.environ.get("FOOTPRINT_STUCK_CREATED_MINUTES", "10"))
+STUCK_CREATED_MINUTES = int(os.environ.get("FOOTPRINT_STUCK_CREATED_MINUTES", "3"))
 STUCK_STARTING_MINUTES = int(os.environ.get("FOOTPRINT_STUCK_STARTING_MINUTES", "10"))
 STUCK_PASSIVE_RUNNING_MINUTES = int(
     os.environ.get("FOOTPRINT_STUCK_PASSIVE_RUNNING_MINUTES", "30")
@@ -250,6 +250,18 @@ async def _poll_running_scan(
         entry["last_checked"] = datetime.now(timezone.utc).isoformat()
         entry["spiderfoot_status"] = status
         age_mins = _entry_age_minutes(entry)
+
+        ended = str(parsed.get("ended") or "")
+        if (
+            status == "CREATED"
+            and ended.startswith("1970-")
+            and age_mins is not None
+            and age_mins >= 2
+        ):
+            await _abort_stuck_scan(
+                client, scan_id, entry, summary, "stuck_created_never_started",
+            )
+            return
 
         if status in ("FINISHED", "FINISHED-ERROR"):
             await _finalize_scan(
