@@ -16,6 +16,7 @@ FROM ghcr.io/telekom-security/spiderfoot:24.04.1 AS sfsrc
 FROM python:3.12-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Europe/Berlin \
     VIRTUAL_ENV=/opt/venv \
     SPIDERFOOT_DATA=/var/lib/spiderfoot \
     SPIDERFOOT_LOGS=/var/lib/spiderfoot/log \
@@ -26,9 +27,11 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # --- Base + apt-installable tools (nmap, nbtscan, onesixtyone) + ruby for WhatWeb ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl wget git unzip xz-utils libcap2-bin \
-        openssl procps bsdmainutils dnsutils coreutils \
+        openssl procps bsdmainutils dnsutils coreutils tzdata \
         nmap nbtscan onesixtyone \
         ruby ruby-dev build-essential \
+    && ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime \
+    && echo Europe/Berlin > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Node.js 20 LTS (retire.js + wappalyzer CLI) ---

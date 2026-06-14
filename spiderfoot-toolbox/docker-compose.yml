@@ -34,6 +34,8 @@ services:
     depends_on:
       tor-gateway:
         condition: service_healthy
+    environment:
+      - TZ=Europe/Berlin
     cap_add:
       - NET_RAW
       - NET_ADMIN

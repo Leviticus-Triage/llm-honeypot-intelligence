@@ -1,5 +1,5 @@
 FROM alpine:3.20
-RUN apk add --no-cache tor iptables ip6tables curl bind-tools macchanger iproute2 netcat-openbsd \
+RUN apk add --no-cache tor iptables ip6tables curl bind-tools macchanger iproute2 netcat-openbsd tzdata \
     && mkdir -p /var/lib/tor \
     && chown tor:tor /var/lib/tor \
     && chmod 700 /var/lib/tor
