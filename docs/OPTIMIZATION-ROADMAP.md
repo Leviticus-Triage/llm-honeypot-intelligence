@@ -1253,3 +1253,68 @@ Dedizierter SpiderFoot mit allen CLI-Tool-Modulen — Scan-Last und Tool-Binarie
 - **Wappalyzer:** kein öffentliches `cli.js` mehr — Modul deaktivieren bis Adapter
 - **Deploy VM 200:** `cd ~/spiderfoot-toolbox && docker compose up -d --build`
 
+### P.8  Automatisierte OSINT-Footprint-Pipeline (2026-06-14 Spätabend)
+
+Zwei-Stufen-OSINT für klar bösartige Angreifer (high/critical + block), integriert in
+Rule-Generator und Fail2ban mit **temporären 12h-Sperren** (nicht permanent).
+
+**Voraussetzung:** P.7 SpiderFoot Toolbox auf VM 200 + Tor-Egress-Sidecar.
+
+#### Tier-Policy
+
+| Tier | Usecase | Trigger | Limits |
+|------|---------|---------|--------|
+| Passive | `Passive` (API/OSINT via Tor) | `threat_level` critical/high + block oder Score ≥ 80 | max 3/Zyklus, 2 concurrent, 24h Cooldown/IP |
+| Active | `Footprint` (Nmap, Nuclei, …) | critical + block + Exploit-Signale + passive fertig | max 1/Zyklus, 1 concurrent, 7d Cooldown/IP |
+
+#### Neue Komponenten
+
+```
+proxy/src/spiderfoot_client.py      # API-Client (start/poll/export)
+proxy/src/footprint_orchestrator.py # Kandidatenwahl, Polling, Stuck-Recovery
+proxy/src/osint_enrichment.py       # Events → IOCs, Footprint-JSON
+proxy/run_footprint_orchestrator.py # Runner-Loop (15-Min-Intervall)
+```
+
+Docker-Service: **`ollama-footprint-orchestrator`** in `proxy/docker-compose.yml`.
+
+#### Outputs (`threat-intel/` auf Volume `ollama-threat-output`)
+
+- `osint-footprints/<ip>.json` — passive Footprints
+- `osint-footprints/<ip>.active.json` — active Footprints
+- `footprint_state.json` — Orchestrator-State
+- `footprint_queue.json` — Queue/Summary pro Zyklus
+- `campaigns_osint_enriched.json` — angereicherte Kampagnen
+
+#### Blocklist-Sync (12h temporär)
+
+- `BLOCK_BANTIME_SECONDS=43200` in Rule-Generator / Fail2ban-Artefakten
+- VM 200: `scripts/sync-blocklist-to-tpot.sh` + `blocklist-sync.timer` (stündlich)
+- VM 400: `deploy/tpot/setup-blocklist-timer.sh` → ipset `honeypot-ban` timeout 43200s
+
+#### Env-Defaults (wichtig)
+
+```
+FOOTPRINT_INTERVAL=900              # 15 Min (vorher 1800)
+FOOTPRINT_MAX_NEW_SCANS=3
+FOOTPRINT_MAX_CONCURRENT=2
+FOOTPRINT_COOLDOWN_HOURS=24
+SPIDERFOOT_URL=http://127.0.0.1:5001/spiderfoot
+```
+
+#### Bugfixes & Stabilität
+
+- `scanstatus` flat-list parsing (Status an Index 5, nicht `rows[0][5]`)
+- `startscan` Response `["SUCCESS", "SCAN_ID"]` → ID aus `data[1]`
+- Timezone `Europe/Berlin` in Toolbox + Tor-Gateway (CEST in UI)
+- Stuck-Recovery: `CREATED`+Epoch-Ende nach 2m, `CREATED` nach 3m, `STARTING` nach 10m
+- Volume-Mount `footprint_orchestrator.py` für Rebuild-sichere Deploys
+
+#### Commits (Auswahl)
+
+`1a2ee5d`, `713af0c`, `763537d`, `819f6cc`, `cfdab19`, `30b5736`, `796c763`, `63c2390`
+
+#### Notion
+
+<https://app.notion.com/p/37f30537269d810281a5e850f9220275> — Ops-Update Spätabend
+
