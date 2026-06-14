@@ -16,7 +16,7 @@ chmod +x "${CUSTOM_DIR}/apply-ipset-temp-blocklist.sh" 2>/dev/null || true
 
 cat > "${UNIT_DIR}/honeypot-blocklist-apply.service" <<EOF
 [Unit]
-Description=Apply LLM honeypot 24h temporary IP blocklist (ipset)
+Description=Apply LLM honeypot 12h temporary IP blocklist (ipset)
 After=network-online.target
 Wants=network-online.target
 
@@ -27,7 +27,7 @@ EOF
 
 cat > "${UNIT_DIR}/honeypot-blocklist-apply.timer" <<'EOF'
 [Unit]
-Description=Hourly honeypot blocklist apply (24h ipset timeout)
+Description=Hourly honeypot blocklist apply (12h ipset timeout)
 
 [Timer]
 OnCalendar=hourly
