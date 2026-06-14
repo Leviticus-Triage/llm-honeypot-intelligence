@@ -1,8 +1,11 @@
 """
-Automated SpiderFoot footprint orchestrator.
+Automated SpiderFoot footprint orchestrator — two-tier escalation.
 
-Triggers Passive OSINT scans for clearly malicious, targeted attackers
-(critical/high threat + block action) and stores results for rule generation.
+Tier 1 (Passive): API/OSINT modules via Tor — critical/high + block.
+Tier 2 (Active/Footprint): Nmap, Nuclei, etc. — only when targeted
+exploitation signals fire AND passive scan completed (or urgent cred-theft).
+
+Ban/blocklist duration is configured separately (default 12h).
 """
 
 from __future__ import annotations
@@ -13,12 +16,13 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from .osint_enrichment import (
     OSINT_DIR,
     enrich_campaigns,
     is_private_ip,
+    load_all_footprints,
     parse_spiderfoot_events,
     serialise_footprint,
 )
@@ -36,19 +40,38 @@ STATE_PATH = Path(
     )
 )
 
-COOLDOWN_HOURS = int(os.environ.get("FOOTPRINT_COOLDOWN_HOURS", "24"))
-MAX_NEW_SCANS = int(os.environ.get("FOOTPRINT_MAX_NEW_SCANS", "3"))
-MAX_CONCURRENT = int(os.environ.get("FOOTPRINT_MAX_CONCURRENT", "2"))
-SCAN_TIMEOUT = float(os.environ.get("FOOTPRINT_SCAN_TIMEOUT", "3600"))
-POLL_INTERVAL = float(os.environ.get("FOOTPRINT_POLL_INTERVAL", "30"))
-SCAN_USECASE = os.environ.get("FOOTPRINT_USECASE", "Passive")
+# ── Passive tier (API/OSINT, Tor-friendly) ──
+PASSIVE_COOLDOWN_HOURS = int(os.environ.get("FOOTPRINT_COOLDOWN_HOURS", "24"))
+PASSIVE_MAX_NEW = int(os.environ.get("FOOTPRINT_MAX_NEW_SCANS", "3"))
+PASSIVE_MAX_CONCURRENT = int(os.environ.get("FOOTPRINT_MAX_CONCURRENT", "2"))
+PASSIVE_USECASE = os.environ.get("FOOTPRINT_PASSIVE_USECASE", "Passive")
 
-# Minimum reputation score even if threat_level is high
+# ── Active tier (Nmap/Nuclei — slow, noisy, Tor-limited) ──
+ACTIVE_ENABLED = os.environ.get("FOOTPRINT_ACTIVE_ENABLED", "true").lower() == "true"
+ACTIVE_COOLDOWN_HOURS = int(os.environ.get("FOOTPRINT_ACTIVE_COOLDOWN_HOURS", "168"))
+ACTIVE_MAX_NEW = int(os.environ.get("FOOTPRINT_ACTIVE_MAX_NEW", "1"))
+ACTIVE_MAX_CONCURRENT = int(os.environ.get("FOOTPRINT_ACTIVE_MAX_CONCURRENT", "1"))
+ACTIVE_USECASE = os.environ.get("FOOTPRINT_ACTIVE_USECASE", "Footprint")
+ACTIVE_MIN_SCORE = int(os.environ.get("FOOTPRINT_ACTIVE_MIN_SCORE", "85"))
+ACTIVE_REQUIRE_PASSIVE = os.environ.get(
+    "FOOTPRINT_ACTIVE_REQUIRE_PASSIVE", "true"
+).lower() == "true"
+
+SCAN_TIMEOUT = float(os.environ.get("FOOTPRINT_SCAN_TIMEOUT", "3600"))
+ACTIVE_SCAN_TIMEOUT = float(os.environ.get("FOOTPRINT_ACTIVE_SCAN_TIMEOUT", "7200"))
+POLL_INTERVAL = float(os.environ.get("FOOTPRINT_POLL_INTERVAL", "30"))
 MIN_BLOCK_SCORE = int(os.environ.get("FOOTPRINT_MIN_SCORE", "80"))
 
-PRIVATE_IP_RE = re.compile(
-    r"^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|::1)"
+ScanTier = Literal["passive", "active"]
+
+# Reasons that justify escalating to active tooling (Nmap/Nuclei).
+ACTIVE_REASON_PATTERN = re.compile(
+    r"CVE|exploit|RCE|webshell|malware|reverse.?shell|credential|"
+    r"lateral|payload|shell.?download|0day|0-day|vuln",
+    re.IGNORECASE,
 )
+
+URGENT_ALERT_TYPES = frozenset({"credential_theft"})
 
 
 def _load_json(path: Path, default: Any) -> Any:
@@ -74,103 +97,46 @@ def _load_noise_ips() -> set[str]:
 
 
 def _load_state() -> dict:
-    return _load_json(STATE_PATH, {
+    raw = _load_json(STATE_PATH, {
         "scans": {},
         "last_run": None,
-        "stats": {"completed": 0, "failed": 0, "skipped": 0},
+        "stats": {"passive_completed": 0, "active_completed": 0, "failed": 0},
     })
+    _migrate_state(raw)
+    return raw
+
+
+def _migrate_state(state: dict) -> None:
+    """Upgrade legacy flat per-IP entries to {passive, active} structure."""
+    scans = state.get("scans", {})
+    for ip, entry in list(scans.items()):
+        if not isinstance(entry, dict):
+            continue
+        if "passive" in entry or "active" in entry:
+            continue
+        if entry.get("scan_id"):
+            scans[ip] = {"passive": entry, "active": None}
+        else:
+            scans[ip] = {"passive": None, "active": None}
 
 
 def _save_state(state: dict) -> None:
     _save_json(STATE_PATH, state)
 
 
-def select_footprint_candidates(
-    reputation: dict,
-    alerts: list[dict],
-    campaigns: list[dict],
-    noise_ips: set[str],
-) -> list[dict]:
-    """
-    Select IPs warranting OSINT footprint scans.
-
-    Criteria:
-    - threat_level in (critical, high)
-    - action == block OR score >= MIN_BLOCK_SCORE
-    - not in noise_ips, not private IP
-    - bonus priority for CVE/exploit alerts and campaign members
-    """
-    candidates: dict[str, dict] = {}
-
-    alert_ips: set[str] = set()
-    for alert in alerts:
-        if alert.get("severity") in ("critical", "high"):
-            for ip in alert.get("ips", [alert.get("ip")]):
-                if ip:
-                    alert_ips.add(ip)
-
-    campaign_ips: set[str] = set()
-    high_campaign_ips: set[str] = set()
-    for camp in campaigns:
-        if camp.get("max_threat_level") in ("critical", "high"):
-            for ip in camp.get("ips", []):
-                high_campaign_ips.add(ip)
-        for ip in camp.get("ips", []):
-            campaign_ips.add(ip)
-
-    for ip, rep in reputation.items():
-        if not ip or is_private_ip(ip) or ip in noise_ips:
-            continue
-
-        level = rep.get("threat_level", "low")
-        if level == "benign" or level not in ("critical", "high"):
-            continue
-
-        action = rep.get("action", "monitor")
-        score = rep.get("score", 0)
-        if action != "block" and score < MIN_BLOCK_SCORE:
-            continue
-
-        priority = score
-        if level == "critical":
-            priority += 20
-        if ip in alert_ips:
-            priority += 15
-        if ip in high_campaign_ips:
-            priority += 10
-        if ip in campaign_ips:
-            priority += 5
-
-        candidates[ip] = {
-            "ip": ip,
-            "priority": priority,
-            "threat_level": level,
-            "score": score,
-            "action": action,
-            "reasons": rep.get("reasons", [])[:5],
-            "country": rep.get("country", "Unknown"),
-            "asn": rep.get("asn", "Unknown"),
-            "campaign_id": rep.get("campaign_id", -1),
-            "events": rep.get("events", 0),
-            "sources": [],
-        }
-
-        if ip in alert_ips:
-            candidates[ip]["sources"].append("alert")
-        if ip in high_campaign_ips:
-            candidates[ip]["sources"].append("campaign")
-        candidates[ip]["sources"].append("reputation")
-
-    ranked = sorted(candidates.values(), key=lambda c: -c["priority"])
-    logger.info(
-        "Footprint candidates: %d (critical/high + block, excl. noise)",
-        len(ranked),
-    )
-    return ranked
+def _tier_entry(state: dict, ip: str, tier: ScanTier) -> dict | None:
+    slot = state.get("scans", {}).get(ip, {})
+    return slot.get(tier) if isinstance(slot, dict) else None
 
 
-def _in_cooldown(state: dict, ip: str) -> bool:
-    entry = state.get("scans", {}).get(ip)
+def _set_tier_entry(state: dict, ip: str, tier: ScanTier, entry: dict | None) -> None:
+    state.setdefault("scans", {}).setdefault(ip, {"passive": None, "active": None})
+    if "passive" not in state["scans"][ip]:
+        _migrate_state(state)
+    state["scans"][ip][tier] = entry
+
+
+def _in_cooldown(entry: dict | None, hours: int) -> bool:
     if not entry:
         return False
     last = entry.get("started_at") or entry.get("completed_at")
@@ -180,35 +146,200 @@ def _in_cooldown(state: dict, ip: str) -> bool:
         ts = datetime.fromisoformat(last.replace("Z", "+00:00"))
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) - ts < timedelta(hours=COOLDOWN_HOURS)
+        return datetime.now(timezone.utc) - ts < timedelta(hours=hours)
     except Exception:
         return False
 
 
-def _running_count(state: dict) -> int:
-    return sum(
-        1 for s in state.get("scans", {}).values()
-        if s.get("status") == "RUNNING"
+def _running_count(state: dict, tier: ScanTier | None = None) -> int:
+    count = 0
+    for slot in state.get("scans", {}).values():
+        if not isinstance(slot, dict):
+            continue
+        tiers = [tier] if tier else ["passive", "active"]
+        for t in tiers:
+            e = slot.get(t)
+            if e and e.get("status") == "RUNNING":
+                count += 1
+    return count
+
+
+def _build_alert_index(alerts: list[dict]) -> dict[str, list[dict]]:
+    """Map IP -> matching critical/high alerts."""
+    index: dict[str, list[dict]] = {}
+    for alert in alerts:
+        if alert.get("severity") not in ("critical", "high"):
+            continue
+        ips: list[str] = []
+        if alert.get("ip"):
+            raw = str(alert["ip"])
+            if re.match(r"^\d+\.\d+\.\d+\.\d+$", raw):
+                ips.append(raw)
+            else:
+                ips.extend(re.findall(r"\d+\.\d+\.\d+\.\d+", raw))
+        for ip in alert.get("ips", []):
+            if ip:
+                ips.append(ip)
+        for ip in ips:
+            index.setdefault(ip, []).append(alert)
+    return index
+
+
+def select_passive_candidates(
+    reputation: dict,
+    alerts: list[dict],
+    campaigns: list[dict],
+    noise_ips: set[str],
+) -> list[dict]:
+    """Tier 1: Passive OSINT for critical/high attackers recommended for block."""
+    candidates: dict[str, dict] = {}
+    alert_index = _build_alert_index(alerts)
+
+    high_campaign_ips: set[str] = set()
+    for camp in campaigns:
+        if camp.get("max_threat_level") in ("critical", "high"):
+            high_campaign_ips.update(camp.get("ips", []))
+
+    for ip, rep in reputation.items():
+        if not ip or is_private_ip(ip) or ip in noise_ips:
+            continue
+        level = rep.get("threat_level", "low")
+        if level not in ("critical", "high"):
+            continue
+        score = rep.get("score", 0)
+        if rep.get("action") != "block" and score < MIN_BLOCK_SCORE:
+            continue
+
+        priority = score + (20 if level == "critical" else 0)
+        if ip in alert_index:
+            priority += 15
+        if ip in high_campaign_ips:
+            priority += 10
+
+        candidates[ip] = {
+            "ip": ip,
+            "tier": "passive",
+            "priority": priority,
+            "threat_level": level,
+            "score": score,
+            "reasons": rep.get("reasons", [])[:8],
+        }
+
+    ranked = sorted(candidates.values(), key=lambda c: -c["priority"])
+    logger.info("Passive candidates: %d", len(ranked))
+    return ranked
+
+
+def select_active_candidates(
+    reputation: dict,
+    alerts: list[dict],
+    campaigns: list[dict],
+    noise_ips: set[str],
+    state: dict,
+    footprints: dict[str, dict],
+) -> list[dict]:
+    """
+    Tier 2: Active Footprint (Nmap/Nuclei) — strict triggers only.
+
+    Policy (industry-aligned for honeypot CTI):
+    - MUST be critical + block (score >= ACTIVE_MIN_SCORE)
+    - MUST have at least one targeted-exploitation signal
+    - SHOULD have completed passive scan first (waived for credential_theft)
+    - Max 1 active scan at a time; 7-day cooldown per IP
+    """
+    if not ACTIVE_ENABLED:
+        return []
+
+    candidates: list[dict] = []
+    alert_index = _build_alert_index(alerts)
+
+    critical_campaign_ips: set[str] = set()
+    for camp in campaigns:
+        if camp.get("max_threat_level") == "critical" and camp.get("ip_count", 0) >= 3:
+            critical_campaign_ips.update(camp.get("ips", []))
+
+    for ip, rep in reputation.items():
+        if not ip or is_private_ip(ip) or ip in noise_ips:
+            continue
+        if rep.get("threat_level") != "critical":
+            continue
+        if rep.get("action") != "block":
+            continue
+        score = rep.get("score", 0)
+        if score < ACTIVE_MIN_SCORE:
+            continue
+
+        reasons = rep.get("reasons", [])
+        ip_alerts = alert_index.get(ip, [])
+        passive_entry = _tier_entry(state, ip, "passive")
+        passive_done = (
+            passive_entry
+            and passive_entry.get("status") == "COMPLETED"
+        ) or ip in footprints
+        fp = footprints.get(ip, {})
+
+        triggers: list[str] = []
+
+        # Urgent: credential theft — may skip passive prerequisite
+        for alert in ip_alerts:
+            if alert.get("type") in URGENT_ALERT_TYPES:
+                triggers.append(f"alert:{alert['type']}")
+
+        if ip in critical_campaign_ips:
+            triggers.append("campaign:critical_coordinated")
+
+        if any(ACTIVE_REASON_PATTERN.search(r) for r in reasons):
+            triggers.append("reason:exploit_indicator")
+
+        malicious = len(fp.get("malicious_indicators", []))
+        if malicious >= 1:
+            triggers.append(f"osint:malicious_hits={malicious}")
+
+        related_domains = len(fp.get("domains", []))
+        if related_domains >= 3 and score >= 90:
+            triggers.append(f"osint:related_domains={related_domains}")
+
+        if not triggers:
+            continue
+
+        urgent = any(t.startswith("alert:credential_theft") for t in triggers)
+        if ACTIVE_REQUIRE_PASSIVE and not passive_done and not urgent:
+            logger.debug(
+                "Active skipped %s: passive scan not complete (triggers=%s)",
+                ip, triggers,
+            )
+            continue
+
+        priority = score + len(triggers) * 10 + (50 if urgent else 0)
+        candidates.append({
+            "ip": ip,
+            "tier": "active",
+            "priority": priority,
+            "threat_level": "critical",
+            "score": score,
+            "reasons": reasons[:8],
+            "active_triggers": triggers,
+            "passive_completed": passive_done,
+            "urgent": urgent,
+        })
+
+    ranked = sorted(candidates, key=lambda c: -c["priority"])
+    logger.info(
+        "Active candidates: %d (enabled=%s, require_passive=%s)",
+        len(ranked), ACTIVE_ENABLED, ACTIVE_REQUIRE_PASSIVE,
     )
+    return ranked
 
 
 async def run_footprint_cycle() -> dict:
-    """
-    One orchestration cycle:
-    1. Load threat intel outputs
-    2. Select candidates
-    3. Start new scans (rate-limited)
-    4. Poll running scans
-    5. Export + persist results
-    6. Write enriched campaigns
-    """
+    """Run passive + active scan orchestration cycle."""
     logger.info("=" * 60)
     logger.info("Footprint Orchestrator cycle starting")
     logger.info("=" * 60)
 
     client = SpiderFootClient()
     if not await client.ping():
-        logger.error("SpiderFoot not reachable at %s", os.environ.get("SPIDERFOOT_URL"))
+        logger.error("SpiderFoot not reachable")
         return {"status": "spiderfoot_unreachable"}
 
     reputation = _load_json(THREAT_DIR / "ip_reputation.json", {})
@@ -217,198 +348,201 @@ async def run_footprint_cycle() -> dict:
     noise_ips = _load_noise_ips()
 
     if not reputation:
-        logger.warning("No ip_reputation.json — run heuristic detector first")
         return {"status": "no_reputation_data"}
 
-    candidates = select_footprint_candidates(
-        reputation, alerts, campaigns, noise_ips
-    )
     state = _load_state()
     OSINT_DIR.mkdir(parents=True, exist_ok=True)
+    footprints = load_all_footprints()
+
+    passive_candidates = select_passive_candidates(
+        reputation, alerts, campaigns, noise_ips
+    )
+    active_candidates = select_active_candidates(
+        reputation, alerts, campaigns, noise_ips, state, footprints
+    )
 
     summary = {
         "status": "ok",
-        "candidates": len(candidates),
-        "new_scans": 0,
+        "passive_candidates": len(passive_candidates),
+        "active_candidates": len(active_candidates),
+        "new_passive": 0,
+        "new_active": 0,
         "completed": 0,
         "failed": 0,
         "skipped_cooldown": 0,
         "still_running": 0,
     }
 
-    # ── Poll existing RUNNING scans ──
-    for ip, entry in list(state.get("scans", {}).items()):
-        if entry.get("status") != "RUNNING":
+    # ── Poll all running scans ──
+    for ip, slot in list(state.get("scans", {}).items()):
+        if not isinstance(slot, dict):
             continue
-
-        scan_id = entry.get("scan_id")
-        if not scan_id or len(str(scan_id)) != 8:
-            entry["status"] = "FAILED"
-            entry["error"] = "invalid scan_id"
-            summary["failed"] += 1
-            continue
-
-        try:
-            rows = await client.scan_status(scan_id)
-            if not rows:
-                continue
-            status = str(rows[0][5] if len(rows[0]) > 5 else "UNKNOWN").upper()
-            entry["last_checked"] = datetime.now(timezone.utc).isoformat()
-
-            if status in ("FINISHED", "FINISHED-ERROR"):
-                await _finalize_scan(client, ip, scan_id, entry, reputation.get(ip, {}))
-                entry["status"] = "COMPLETED"
-                entry["completed_at"] = datetime.now(timezone.utc).isoformat()
-                summary["completed"] += 1
-                state["stats"]["completed"] = state["stats"].get("completed", 0) + 1
-            elif status.startswith("ERROR") or status.startswith("ABORT"):
-                entry["status"] = "FAILED"
-                entry["error"] = status
-                entry["completed_at"] = datetime.now(timezone.utc).isoformat()
-                summary["failed"] += 1
-                state["stats"]["failed"] = state["stats"].get("failed", 0) + 1
-                logger.warning("Scan %s for %s failed: %s", scan_id, ip, status)
-            else:
-                summary["still_running"] += 1
-
-        except SpiderFootError as exc:
-            logger.warning("Poll failed for %s: %s", ip, exc)
-
-    # ── Start new scans ──
-    new_started = 0
-    for cand in candidates:
-        if new_started >= MAX_NEW_SCANS:
-            break
-        if _running_count(state) >= MAX_CONCURRENT:
-            break
-
-        ip = cand["ip"]
-        if _in_cooldown(state, ip):
-            summary["skipped_cooldown"] += 1
-            continue
-
-        existing = state.get("scans", {}).get(ip, {})
-        if existing.get("status") == "RUNNING":
-            continue
-        if existing.get("status") == "COMPLETED" and _in_cooldown(state, ip):
-            summary["skipped_cooldown"] += 1
-            continue
-
-        scan_name = (
-            f"honeypot-{ip}-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
-        )
-        try:
-            scan_id = await client.start_scan(
-                ip,
-                scan_name,
-                usecase=SCAN_USECASE,
-            )
-            state.setdefault("scans", {})[ip] = {
-                "scan_id": scan_id,
-                "scan_name": scan_name,
-                "status": "RUNNING",
-                "started_at": datetime.now(timezone.utc).isoformat(),
-                "threat_level": cand["threat_level"],
-                "reputation_score": cand["score"],
-                "threat_reasons": cand["reasons"],
-                "priority": cand["priority"],
-            }
-            new_started += 1
-            summary["new_scans"] += 1
-            logger.info(
-                "Started footprint scan %s for %s (level=%s score=%d)",
-                scan_id, ip, cand["threat_level"], cand["score"],
-            )
-        except SpiderFootError as exc:
-            logger.error("Failed to start scan for %s: %s", ip, exc)
-            state.setdefault("scans", {})[ip] = {
-                "status": "FAILED",
-                "error": str(exc),
-                "started_at": datetime.now(timezone.utc).isoformat(),
-            }
-            summary["failed"] += 1
-
-    # ── Blocking wait for newly started scans if configured ──
-    wait_inline = os.environ.get("FOOTPRINT_WAIT_INLINE", "false").lower() == "true"
-    if wait_inline and new_started:
-        for ip, entry in state.get("scans", {}).items():
-            if entry.get("status") != "RUNNING":
+        for tier in ("passive", "active"):
+            entry = slot.get(tier)
+            if not entry or entry.get("status") != "RUNNING":
                 continue
             scan_id = entry.get("scan_id")
-            if not scan_id:
+            if not scan_id or len(str(scan_id)) != 8:
+                entry["status"] = "FAILED"
+                entry["error"] = "invalid scan_id"
+                summary["failed"] += 1
                 continue
             try:
-                final = await client.wait_for_scan(
-                    scan_id,
-                    poll_interval=POLL_INTERVAL,
-                    timeout=SCAN_TIMEOUT,
-                )
-                if final.startswith("FINISHED"):
+                rows = await client.scan_status(scan_id)
+                if not rows:
+                    continue
+                status = str(rows[0][5] if len(rows[0]) > 5 else "UNKNOWN").upper()
+                entry["last_checked"] = datetime.now(timezone.utc).isoformat()
+                if status in ("FINISHED", "FINISHED-ERROR"):
                     await _finalize_scan(
                         client, ip, scan_id, entry,
-                        reputation.get(ip, {}),
+                        reputation.get(ip, {}), tier,
                     )
                     entry["status"] = "COMPLETED"
                     entry["completed_at"] = datetime.now(timezone.utc).isoformat()
                     summary["completed"] += 1
-                else:
+                    key = f"{tier}_completed"
+                    state["stats"][key] = state["stats"].get(key, 0) + 1
+                elif status.startswith("ERROR") or status.startswith("ABORT"):
                     entry["status"] = "FAILED"
-                    entry["error"] = final
+                    entry["error"] = status
                     summary["failed"] += 1
+                else:
+                    summary["still_running"] += 1
             except SpiderFootError as exc:
-                entry["status"] = "FAILED"
-                entry["error"] = str(exc)
-                summary["failed"] += 1
+                logger.warning("Poll %s/%s failed: %s", ip, tier, exc)
 
-    # ── Write queue status + enriched campaigns ──
+    # ── Start passive scans ──
+    summary["new_passive"] = await _start_scans(
+        client, state, passive_candidates, "passive",
+        usecase=PASSIVE_USECASE,
+        max_new=PASSIVE_MAX_NEW,
+        max_concurrent=PASSIVE_MAX_CONCURRENT,
+        cooldown_hours=PASSIVE_COOLDOWN_HOURS,
+        summary=summary,
+    )
+
+    # ── Start active scans (heavy tooling) ──
+    summary["new_active"] = await _start_scans(
+        client, state, active_candidates, "active",
+        usecase=ACTIVE_USECASE,
+        max_new=ACTIVE_MAX_NEW,
+        max_concurrent=ACTIVE_MAX_CONCURRENT,
+        cooldown_hours=ACTIVE_COOLDOWN_HOURS,
+        summary=summary,
+    )
+
+    summary["new_scans"] = summary["new_passive"] + summary["new_active"]
     state["last_run"] = datetime.now(timezone.utc).isoformat()
     summary["still_running"] = _running_count(state)
     _save_state(state)
 
+    footprints = load_all_footprints()
     queue = {
         "generated_at": state["last_run"],
-        "candidates": len(candidates),
-        "running": _running_count(state),
+        "policy": {
+            "passive_usecase": PASSIVE_USECASE,
+            "active_usecase": ACTIVE_USECASE,
+            "active_enabled": ACTIVE_ENABLED,
+            "active_require_passive": ACTIVE_REQUIRE_PASSIVE,
+            "active_cooldown_hours": ACTIVE_COOLDOWN_HOURS,
+        },
+        "passive_candidates": len(passive_candidates),
+        "active_candidates": len(active_candidates),
+        "running": summary["still_running"],
         "scans": state.get("scans", {}),
         "summary": summary,
     }
     _save_json(THREAT_DIR / "footprint_queue.json", queue)
 
-    # Enrich campaigns with completed footprints
-    from .osint_enrichment import load_all_footprints
-    footprints = load_all_footprints()
     if footprints and campaigns:
         enriched = enrich_campaigns(campaigns, footprints)
         _save_json(THREAT_DIR / "campaigns_osint_enriched.json", enriched)
-        logger.info("Wrote campaigns_osint_enriched.json (%d campaigns)", len(enriched))
 
-    # Index of all footprints
-    index = {
+    _save_json(OSINT_DIR / "index.json", {
         "generated_at": state["last_run"],
         "count": len(footprints),
         "targets": {
             t: {
+                "tier": fp.get("scan_tier", "passive"),
                 "scan_id": fp.get("scan_id"),
                 "threat_level": fp.get("threat_level"),
-                "domains": len(fp.get("domains", [])),
-                "related_ips": len(fp.get("ipv4", {})),
                 "malicious": len(fp.get("malicious_indicators", [])),
             }
             for t, fp in footprints.items()
         },
-    }
-    _save_json(OSINT_DIR / "index.json", index)
+    })
 
-    logger.info("=" * 60)
     logger.info(
-        "Footprint cycle done: new=%d completed=%d failed=%d "
-        "cooldown_skip=%d running=%d",
-        summary["new_scans"], summary["completed"], summary["failed"],
-        summary["skipped_cooldown"], summary["still_running"],
+        "Cycle done: passive_new=%d active_new=%d completed=%d failed=%d running=%d",
+        summary["new_passive"], summary["new_active"],
+        summary["completed"], summary["failed"], summary["still_running"],
     )
-    logger.info("=" * 60)
-
     return summary
+
+
+async def _start_scans(
+    client: SpiderFootClient,
+    state: dict,
+    candidates: list[dict],
+    tier: ScanTier,
+    *,
+    usecase: str,
+    max_new: int,
+    max_concurrent: int,
+    cooldown_hours: int,
+    summary: dict,
+) -> int:
+    started = 0
+    for cand in candidates:
+        if started >= max_new:
+            break
+        if _running_count(state, tier) >= max_concurrent:
+            break
+
+        ip = cand["ip"]
+        existing = _tier_entry(state, ip, tier)
+
+        if existing and existing.get("status") == "RUNNING":
+            continue
+        if _in_cooldown(existing, cooldown_hours):
+            summary["skipped_cooldown"] += 1
+            continue
+
+        scan_name = f"honeypot-{tier}-{ip}-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
+        try:
+            scan_id = await client.start_scan(ip, scan_name, usecase=usecase)
+            entry = {
+                "scan_id": scan_id,
+                "scan_name": scan_name,
+                "scan_tier": tier,
+                "usecase": usecase,
+                "status": "RUNNING",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "threat_level": cand["threat_level"],
+                "reputation_score": cand["score"],
+                "threat_reasons": cand.get("reasons", []),
+                "priority": cand["priority"],
+            }
+            if tier == "active":
+                entry["active_triggers"] = cand.get("active_triggers", [])
+            _set_tier_entry(state, ip, tier, entry)
+            started += 1
+            logger.info(
+                "Started %s %s scan %s for %s (score=%d triggers=%s)",
+                usecase, tier, scan_id, ip, cand["score"],
+                cand.get("active_triggers", []),
+            )
+        except SpiderFootError as exc:
+            logger.error("Failed %s scan for %s: %s", tier, ip, exc)
+            _set_tier_entry(state, ip, tier, {
+                "status": "FAILED",
+                "error": str(exc),
+                "scan_tier": tier,
+                "started_at": datetime.now(timezone.utc).isoformat(),
+            })
+            summary["failed"] += 1
+    return started
 
 
 async def _finalize_scan(
@@ -417,26 +551,28 @@ async def _finalize_scan(
     scan_id: str,
     entry: dict,
     reputation: dict,
+    tier: ScanTier,
 ) -> None:
-    """Export scan results and write footprint JSON."""
+    """Export scan results; passive -> <ip>.json, active -> <ip>.active.json."""
     events = await client.export_json(scan_id)
     parsed = parse_spiderfoot_events(events, seed_target=ip, scan_id=scan_id)
-
+    parsed["scan_tier"] = tier
+    parsed["usecase"] = entry.get("usecase", "")
     parsed["threat_level"] = entry.get("threat_level") or reputation.get("threat_level")
     parsed["reputation_score"] = entry.get("reputation_score") or reputation.get("score")
     parsed["threat_reasons"] = entry.get("threat_reasons") or reputation.get("reasons", [])
+    parsed["active_triggers"] = entry.get("active_triggers", [])
     parsed["country"] = reputation.get("country", "Unknown")
     parsed["asn_honeypot"] = reputation.get("asn", "Unknown")
     parsed["scan_completed_at"] = datetime.now(timezone.utc).isoformat()
-    parsed["raw_events"] = events  # keep full export for rule gen deep-dive
+    parsed["raw_events"] = events
 
-    safe_name = ip.replace(":", "_").replace("/", "_")
-    out_path = OSINT_DIR / f"{safe_name}.json"
+    safe = ip.replace(":", "_").replace("/", "_")
+    suffix = ".active.json" if tier == "active" else ".json"
+    out_path = OSINT_DIR / f"{safe}{suffix}"
     _save_json(out_path, serialise_footprint(parsed))
     logger.info(
-        "Footprint saved: %s (%d events, %d domains, %d related IPs)",
-        out_path.name,
-        parsed["raw_event_count"],
-        len(parsed.get("domains", [])),
-        len(parsed.get("ipv4", {})),
+        "Saved %s footprint %s (%d events, %d malicious)",
+        tier, out_path.name, parsed["raw_event_count"],
+        len(parsed.get("malicious_indicators", [])),
     )

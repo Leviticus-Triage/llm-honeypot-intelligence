@@ -1,5 +1,5 @@
 [Unit]
-Description=LLM-Honeypot: hourly sync of 24h blocklist to T-Pot
+Description=LLM-Honeypot: hourly sync of 12h blocklist to T-Pot
 
 [Timer]
 OnCalendar=hourly

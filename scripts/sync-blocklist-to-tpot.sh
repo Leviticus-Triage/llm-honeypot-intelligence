@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sync 24h temporary blocklist + apply scripts from the rule generator to T-Pot.
+# Sync 12h temporary blocklist + apply scripts from the rule generator to T-Pot.
 # Uses ipset timeout (auto-expire) — works without fail2ban.
 #
 # Target files land in ~/tpotce/custom/ (same pattern as noise_ips.csv).

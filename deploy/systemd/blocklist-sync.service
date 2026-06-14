@@ -1,5 +1,5 @@
 [Unit]
-Description=LLM-Honeypot: sync 24h blocklist to T-Pot VM
+Description=LLM-Honeypot: sync 12h blocklist to T-Pot VM
 Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
 OnFailure=blocklist-sync-failure.service
 

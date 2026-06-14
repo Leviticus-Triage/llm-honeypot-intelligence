@@ -160,7 +160,9 @@ def _extract_domain(value: str) -> str | None:
 
 def load_all_footprints(base_dir: Path | None = None) -> dict[str, dict]:
     """
-    Load all completed footprint JSON files keyed by seed IP/target.
+    Load completed footprint JSON files keyed by seed IP/target.
+
+    Passive: <ip>.json — Active: <ip>.active.json (merged, active fields win).
     """
     base = base_dir or OSINT_DIR
     footprints: dict[str, dict] = {}
@@ -174,8 +176,15 @@ def load_all_footprints(base_dir: Path | None = None) -> dict[str, dict]:
         try:
             with open(path) as f:
                 payload = json.load(f)
-            target = payload.get("seed_target") or path.stem
-            footprints[target] = payload
+            stem = path.name
+            if stem.endswith(".active.json"):
+                target = payload.get("seed_target") or stem[: -len(".active.json")]
+            else:
+                target = payload.get("seed_target") or path.stem
+            if target in footprints:
+                footprints[target] = {**footprints[target], **payload}
+            else:
+                footprints[target] = payload
         except Exception as exc:
             logger.warning("Could not load footprint %s: %s", path, exc)
 

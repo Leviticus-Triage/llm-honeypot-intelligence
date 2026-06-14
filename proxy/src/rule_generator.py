@@ -46,8 +46,9 @@ ES_USER = os.environ.get("ES_USER", "")
 ES_PASS = os.environ.get("ES_PASS", "")
 RULES_DIR = Path(os.environ.get("RULES_DIR", "/data/ollama-proxy/generated-rules"))
 SINCE_HOURS = int(os.environ.get("RULEGEN_SINCE_HOURS", "24"))
-# Temporary ban duration (fail2ban bantime + ipset timeout). Default: 24 hours.
-BLOCK_BANTIME_SECONDS = int(os.environ.get("BLOCK_BANTIME_SECONDS", "86400"))
+# Temporary ban duration (fail2ban bantime + ipset timeout).
+# 12h is common for dynamic CTI blocklists (balances false-positive recovery vs protection).
+BLOCK_BANTIME_SECONDS = int(os.environ.get("BLOCK_BANTIME_SECONDS", "43200"))
 
 MIN_HITS_FOR_BLOCKLIST = 3
 MIN_HITS_FOR_RULE = 2

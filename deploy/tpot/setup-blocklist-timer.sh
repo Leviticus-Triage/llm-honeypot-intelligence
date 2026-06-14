@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup on T-Pot (VM400): hourly ipset blocklist apply with 24h auto-expire.
+# One-time setup on T-Pot (VM400): hourly ipset blocklist apply with 12h auto-expire.
 # Run as admin with sudo:
 #   cd ~/tpotce/custom && sudo bash setup-blocklist-timer.sh
 set -euo pipefail
@@ -42,7 +42,7 @@ systemctl daemon-reload
 systemctl enable --now honeypot-blocklist-apply.timer
 systemctl start honeypot-blocklist-apply.service
 
-echo "OK: honeypot-blocklist-apply.timer enabled (24h ipset bans, hourly refresh)"
+echo "OK: honeypot-blocklist-apply.timer enabled (12h ipset bans by default, hourly refresh)"
 systemctl list-timers honeypot-blocklist-apply.timer --no-pager
 
 # Optional fail2ban (if installed)
