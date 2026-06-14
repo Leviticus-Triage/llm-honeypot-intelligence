@@ -788,6 +788,11 @@ def write_results(features: list, reputation: dict, campaigns: list,
             "ips": noise_ips,
         }, f, indent=2)
 
+    # CSV for Logstash translate filter (synced to T-Pot VM)
+    with open(OUTPUT_DIR / "noise_ips.csv", "w") as f:
+        for entry in noise_ips:
+            f.write(f"{entry['ip']},noise\n")
+
     logger.info("Results written to %s (%d files)", OUTPUT_DIR, 7)
     logger.info("  Summary: %s", json.dumps(summary, default=str))
 

@@ -1136,3 +1136,49 @@ Es existieren zwei Klone des Repos (Dev-Klon = Code source of truth; Sync-Klon
 Dev-Klon/GitHub, „neueste Rules“ vom Sync-Klon (aus den Docker-Volumes). Sie
 treffen sich über GitHub. Detaillierte Pfade liegen in der internen
 Infra-Doku (nicht im öffentlichen Repo).
+
+## Anhang P – Noise-Reduktion + Infra-Stabilität + tpotce-Sync (2026-06-14)
+
+Drei parallele Spuren: VM-RAM/Swap stabilisieren, Hintergrundrauschen aus dem
+Signal-Pfad filtern (ohne Rohdaten-Hard-Drop), sichere Upstream-Daemon-Bumps.
+
+### P.1  VM Memory/Swap (Stabilität)
+
+| Parameter | Vorher | Nachher |
+|-----------|--------|---------|
+| Balloon | Mini-Range 7168/8192 | **aus** (fix 8 GiB) |
+| Swap | 8 GiB (zram voll + swap.img) | **12 GiB** (zram 4G + swapfile2 8G) |
+| MemAvailable | ~300 MiB unter Last | nach Reboot ~6,5 GiB frei |
+
+Recovery-Skripte (`fix-memory-budget.sh`, `recover-homelab-stack.sh`) auf
+`balloon: 0` reconciled.
+
+### P.2  Noise-Reduktion (Custom Stack)
+
+| Layer | Mechanismus | Datenverlust |
+|-------|-------------|--------------|
+| **Detection** | `threat_level=benign` für Mass-Scanner + Census-ASNs; `noise_ips.json/csv` | Nein |
+| **Proxy Ingress** | `noise_filter.py` → Canned-Antwort statt LLM-Call (`NOISE_FILTER_ENABLED`) | Nein |
+| **Rule-Gen** | benign IPs aus Firewall-Blocklist ausgeschlossen | Nein |
+| **ES Ingest** | Logstash-Filter taggt Noise → `logstash-noise-*` Index, ILM 3 Tage | Nein (kurze Retention) |
+
+Bewusst **kein Hard-Drop** aus dem Hauptindex — reversibel, Audit-freundlich.
+
+### P.3  Upstream tpotce (selektiv)
+
+42 Commits fast-forward (`h0neytr4p v0.44`, `ipphoney`, `honeytrap`, `heralding`,
+`honeyaml`, Alpine-Bases, CI-Tests). **Beelzebub/Galah unverändert** (LLM → Proxy
+auf `<ai-workstation>`). Port-Konflikt `h0neytr4p`: lokales `4443:443` beibehalten.
+
+### P.4  Geänderte Dateien
+
+```
+proxy/src/heuristic_detector.py   benign class + noise_ips.json/csv
+proxy/src/noise_filter.py         NEW — ingress short-circuit
+proxy/src/main.py                 hook + /proxy/stats noise_filter block
+proxy/src/rule_generator.py       exclude noise IPs from blocklists
+proxmox/custom-logstash-noise-filter.conf   NEW — ES noise tagging
+proxmox/setup-es-noise-ilm.sh     NEW — 3-day ILM for logstash-noise-*
+proxmox/fix-memory-budget.sh      balloon 0, updated recovery hints
+proxmox/recover-homelab-stack.sh  balloon 0
+```
