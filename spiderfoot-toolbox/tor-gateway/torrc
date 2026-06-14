@@ -1,0 +1,7 @@
+DataDirectory /var/lib/tor
+Log notice stdout
+SocksPort 127.0.0.1:9050 IsolateDestAddr
+TransPort 127.0.0.1:9040
+DNSPort 127.0.0.1:9053
+AutomapHostsOnResolve 1
+ClientOnly 1

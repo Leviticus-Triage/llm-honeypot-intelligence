@@ -46,7 +46,26 @@ docker compose up -d --build      # build + (re)start
 docker compose logs -f spiderfoot # watch
 ```
 
-## API keys (T-Pot / SpiderFoot export)
+## Anonyme Scan-Egress (Pflicht)
+
+Alle ausgehenden Scan-Verbindungen laufen über den Sidecar **`tor-gateway`**
+(`network_mode: service:tor-gateway` — gleiches Pattern wie Gluetun/VPN-Routing).
+
+- Transparent TCP + DNS → Tor (iptables `TransPort` / `DNSPort`)
+- SpiderFoot HTTP-Module zusätzlich: `_socks1type=TOR` → `127.0.0.1:9050`
+- Ohne healthy Tor startet SpiderFoot **nicht** (`depends_on`)
+- LAN bleibt direkt (UI auf `:5001` vom Heimnetz erreichbar)
+
+Verifikation:
+
+```bash
+chmod +x scripts/verify-egress.sh && ./scripts/verify-egress.sh
+```
+
+**Limits:** Tor ist langsam; viele API-Module blockieren Exit-Nodes. Nmap `-sS`
+ist unzuverlässig — TCP-Connect-Scans funktionieren. Optional später: Mullvad/
+Proton via Gluetun (WireGuard-Key in `secrets/`) für schnellere Scans.
+
 
 Place a SpiderFoot settings export as **`secrets/SpiderFoot.cfg`** next to
 `docker-compose.yml` (never commit — see `.gitignore`). On container start the

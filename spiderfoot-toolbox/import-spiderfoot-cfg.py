@@ -13,6 +13,9 @@ DB_PATH = "/var/lib/spiderfoot/spiderfoot.db"
 MOD_DIR = "/home/spiderfoot/modules/"
 
 TOOL_PATHS = {
+    "_socks1type": "TOR",
+    "_socks2addr": "127.0.0.1",
+    "_socks3port": "9050",
     "sfp_tool_dnstwist:dnstwistpath": "/opt/venv/bin/dnstwist",
     "sfp_tool_cmseek:cmseekpath": "/tools/CMSeeK/cmseek.py",
     "sfp_tool_whatweb:whatweb_path": "/tools/WhatWeb/whatweb",

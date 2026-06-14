@@ -8,6 +8,9 @@ python - <<'PY' || echo "WARN: tool-path seeding failed (UI will still start)"
 from spiderfoot import SpiderFootDb
 db = SpiderFootDb({"__database": "/var/lib/spiderfoot/spiderfoot.db"})
 db.configSet({
+    "_socks1type": "TOR",
+    "_socks2addr": "127.0.0.1",
+    "_socks3port": "9050",
     "sfp_tool_dnstwist:dnstwistpath": "/opt/venv/bin/dnstwist",
     "sfp_tool_cmseek:cmseekpath": "/tools/CMSeeK/cmseek.py",
     "sfp_tool_whatweb:whatweb_path": "/tools/WhatWeb/whatweb",

@@ -1,10 +1,23 @@
 # Dedicated, tool-equipped SpiderFoot on VM 200 (ai-workstation).
-# Separate from the T-Pot SpiderFoot so scanning load/traffic stays off the
-# honeypot VM. UI: http://192.168.2.116:5001
+# ALL outbound scan traffic is forced through Tor (tor-gateway) so targets
+# never see the home ISP IP. UI: http://192.168.2.116:5001/spiderfoot/
 #
 #   docker compose up -d --build
 #
 services:
+  tor-gateway:
+    build:
+      context: ./tor-gateway
+    image: spiderfoot-tor-gateway:local
+    container_name: spiderfoot-tor-gateway
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "5001:5001"
+    environment:
+      - TZ=Europe/Berlin
+
   spiderfoot:
     container_name: spiderfoot-toolbox
     build:
@@ -12,17 +25,17 @@ services:
       dockerfile: Dockerfile
     image: spiderfoot-toolbox:local
     restart: unless-stopped
-    # nmap raw-socket scans as the non-root spiderfoot user (binary has file caps).
+    network_mode: "service:tor-gateway"
+    depends_on:
+      tor-gateway:
+        condition: service_healthy
     cap_add:
       - NET_RAW
       - NET_ADMIN
-    ports:
-      - "5001:5001"
     volumes:
       - spiderfoot_data:/var/lib/spiderfoot
       - ./secrets:/run/spiderfoot-secrets:ro
-    # SpiderFoot 4 has no built-in auth by default. This binds on the LAN; keep it
-    # on a trusted network or front it with auth/reverse-proxy before wider exposure.
+    # Ports MUST be on tor-gateway when using network_mode: service:*
 
 volumes:
   spiderfoot_data:
