@@ -104,7 +104,8 @@ RUN mkdir -p "$SPIDERFOOT_DATA" "$SPIDERFOOT_LOGS" "$SPIDERFOOT_CACHE" /tools/CM
     && chown -R spiderfoot:spiderfoot "$SPIDERFOOT_DATA" /home/spiderfoot /tools/CMSeeK
 
 COPY --chown=spiderfoot:spiderfoot entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --chown=spiderfoot:spiderfoot import-spiderfoot-cfg.py /opt/import-spiderfoot-cfg.py
+RUN chmod +x /entrypoint.sh /opt/import-spiderfoot-cfg.py
 
 WORKDIR /home/spiderfoot
 USER spiderfoot

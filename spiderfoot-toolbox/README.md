@@ -46,6 +46,22 @@ docker compose up -d --build      # build + (re)start
 docker compose logs -f spiderfoot # watch
 ```
 
+## API keys (T-Pot / SpiderFoot export)
+
+Place a SpiderFoot settings export as **`secrets/SpiderFoot.cfg`** next to
+`docker-compose.yml` (never commit — see `.gitignore`). On container start the
+entrypoint imports it automatically and re-applies CLI tool paths.
+
+One-time manual import:
+
+```bash
+docker exec -w /home/spiderfoot -e PYTHONPATH=/home/spiderfoot spiderfoot-toolbox \
+  /opt/venv/bin/python /opt/import-spiderfoot-cfg.py /run/spiderfoot-secrets/SpiderFoot.cfg
+```
+
+Export from T-Pot UI: Settings → download **SpiderFoot.cfg**, or use the same
+file T-Pot ships for preconfigured modules.
+
 ## Notes
 
 - **nmap**: binary has `cap_net_raw,cap_net_admin` file-caps and the container

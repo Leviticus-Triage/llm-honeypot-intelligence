@@ -27,4 +27,12 @@ db.configSet({
 print("Seeded tool paths into SpiderFoot config.")
 PY
 
+# Optional API/module config export (never commit secrets/ to git).
+for cfg in /run/spiderfoot-secrets/SpiderFoot.cfg /run/spiderfoot-secrets/*.cfg; do
+    if [ -f "$cfg" ]; then
+        python /opt/import-spiderfoot-cfg.py "$cfg" || echo "WARN: API config import failed for $cfg"
+        break
+    fi
+done
+
 exec python sf.py -l 0.0.0.0:5001

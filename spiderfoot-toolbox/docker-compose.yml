@@ -20,6 +20,7 @@ services:
       - "5001:5001"
     volumes:
       - spiderfoot_data:/var/lib/spiderfoot
+      - ./secrets:/run/spiderfoot-secrets:ro
     # SpiderFoot 4 has no built-in auth by default. This binds on the LAN; keep it
     # on a trusted network or front it with auth/reverse-proxy before wider exposure.
 
