@@ -38,9 +38,12 @@ fi
 # previously populated dictionary gets cleared when noise subsides.
 lines="$(grep -c ',noise' "$TMP" 2>/dev/null || echo 0)"
 
-# 2. Sync to the T-Pot VM. -c (checksum) skips the transfer when unchanged, which
-#    avoids needless Logstash dictionary reloads.
-if rsync -az -c \
+# 2. Sync to the T-Pot VM.
+#    -c (checksum) skips the transfer when unchanged (no needless reloads).
+#    --inplace is CRITICAL: Logstash bind-mounts this single file by inode, so a
+#    temp-file+rename (rsync default) would orphan the container's view. --inplace
+#    writes into the existing inode, so updates reach the running container live.
+if rsync -az -c --inplace \
         -e "ssh -p ${TPOT_PORT} -o BatchMode=yes -o ConnectTimeout=10" \
         "$TMP" "${TPOT_HOST}:${TPOT_CSV}" 2>>"$LOG"; then
     log "Synced noise_ips.csv (${lines} IPs) -> ${TPOT_HOST}:${TPOT_CSV}"
