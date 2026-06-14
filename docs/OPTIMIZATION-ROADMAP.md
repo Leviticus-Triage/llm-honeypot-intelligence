@@ -1182,3 +1182,34 @@ proxmox/setup-es-noise-ilm.sh     NEW — 3-day ILM for logstash-noise-*
 proxmox/fix-memory-budget.sh      balloon 0, updated recovery hints
 proxmox/recover-homelab-stack.sh  balloon 0
 ```
+
+### P.5  Post-Verifikation (2026-06-14 Abend) — ES-TLS-Regression gefixt
+
+Bei der End-to-End-Verifikation aufgefallen: Der CodeQL-TLS-Fix vom **12.06.**
+(`13fd84a`) stellte `verify=False` auf `certifi` um. T-Pots ES-Endpoint
+(`nginx`, self-signed) schlug damit fehl → **alle ES-Consumer
+(rule-generator, heuristic-detector, c2-detector, ml-runner) erreichten ES
+seit 2 Tagen nicht** (`CERTIFICATE_VERIFY_FAILED`). Damit wäre auch die neue
+Noise-Klassifikation tot geblieben.
+
+Fix (`6a34eda`): `ES_INSECURE=${ES_INSECURE:-1}` an alle ES-Consumer in
+`proxy/docker-compose.yml` durchgereicht (LAN, fixe IP, vertrautes
+self-signed Cert; env-gesteuert → kein hardcoded `verify=False`, CodeQL-clean).
+
+Verifikation nach Fix:
+
+| Check | Ergebnis |
+|-------|----------|
+| heuristic-detector | 96 Sessions, 4 benign gefiltert, 18 IPs to block, v1.1 |
+| `noise_ips.json/.csv` | erzeugt (Volume `threat_output`) |
+| Proxy `noise_filter` | `noise_ips_loaded: 4`, enabled |
+| rule-generator | ES-Query ok (kein SSL-Fehler) |
+| LLM end-to-end (`/api/chat`) | `whoami` → `admin` (plausibel) |
+| ES ILM `logstash-noise-3d` | vorhanden |
+| h0neytr4p Port | `4443→443` (custom erhalten) |
+
+**VM 400 RAM-Realität:** Host ist übercommitted (Summe Gast-RAM ≈ 44 GiB auf
+31 GiB physisch). VM 400 läuft mit `balloon: 0`, bekommt real aber ~6,8 GiB +
+12 GiB Swap (Host kann die vollen 8 GiB nicht backen, solange alle Gäste
+laufen). Stabil — ES/Logstash/Kibana healthy. Echte 8 GiB fix nur durch
+Host-Entlastung (anderen Gast stoppen/verkleinern) erreichbar.
