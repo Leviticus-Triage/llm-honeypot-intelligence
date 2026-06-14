@@ -55,6 +55,9 @@ Alle ausgehenden Scan-Verbindungen laufen über den Sidecar **`tor-gateway`**
 - SpiderFoot HTTP-Module zusätzlich: `_socks1type=TOR` → `127.0.0.1:9050`
 - Ohne healthy Tor startet SpiderFoot **nicht** (`depends_on`)
 - LAN bleibt direkt (UI auf `:5001` vom Heimnetz erreichbar)
+- **Pflicht-Rotation:** `macchanger` alle **8–15 s** (random) auf `eth0`
+- **Pflicht-Rotation:** Tor-Exit via `SIGNAL NEWNYM` alle **30–60 s** (random)
+- Stirbt ein Rotator → Gateway beendet sich → **keine Scans ohne Rotation**
 
 Verifikation:
 

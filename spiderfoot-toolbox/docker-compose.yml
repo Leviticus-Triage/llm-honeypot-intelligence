@@ -17,6 +17,11 @@ services:
       - "5001:5001"
     environment:
       - TZ=Europe/Berlin
+      # Mandatory rotation (gateway exits if rotators die)
+      - MAC_ROTATE_MIN_SEC=8
+      - MAC_ROTATE_MAX_SEC=15
+      - TOR_ROTATE_MIN_SEC=30
+      - TOR_ROTATE_MAX_SEC=60
 
   spiderfoot:
     container_name: spiderfoot-toolbox

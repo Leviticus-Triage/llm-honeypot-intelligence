@@ -1,3 +1,7 @@
+ControlPort 127.0.0.1:9051
+CookieAuthentication 1
+# Force fresh circuits at least every 60s (backup to NEWNYM loop).
+MaxCircuitDirtiness 60
 DataDirectory /var/lib/tor
 Log notice stdout
 SocksPort 127.0.0.1:9050 IsolateDestAddr
