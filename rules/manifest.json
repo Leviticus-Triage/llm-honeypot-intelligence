@@ -1,30 +1,31 @@
 {
-  "generated_at": "2026-06-14T08:04:37.043393+00:00",
+  "generated_at": "2026-06-14T14:58:36.658120+00:00",
   "source": "LLM Honeypot Intelligence Platform",
   "version": "2.0",
   "window_hours": 24,
   "input_events": {
-    "beelzebub": 388,
+    "beelzebub": 1000,
     "galah": 0,
-    "unique_ips": 574,
-    "normalised_commands": 2881,
-    "countries": 33,
-    "asns": 46
+    "unique_ips": 567,
+    "normalised_commands": 3874,
+    "countries": 35,
+    "asns": 45
   },
   "output": {
-    "sigma": 3,
-    "yara": 2,
+    "sigma": 4,
+    "yara": 3,
     "suricata": 30,
-    "firewall_ips": 499,
-    "stix_objects": 57,
-    "iocs": 201,
+    "firewall_ips": 498,
+    "stix_objects": 58,
+    "iocs": 236,
     "report": 1,
-    "cve_rules": 15
+    "cve_rules": 14
   },
   "files": [
     "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_system_reconnaissance.yml",
     "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_command_execution.yml",
     "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_tool_download_c2.yml",
+    "/data/ollama-proxy/generated-rules/sigma/honeypot_ssh_persistence_mechanism.yml",
     "/data/ollama-proxy/generated-rules/yara/honeypot_rules.yar",
     "/data/ollama-proxy/generated-rules/suricata/honeypot.rules",
     "/data/ollama-proxy/generated-rules/firewall/blocklist_iptables.sh",
@@ -36,105 +37,98 @@
     "/data/ollama-proxy/generated-rules/cve/CVE-2024-6387.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2024-1709.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2026-1731.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2024-21887.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2024-24919.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2024-20353.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2023-46805.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2024-55591.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2025-40536.yml",
+    "/data/ollama-proxy/generated-rules/cve/CVE-2024-21887.yml",
+    "/data/ollama-proxy/generated-rules/cve/CVE-2024-47575.yml",
+    "/data/ollama-proxy/generated-rules/cve/CVE-2023-4966.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2024-3400.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2025-0282.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2023-4966.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2024-43468.yml",
-    "/data/ollama-proxy/generated-rules/cve/CVE-2024-47575.yml",
+    "/data/ollama-proxy/generated-rules/cve/CVE-2023-46805.yml",
+    "/data/ollama-proxy/generated-rules/cve/CVE-2024-24919.yml",
+    "/data/ollama-proxy/generated-rules/cve/CVE-2025-40536.yml",
     "/data/ollama-proxy/generated-rules/cve/CVE-2024-23897.yml"
   ],
   "cves_covered": [
     "CVE-2024-6387",
     "CVE-2024-1709",
     "CVE-2026-1731",
-    "CVE-2024-21887",
-    "CVE-2024-24919",
     "CVE-2024-20353",
-    "CVE-2023-46805",
-    "CVE-2024-55591",
-    "CVE-2025-40536",
+    "CVE-2024-21887",
+    "CVE-2024-47575",
+    "CVE-2023-4966",
     "CVE-2024-3400",
     "CVE-2025-0282",
-    "CVE-2023-4966",
     "CVE-2024-43468",
-    "CVE-2024-47575",
+    "CVE-2023-46805",
+    "CVE-2024-24919",
+    "CVE-2025-40536",
     "CVE-2024-23897"
   ],
   "cve_coverage_detail": [
     {
       "cve_id": "CVE-2024-6387",
-      "sessions": 24370,
+      "sessions": 30990,
       "sample_cmds": []
     },
     {
       "cve_id": "CVE-2024-1709",
-      "sessions": 5857,
+      "sessions": 4750,
       "sample_cmds": []
     },
     {
       "cve_id": "CVE-2026-1731",
-      "sessions": 3670,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2024-21887",
-      "sessions": 2421,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2024-24919",
-      "sessions": 1233,
+      "sessions": 2658,
       "sample_cmds": []
     },
     {
       "cve_id": "CVE-2024-20353",
-      "sessions": 1166,
+      "sessions": 855,
       "sample_cmds": []
     },
     {
-      "cve_id": "CVE-2023-46805",
-      "sessions": 994,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2024-55591",
-      "sessions": 585,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2025-40536",
-      "sessions": 521,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2024-3400",
-      "sessions": 492,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2025-0282",
-      "sessions": 492,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2023-4966",
-      "sessions": 466,
-      "sample_cmds": []
-    },
-    {
-      "cve_id": "CVE-2024-43468",
-      "sessions": 335,
+      "cve_id": "CVE-2024-21887",
+      "sessions": 855,
       "sample_cmds": []
     },
     {
       "cve_id": "CVE-2024-47575",
-      "sessions": 325,
+      "sessions": 480,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2023-4966",
+      "sessions": 475,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2024-3400",
+      "sessions": 380,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2025-0282",
+      "sessions": 380,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2024-43468",
+      "sessions": 287,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2023-46805",
+      "sessions": 276,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2024-24919",
+      "sessions": 247,
+      "sample_cmds": []
+    },
+    {
+      "cve_id": "CVE-2025-40536",
+      "sessions": 150,
       "sample_cmds": []
     },
     {

@@ -2,8 +2,8 @@ title: Honeypot - SSH System Reconnaissance
 id: eec9ac59-50be-51cf-b1ba-776096287a6a
 status: experimental
 level: medium
-description: System reconnaissance commands observed on SSH honeypot. 1615 events,
-  8 source IPs, 15 unique patterns.
+description: System reconnaissance commands observed on SSH honeypot. 2120 events,
+  5 source IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
 date: 2026/06/14
 references:
@@ -19,21 +19,21 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - ls --help 2>&1
-    - dmidecode -s processor-version 2>/dev/null
-    - uname -m 2>/dev/null
-    - nproc --all
-    - nvidia-smi -q
-    - nproc 2>/dev/null
-    - which ps 2>/dev/null
-    - /bin/./uname -s -v -n -r -m
+    - ps aux
     - uname -s -v -n -m 2>/dev/null
-    - cat /proc/uptime 2>/dev/null
-    - lspci 2>/dev/null
+    - nproc
+    - lscpu
+    - uname -n
+    - grep -c "^processor" /proc/cpuinfo 2>/dev/null
+    - kill -9 $pid 2>/dev/null
+    - gpu_info=$( (lspci 2>/dev/null
     - cat --help 2>&1
-    - lspci
+    - grep -i nvidia) 2>/dev/null
+    - uname -m
+    - dmidecode -s processor-version 2>/dev/null
+    - cat /proc/uptime 2>/dev/null
+    - nproc 2>/dev/null
     - lscpu 2>/dev/null
-    - uptime -p
   condition: selection
 falsepositives:
 - Legitimate system administration

