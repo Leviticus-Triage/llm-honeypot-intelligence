@@ -35,6 +35,13 @@ CACHE_DB = os.environ.get("CACHE_DB", "/data/ollama-proxy/cache.db")
 OUTPUT_DIR = Path(os.environ.get("THREAT_DIR", "/data/ollama-proxy/threat-intel"))
 SINCE_HOURS = int(os.environ.get("HEURISTIC_SINCE_HOURS", "24"))
 
+# Known benign scanner / census AS org substrings (case-insensitive)
+BENIGN_ASN_PATTERNS = (
+    "censys", "shodan", "internet measurement", "internet-census",
+    "shadowserver", "binary edge", "rapid7", "sonar", "stretchoid",
+    "research scanner", "university", "academic", "netcraft",
+)
+
 # ─── Feature Extraction Constants ──────────────────────────────────────
 
 # Known attacker toolkit fingerprints (command sequences)
@@ -400,11 +407,56 @@ def run_campaign_clustering(features: list[dict], matrix: np.ndarray) -> list[di
     return features
 
 
+def _has_exploit_signals(feat: dict) -> bool:
+    """True when session shows non-noise attack indicators."""
+    if feat.get("tk_credential_stealer", 0) > 0.2:
+        return True
+    if feat.get("tk_botnet_installer", 0) > 0.2:
+        return True
+    if feat.get("http_exploit_attempts", 0) > 0:
+        return True
+    if feat.get("http_traversal", 0) > 0:
+        return True
+    if feat.get("cat_evasion", 0) > 0:
+        return True
+    if feat.get("cat_exfiltration", 0) > 0:
+        return True
+    if feat.get("cat_persistence", 0) > 0:
+        return True
+    if feat.get("cat_lateral", 0) > 0:
+        return True
+    if feat.get("anomaly_label") == "anomaly" and feat.get("anomaly_score", 0) > 0.3:
+        return True
+    return False
+
+
+def _is_benign_scanner(feat: dict) -> tuple[bool, list[str]]:
+    """Classify mass scanners / census noise without exploit signals."""
+    reasons: list[str] = []
+    asn = str(feat.get("asn", "")).lower()
+
+    if feat.get("event_count", 0) > 100 and feat.get("cmd_diversity", 1) < 0.1:
+        if not _has_exploit_signals(feat):
+            reasons.append("Mass scanner pattern (high volume, low diversity)")
+
+    if asn and any(p in asn for p in BENIGN_ASN_PATTERNS):
+        if not _has_exploit_signals(feat):
+            reasons.append(f"Benign scanner ASN ({feat.get('asn', 'Unknown')})")
+
+    return (len(reasons) > 0, reasons)
+
+
 def compute_threat_classification(features: list[dict]) -> list[dict]:
     """Rule-based + ML threat classification."""
     for feat in features:
         threat_level = "low"
         threat_reasons = []
+
+        is_benign, benign_reasons = _is_benign_scanner(feat)
+        if is_benign:
+            feat["threat_level"] = "benign"
+            feat["threat_reasons"] = benign_reasons
+            continue
 
         # High-confidence heuristic rules
         if feat.get("tk_credential_stealer", 0) > 0.3:
@@ -449,7 +501,7 @@ def compute_threat_classification(features: list[dict]) -> list[dict]:
                 threat_level = "medium"
             threat_reasons.append(f"ML anomaly (score: {feat.get('anomaly_score', 0):.3f})")
 
-        # Mass scanner detection (high volume, low diversity)
+        # Mass scanner detection (high volume, low diversity) — with exploit signals stays classified
         if feat.get("event_count", 0) > 100 and feat.get("cmd_diversity", 1) < 0.1:
             if not threat_reasons:
                 threat_level = "low"
@@ -479,6 +531,23 @@ def build_ip_reputation(features: list[dict]) -> dict:
 
     for feat in features:
         ip = feat["ip"]
+        level = feat.get("threat_level", "low")
+
+        if level == "benign":
+            reputation[ip] = {
+                "score": 5,
+                "action": "ignore",
+                "threat_level": "benign",
+                "reasons": feat.get("threat_reasons", []),
+                "country": feat.get("country", "Unknown"),
+                "asn": feat.get("asn", "Unknown"),
+                "fingerprint": feat.get("fingerprint", ""),
+                "campaign_id": feat.get("campaign_id", -1),
+                "events": feat.get("event_count", 0),
+                "honeypot": feat.get("honeypot", "unknown"),
+            }
+            continue
+
         score = 50  # neutral
 
         # Increase threat score
@@ -587,7 +656,7 @@ def generate_predictive_alerts(features: list[dict], reputation: dict, campaigns
     timestamp = datetime.now(timezone.utc).isoformat()
 
     # Alert: New anomalous IPs
-    anomalous = [f for f in features if f.get("anomaly_label") == "anomaly"]
+    anomalous = [f for f in features if f.get("anomaly_label") == "anomaly" and f.get("threat_level") != "benign"]
     for feat in anomalous:
         if feat.get("threat_level") in ("critical", "high"):
             alerts.append({
@@ -618,7 +687,7 @@ def generate_predictive_alerts(features: list[dict], reputation: dict, campaigns
             })
 
     # Alert: Credential theft attempts
-    cred_thieves = [f for f in features if f.get("tk_credential_stealer", 0) > 0.3]
+    cred_thieves = [f for f in features if f.get("tk_credential_stealer", 0) > 0.3 and f.get("threat_level") != "benign"]
     if cred_thieves:
         ips = [f["ip"] for f in cred_thieves]
         alerts.append({
@@ -650,13 +719,15 @@ def write_results(features: list, reputation: dict, campaigns: list,
 
     # 1. Threat summary
     levels = Counter(f.get("threat_level", "low") for f in features)
+    benign_count = levels.get("benign", 0)
     summary = {
         "generated_at": ts_str,
-        "version": "1.0",
+        "version": "1.1",
         "source": "LLM Honeypot Intelligence Platform - Heuristic Detector",
         "window_hours": SINCE_HOURS,
         "total_sessions": len(features),
         "threat_distribution": dict(levels),
+        "benign_filtered": benign_count,
         "anomalies_detected": sum(1 for f in features if f.get("anomaly_label") == "anomaly"),
         "campaigns_identified": len(campaigns),
         "alerts_generated": len(alerts),
@@ -700,7 +771,24 @@ def write_results(features: list, reputation: dict, campaigns: list,
         } for ip in alert_ips]
         json.dump(watchlist, f, indent=2, default=str)
 
-    logger.info("Results written to %s (%d files)", OUTPUT_DIR, 6)
+    # 6. Noise IP list (for proxy ingress filter + rule exclusion)
+    noise_ips = sorted([
+        {
+            "ip": feat["ip"],
+            "reasons": feat.get("threat_reasons", []),
+            "asn": feat.get("asn", "Unknown"),
+            "events": feat.get("event_count", 0),
+        }
+        for feat in features if feat.get("threat_level") == "benign"
+    ], key=lambda x: x["events"], reverse=True)
+    with open(OUTPUT_DIR / "noise_ips.json", "w") as f:
+        json.dump({
+            "generated_at": ts_str,
+            "count": len(noise_ips),
+            "ips": noise_ips,
+        }, f, indent=2)
+
+    logger.info("Results written to %s (%d files)", OUTPUT_DIR, 7)
     logger.info("  Summary: %s", json.dumps(summary, default=str))
 
     return summary

@@ -28,6 +28,7 @@ from .embeddings import (
 )
 from .models import get_cache_stats, init_db
 from .task_router import TaskRouter
+from .noise_filter import NoiseFilter
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -82,11 +83,12 @@ http_client: httpx.AsyncClient = None
 cache: HybridCache = None
 cve_engine: CVEEngine = None
 task_router: TaskRouter = None
+noise_filter: NoiseFilter = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global http_client, cache, cve_engine, task_router
+    global http_client, cache, cve_engine, task_router, noise_filter
 
     logger.info("Starting Ollama Proxy")
     logger.info("  Upstream: %s", UPSTREAM)
@@ -136,6 +138,9 @@ async def lifespan(app: FastAPI):
     # Init Task Router (multi-LLM routing based on X-LLM-Task header / _task field)
     task_router = TaskRouter(config)
 
+    noise_filter = NoiseFilter()
+    logger.info("  Noise filter: %s", "enabled" if noise_filter.enabled else "disabled")
+
     stats = get_cache_stats()
     logger.info("Cache loaded: %d prompts, %d responses", stats["total_prompts"], stats["total_responses"])
 
@@ -172,11 +177,13 @@ async def proxy_stats():
     """Return proxy cache statistics."""
     db_stats = get_cache_stats()
     cache_stats = cache.stats if cache else {}
+    noise_stats = noise_filter.stats() if noise_filter else {}
     return JSONResponse({
         "proxy": "ollama-proxy",
         "upstream": UPSTREAM,
         "database": db_stats,
         "session_cache": cache_stats,
+        "noise_filter": noise_stats,
         "config": {
             "semantic_threshold": config["semantic_threshold"],
             "exploration_rate": config["exploration_rate"],
@@ -558,6 +565,17 @@ async def api_chat(request: Request):
                 return _build_chat_response(cached["response_text"], model)
     else:
         logger.debug("EXPLORE: bypassing cache for fresh generation")
+
+    # Noise ingress filter — short-circuit known scanners before LLM call
+    if noise_filter and prompt_text:
+        short, canned, reason = noise_filter.check(src_ip, prompt_text)
+        if short:
+            elapsed = (time.time() - t0) * 1000
+            logger.info(
+                "NOISE SHORTCIRCUIT [%.0fms] reason=%s ip=%s",
+                elapsed, reason, src_ip[:15],
+            )
+            return _build_chat_response(canned, model)
 
     # Step 3: Cache miss - forward to upstream Ollama.
     # Honour the task-specific read timeout from the router (e.g. 30s for

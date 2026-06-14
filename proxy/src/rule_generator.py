@@ -983,6 +983,22 @@ def generate_suricata_rules(data: dict) -> list[str]:
 
 # ─── Firewall Blocklist Generator ────────────────────────────────────
 
+def _load_noise_ips() -> set[str]:
+    """IPs classified as benign noise — exclude from blocklists."""
+    path = Path(os.environ.get(
+        "NOISE_IPS_PATH", "/data/ollama-proxy/threat-intel/noise_ips.json"
+    ))
+    if not path.exists():
+        return set()
+    try:
+        with open(path) as f:
+            payload = json.load(f)
+        return {e["ip"] for e in payload.get("ips", []) if e.get("ip")}
+    except Exception:
+        logger.warning("Could not load noise_ips.json for rule exclusion")
+        return set()
+
+
 def generate_firewall_rules(data: dict) -> dict:
     """Generate firewall blocklists and rules from attacker IPs."""
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -992,8 +1008,14 @@ def generate_firewall_rules(data: dict) -> dict:
     active_attackers = []
     all_attackers = []
 
+    noise_ips = _load_noise_ips()
+    skipped_noise = 0
+
     for ip, count in data["all_src_ips"].most_common():
         if not ip or ip.startswith("192.168.") or ip.startswith("10.") or ip.startswith("172."):
+            continue
+        if ip in noise_ips:
+            skipped_noise += 1
             continue
         all_attackers.append((ip, count))
         is_scanner = any(ip.startswith(prefix) for prefix in KNOWN_SCANNER_PREFIXES)
@@ -1012,7 +1034,8 @@ def generate_firewall_rules(data: dict) -> dict:
         "# LLM Honeypot Intelligence - Firewall Blocklist",
         f"# Generated: {timestamp}",
         f"# Total: {len(all_attackers)} IPs | Blocked: "
-        f"{len(mass_scanners)} scanners + {len(repeat_offenders)} repeat + {len(active_attackers)} active",
+        f"{len(mass_scanners)} scanners + {len(repeat_offenders)} repeat + {len(active_attackers)} active"
+        f" | Noise excluded: {skipped_noise}",
         "",
         "# Mass Scanners (known infrastructure)",
     ]
