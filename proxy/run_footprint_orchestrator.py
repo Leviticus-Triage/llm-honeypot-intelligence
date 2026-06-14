@@ -38,9 +38,12 @@ def main():
             summary = asyncio.run(run_footprint_cycle())
             if summary.get("status") == "ok":
                 logger.info(
-                    "Cycle: candidates=%d new=%d completed=%d failed=%d running=%d",
-                    summary.get("candidates", 0),
-                    summary.get("new_scans", 0),
+                    "Cycle: passive=%d active=%d new_p=%d new_a=%d "
+                    "completed=%d failed=%d running=%d",
+                    summary.get("passive_candidates", 0),
+                    summary.get("active_candidates", 0),
+                    summary.get("new_passive", 0),
+                    summary.get("new_active", 0),
                     summary.get("completed", 0),
                     summary.get("failed", 0),
                     summary.get("still_running", 0),
