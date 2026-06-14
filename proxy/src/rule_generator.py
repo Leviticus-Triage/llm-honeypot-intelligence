@@ -33,6 +33,11 @@ from typing import Optional
 import httpx
 
 from .es_client import es_client_kwargs
+from .osint_enrichment import (
+    aggregate_osint,
+    load_all_footprints,
+    merge_osint_into_iocs,
+)
 
 logger = logging.getLogger("ollama-proxy.rule_generator")
 
@@ -41,6 +46,8 @@ ES_USER = os.environ.get("ES_USER", "")
 ES_PASS = os.environ.get("ES_PASS", "")
 RULES_DIR = Path(os.environ.get("RULES_DIR", "/data/ollama-proxy/generated-rules"))
 SINCE_HOURS = int(os.environ.get("RULEGEN_SINCE_HOURS", "24"))
+# Temporary ban duration (fail2ban bantime + ipset timeout). Default: 24 hours.
+BLOCK_BANTIME_SECONDS = int(os.environ.get("BLOCK_BANTIME_SECONDS", "86400"))
 
 MIN_HITS_FOR_BLOCKLIST = 3
 MIN_HITS_FOR_RULE = 2
@@ -1091,6 +1098,144 @@ def generate_firewall_rules(data: dict) -> dict:
     return result
 
 
+# ─── Fail2ban + OSINT Blocklist Generator ────────────────────────────
+
+def generate_fail2ban_rules(
+    data: dict,
+    iocs: dict,
+    osint_agg: dict | None = None,
+) -> dict:
+    """
+    Generate fail2ban configs and static IP blocklists from honeypot +
+    OSINT footprint enrichment.
+
+    Outputs consumable by:
+    - fail2ban-client set <jail> banip <ip>
+    - /etc/fail2ban/jail.d/ drop-in
+    - ipset/nftables companion scripts
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    noise_ips = _load_noise_ips()
+
+    # Primary: high-hit honeypot attackers
+    block_ips: dict[str, str] = {}
+    for ip, count in data.get("all_src_ips", Counter()).most_common():
+        if not ip or ip.startswith(("192.168.", "10.", "172.")):
+            continue
+        if ip in noise_ips:
+            continue
+        if count >= MIN_HITS_FOR_BLOCKLIST:
+            block_ips[ip] = f"honeypot hits={count}"
+
+    # OSINT: seed targets with critical/high footprints + related malicious IPs
+    if osint_agg:
+        for target, meta in (osint_agg.get("targets") or {}).items():
+            if meta.get("threat_level") in ("critical", "high"):
+                block_ips.setdefault(
+                    target,
+                    f"osint footprint level={meta.get('threat_level')}",
+                )
+        for hit in (osint_agg.get("malicious_indicators") or [])[:50]:
+            data_val = hit.get("data", "")
+            if re.match(r"^\d+\.\d+\.\d+\.\d+$", data_val) and data_val not in noise_ips:
+                block_ips.setdefault(data_val, f"osint malicious {hit.get('type')}")
+
+    sorted_ips = sorted(block_ips.items(), key=lambda x: x[0])
+
+    blocklist_txt = [
+        "# LLM Honeypot Intelligence - fail2ban / ipset blocklist",
+        f"# Generated: {timestamp}",
+        f"# Ban duration: {BLOCK_BANTIME_SECONDS}s ({BLOCK_BANTIME_SECONDS // 3600}h)",
+        f"# Total: {len(sorted_ips)} IPs (honeypot + OSINT footprints)",
+        "",
+    ]
+    for ip, reason in sorted_ips:
+        blocklist_txt.append(f"{ip}  # {reason}")
+
+    bantime_hours = BLOCK_BANTIME_SECONDS // 3600
+    jail_conf = f"""# LLM Honeypot Intelligence - OSINT-enriched temporary ban jail
+# Generated: {timestamp}
+# Bans expire after {bantime_hours}h (bantime={BLOCK_BANTIME_SECONDS})
+# Deploy: sudo bash deploy-honeypot-blocklist.sh
+
+[honeypot-osint]
+enabled = true
+filter = honeypot-osint
+action = iptables-allports[name=honeypot-osint]
+logpath = /dev/null
+backend = polling
+bantime = {BLOCK_BANTIME_SECONDS}
+findtime = 1
+maxretry = 1
+"""
+
+    filter_conf = """# Dummy filter — bans applied via fail2ban-client banip
+[Definition]
+failregex = ^$
+ignoreregex =
+"""
+
+    deploy_sh = f"""#!/bin/bash
+# Apply honeypot+OSINT blocklist to fail2ban jail honeypot-osint
+# Generated: {timestamp}
+# Each ban expires after {bantime_hours}h (jail bantime={BLOCK_BANTIME_SECONDS})
+set -euo pipefail
+JAIL="${{JAIL:-honeypot-osint}}"
+LIST="$(dirname "$0")/blocklist_honeypot_osint.txt"
+if ! fail2ban-client status "$JAIL" &>/dev/null; then
+  echo "Jail $JAIL not loaded — copy jail.d + filter.d first, then: systemctl reload fail2ban"
+  exit 1
+fi
+count=0
+while IFS= read -r line; do
+  [[ "$line" =~ ^#.*$ ]] && continue
+  [[ -z "$line" ]] && continue
+  ip="${{line%% *}}"
+  fail2ban-client set "$JAIL" banip "$ip" 2>/dev/null && count=$((count+1)) || true
+done < "$LIST"
+echo "Banned $count IPs in jail $JAIL (bantime=${BLOCK_BANTIME_SECONDS}s)"
+"""
+
+    ipset_lines = [
+        "#!/bin/bash",
+        "# LLM Honeypot Intelligence - ipset temporary blocklist (no fail2ban required)",
+        f"# Generated: {timestamp}",
+        f"# Each IP auto-expires after {BLOCK_BANTIME_SECONDS}s ({bantime_hours}h)",
+        "set -euo pipefail",
+        f'BANTIME={BLOCK_BANTIME_SECONDS}',
+        'IPSET_NAME="${IPSET_NAME:-honeypot-ban}"',
+        'LIST="$(dirname "$0")/blocklist_honeypot_osint.txt"',
+        "",
+        'if ! ipset list "$IPSET_NAME" &>/dev/null; then',
+        '  ipset create "$IPSET_NAME" hash:ip family inet hashsize 4096 maxelem 65536 timeout "$BANTIME"',
+        "fi",
+        'if ! iptables -C INPUT -m set --match-set "$IPSET_NAME" src -j DROP 2>/dev/null; then',
+        '  iptables -I INPUT -m set --match-set "$IPSET_NAME" src -j DROP',
+        "fi",
+        "count=0",
+        'while IFS= read -r line; do',
+        '  [[ "$line" =~ ^#.*$ ]] && continue',
+        '  [[ -z "$line" ]] && continue',
+        '  ip="${line%% *}"',
+        '  ipset add "$IPSET_NAME" "$ip" timeout "$BANTIME" -exist && count=$((count+1)) || true',
+        'done < "$LIST"',
+        'echo "Applied $count IPs to ipset $IPSET_NAME (timeout=${BANTIME}s)"',
+    ]
+
+    return {
+        "blocklist": "\n".join(blocklist_txt),
+        "jail": jail_conf,
+        "filter": filter_conf,
+        "deploy_script": deploy_sh,
+        "ipset_script": "\n".join(ipset_lines),
+        "stats": {
+            "blocked_ips": len(sorted_ips),
+            "osint_targets": len((osint_agg or {}).get("targets", {})),
+            "bantime_seconds": BLOCK_BANTIME_SECONDS,
+        },
+    }
+
+
 # ─── STIX 2.1 Bundle Generator ───────────────────────────────────────
 
 def generate_stix_bundle(data: dict, iocs: dict, sigma_rules: list) -> dict:
@@ -1389,7 +1534,7 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     summary = {"files": [], "counts": {}}
 
-    for subdir in ["sigma", "yara", "suricata", "firewall", "stix", "iocs", "reports"]:
+    for subdir in ["sigma", "yara", "suricata", "firewall", "fail2ban", "stix", "iocs", "reports"]:
         d = RULES_DIR / subdir
         d.mkdir(parents=True, exist_ok=True)
         # Clean old files before writing new ones
@@ -1444,6 +1589,33 @@ def write_rules(sigma_rules: list, yara_rules: list, suricata_rules: list,
                 summary["files"].append(str(path))
         summary["counts"]["firewall_ips"] = firewall.get("stats", {}).get("blocked_total", 0)
         logger.info("Wrote firewall rules (%d IPs blocked)", firewall.get("stats", {}).get("blocked_total", 0))
+
+    # Fail2ban (honeypot + OSINT blocklists)
+    fail2ban = data.get("_fail2ban")
+    if fail2ban:
+        f2b_dir = RULES_DIR / "fail2ban"
+        f2b_files = {
+            "blocklist_honeypot_osint.txt": fail2ban.get("blocklist", ""),
+            "jail.d/honeypot-osint.local": fail2ban.get("jail", ""),
+            "filter.d/honeypot-osint.conf": fail2ban.get("filter", ""),
+            "deploy-honeypot-blocklist.sh": fail2ban.get("deploy_script", ""),
+            "apply-ipset-temp-blocklist.sh": fail2ban.get("ipset_script", ""),
+        }
+        for rel_path, content in f2b_files.items():
+            if not content:
+                continue
+            path = f2b_dir / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w") as f:
+                f.write(content)
+            if rel_path.endswith(".sh"):
+                path.chmod(0o755)
+            summary["files"].append(str(path))
+        summary["counts"]["fail2ban_ips"] = fail2ban.get("stats", {}).get("blocked_ips", 0)
+        logger.info(
+            "Wrote fail2ban blocklist (%d IPs)",
+            fail2ban.get("stats", {}).get("blocked_ips", 0),
+        )
 
     # STIX Bundle
     if stix_bundle:
@@ -1689,8 +1861,19 @@ async def run_rule_generation() -> dict:
         logger.warning("CVE coverage fetch failed: %s", e)
         data["cve_coverage"] = []
 
-    # 2. Extract IOCs
+    # 2. Extract IOCs (+ merge OSINT footprints if available)
     iocs = extract_iocs(data)
+    footprints = load_all_footprints()
+    osint_agg = aggregate_osint(footprints) if footprints else None
+    if osint_agg and osint_agg.get("footprint_count", 0) > 0:
+        iocs = merge_osint_into_iocs(iocs, osint_agg)
+        data["osint_footprints"] = osint_agg
+        logger.info(
+            "OSINT enrichment: %d footprints, +%d related IPs, +%d domains",
+            osint_agg["footprint_count"],
+            len(osint_agg.get("ipv4", {})),
+            len(osint_agg.get("domains", set())),
+        )
     logger.info("IOCs: %d IPs, %d URLs, %d domains, %d hashes, %d paths",
                 len(iocs["ipv4"]), len(iocs["urls"]), len(iocs["domains"]),
                 len(iocs["hashes_sha256"]), len(iocs["file_paths"]))
@@ -1700,6 +1883,8 @@ async def run_rule_generation() -> dict:
     yara_rules = generate_yara_rules(data)
     suricata_rules = generate_suricata_rules(data)
     firewall = generate_firewall_rules(data)
+    fail2ban = generate_fail2ban_rules(data, iocs, osint_agg)
+    data["_fail2ban"] = fail2ban
 
     # 4. Generate STIX bundle
     stix_bundle = generate_stix_bundle(data, iocs, sigma_rules)

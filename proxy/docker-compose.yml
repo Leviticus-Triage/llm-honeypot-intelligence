@@ -130,6 +130,7 @@ services:
       - RULES_DIR=/data/ollama-proxy/generated-rules
       - RULEGEN_INTERVAL=21600
       - RULEGEN_SINCE_HOURS=24
+      - BLOCK_BANTIME_SECONDS=${BLOCK_BANTIME_SECONDS:-86400}
     volumes:
       - proxy_data:/data/ollama-proxy
       - ./run_rule_generator.py:/app/run_rule_generator.py:ro
@@ -155,6 +156,28 @@ services:
       - ./run_heuristic_detector.py:/app/run_heuristic_detector.py:ro
       - threat_output:/data/ollama-proxy/threat-intel
     entrypoint: ["python", "/app/run_heuristic_detector.py"]
+
+  footprint-orchestrator:
+    container_name: ollama-footprint-orchestrator
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      - CACHE_DB=/data/ollama-proxy/cache.db
+      - THREAT_DIR=/data/ollama-proxy/threat-intel
+      - SPIDERFOOT_URL=${SPIDERFOOT_URL:-http://127.0.0.1:5001/spiderfoot}
+      - FOOTPRINT_INTERVAL=${FOOTPRINT_INTERVAL:-1800}
+      - FOOTPRINT_COOLDOWN_HOURS=${FOOTPRINT_COOLDOWN_HOURS:-24}
+      - FOOTPRINT_MAX_NEW_SCANS=${FOOTPRINT_MAX_NEW_SCANS:-3}
+      - FOOTPRINT_MAX_CONCURRENT=${FOOTPRINT_MAX_CONCURRENT:-2}
+      - FOOTPRINT_USECASE=${FOOTPRINT_USECASE:-Passive}
+      - FOOTPRINT_MIN_SCORE=${FOOTPRINT_MIN_SCORE:-80}
+      - OSINT_FOOTPRINTS_DIR=/data/ollama-proxy/threat-intel/osint-footprints
+    volumes:
+      - proxy_data:/data/ollama-proxy
+      - ./run_footprint_orchestrator.py:/app/run_footprint_orchestrator.py:ro
+      - threat_output:/data/ollama-proxy/threat-intel
+    entrypoint: ["python", "/app/run_footprint_orchestrator.py"]
 
   c2-detector:
     container_name: ollama-c2-detector

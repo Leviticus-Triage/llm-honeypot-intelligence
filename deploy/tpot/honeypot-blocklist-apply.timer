@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly honeypot blocklist apply (24h ipset timeout)
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=180
+
+[Install]
+WantedBy=timers.target

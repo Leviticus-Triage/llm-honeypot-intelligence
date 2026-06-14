@@ -1,0 +1,6 @@
+[Unit]
+Description=Record blocklist-sync failure heartbeat
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > %h/.blocklist-sync.last-failure'

@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply LLM honeypot 24h temporary IP blocklist (ipset)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/tpotce/custom/apply-ipset-temp-blocklist.sh

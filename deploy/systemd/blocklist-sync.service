@@ -1,0 +1,11 @@
+[Unit]
+Description=LLM-Honeypot: sync 24h blocklist to T-Pot VM
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+OnFailure=blocklist-sync-failure.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/cursor-Projekts/Sec-Systems/llm-honeypot-intelligence/scripts/sync-blocklist-to-tpot.sh
+ExecStartPost=/bin/sh -c 'date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > %h/.blocklist-sync.last-success'
+StandardOutput=append:%h/blocklist-sync.log
+StandardError=append:%h/blocklist-sync.log
