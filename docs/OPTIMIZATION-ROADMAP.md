@@ -1213,3 +1213,29 @@ Verifikation nach Fix:
 12 GiB Swap (Host kann die vollen 8 GiB nicht backen, solange alle Gäste
 laufen). Stabil — ES/Logstash/Kibana healthy. Echte 8 GiB fix nur durch
 Host-Entlastung (anderen Gast stoppen/verkleinern) erreichbar.
+
+**KSM:** Auf dem Host bereits aktiv + getunt (`ksmtuned`, `run=1`,
+`pages_sharing≈115k` ≈ 449 MiB durch Dedup gespart) — wesentlicher Grund, warum
+der übercommittete Host stabil bleibt. Keine weitere kostenlose RAM-Reserve
+ohne CPU-Kosten; RAM bleibt bis zum Hardware-Upgrade so.
+
+### P.6  Noise-IP-Sync VM200 → T-Pot (2026-06-14 Abend)
+
+Damit Logstash auch die **ML-erkannten** Noise-IPs taggt (nicht nur per
+ASN/URI-Muster), wird `noise_ips.csv` stündlich aus dem Proxy-Volume zur T-Pot
+synchronisiert:
+
+- `scripts/sync-noise-to-tpot.sh` + `deploy/systemd/noise-csv-sync.{service,timer,failure}`
+  (systemd `--user` auf VM 200, `OnCalendar=hourly`, `Persistent=true`).
+- Quelle: Volume `ollama-threat-output` (`docker cp`) → Ziel:
+  `<tpot>:tpotce/custom/noise_ips.csv` (in Logstash `:ro` gemountet).
+- Logstash `translate`-Filter lädt das Dictionary alle ~300 s neu → **kein
+  Restart** im Normalbetrieb.
+- **Inode-Falle gefixt:** Single-File-Bind-Mount bindet an Inode; `rsync
+  --inplace` erhält die Inode, sonst sieht der Container Updates nie. Einmaliger
+  Logstash-Rebind war nötig, weil der erste Sync (ohne `--inplace`) die Inode
+  verwaist hatte.
+- Verifiziert: Container liest 4 IPs, Logstash `healthy`, Timer nächster Lauf 16:01 UTC.
+
+Offen: **24h-Spareffekt messen** (`free -h` auf VM 400, Größe `logstash-noise-*`
+vs. `logstash-*`).
