@@ -388,10 +388,7 @@ async def run_footprint_cycle() -> dict:
                 summary["failed"] += 1
                 continue
             try:
-                rows = await client.scan_status(scan_id)
-                if not rows:
-                    continue
-                status = str(rows[0][5] if len(rows[0]) > 5 else "UNKNOWN").upper()
+                status = await client.get_scan_status(scan_id)
                 entry["last_checked"] = datetime.now(timezone.utc).isoformat()
                 if status in ("FINISHED", "FINISHED-ERROR"):
                     await _finalize_scan(
@@ -403,10 +400,36 @@ async def run_footprint_cycle() -> dict:
                     summary["completed"] += 1
                     key = f"{tier}_completed"
                     state["stats"][key] = state["stats"].get(key, 0) + 1
+                    logger.info("Scan %s %s/%s completed", scan_id, ip, tier)
                 elif status.startswith("ERROR") or status.startswith("ABORT"):
                     entry["status"] = "FAILED"
                     entry["error"] = status
                     summary["failed"] += 1
+                elif status in ("STARTING", "RUNNING", "INITIALIZING"):
+                    summary["still_running"] += 1
+                    started = entry.get("started_at")
+                    if started and status == "STARTING":
+                        try:
+                            ts = datetime.fromisoformat(
+                                started.replace("Z", "+00:00")
+                            )
+                            if ts.tzinfo is None:
+                                ts = ts.replace(tzinfo=timezone.utc)
+                            stuck_mins = (
+                                datetime.now(timezone.utc) - ts
+                            ).total_seconds() / 60
+                            if stuck_mins > 15:
+                                logger.warning(
+                                    "Scan %s stuck STARTING %.0fm — aborting",
+                                    scan_id, stuck_mins,
+                                )
+                                await client.stop_scan(scan_id)
+                                entry["status"] = "FAILED"
+                                entry["error"] = "stuck_starting"
+                                summary["failed"] += 1
+                                summary["still_running"] -= 1
+                        except Exception:
+                            pass
                 else:
                     summary["still_running"] += 1
             except SpiderFootError as exc:
@@ -505,9 +528,10 @@ async def _start_scans(
 
         if existing and existing.get("status") == "RUNNING":
             continue
-        if _in_cooldown(existing, cooldown_hours):
-            summary["skipped_cooldown"] += 1
-            continue
+        if existing and existing.get("status") != "FAILED":
+            if _in_cooldown(existing, cooldown_hours):
+                summary["skipped_cooldown"] += 1
+                continue
 
         scan_name = f"honeypot-{tier}-{ip}-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
         try:

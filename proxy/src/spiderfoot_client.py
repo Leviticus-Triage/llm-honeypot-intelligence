@@ -125,13 +125,38 @@ class SpiderFootClient:
 
         raise SpiderFootError(f"Unexpected startscan response: {body[:300]}")
 
-    async def scan_status(self, scan_id: str) -> list[list[Any]]:
+    @staticmethod
+    def parse_scan_status(data: list) -> dict[str, Any]:
         """
-        Return scan status rows.
+        Normalize scanstatus JSON.
 
-        Typical row: [scan_id, name, target, started, ended, status]
-        status: RUNNING, FINISHED, ABORTED, ERROR-FAILED, etc.
+        SpiderFoot 4.x returns a flat list:
+          [name, target, started, created?, ended, status, risk_counts]
+        Older docs showed nested lists — handle both.
         """
+        if not data:
+            return {"status": "UNKNOWN", "raw": data}
+
+        row = data[0] if data and isinstance(data[0], list) else data
+        if not isinstance(row, list) or len(row) < 6:
+            return {"status": "UNKNOWN", "raw": data}
+
+        status = str(row[5]).upper()
+        return {
+            "name": row[0] if len(row) > 0 else "",
+            "target": row[1] if len(row) > 1 else "",
+            "started": row[2] if len(row) > 2 else "",
+            "ended": row[4] if len(row) > 4 else "",
+            "status": status,
+            "raw": data,
+        }
+
+    async def get_scan_status(self, scan_id: str) -> str:
+        """Return uppercase scan status string (RUNNING, FINISHED, STARTING, ...)."""
+        data = await self._fetch_scan_status(scan_id)
+        return self.parse_scan_status(data).get("status", "UNKNOWN")
+
+    async def _fetch_scan_status(self, scan_id: str) -> list:
         async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.get(
                 f"{self.base_url}/scanstatus",
@@ -149,6 +174,14 @@ class SpiderFootClient:
             raise SpiderFootError(f"Unexpected scanstatus: {data!r}")
         return data
 
+    async def scan_status(self, scan_id: str) -> list[list[Any]]:
+        """
+        Return raw scanstatus JSON (flat list in SpiderFoot 4.x).
+
+        Prefer get_scan_status() for polling.
+        """
+        return await self._fetch_scan_status(scan_id)
+
     async def wait_for_scan(
         self,
         scan_id: str,
@@ -159,14 +192,7 @@ class SpiderFootClient:
         """Poll until scan finishes. Returns final status string."""
         elapsed = 0.0
         while elapsed < timeout:
-            rows = await self.scan_status(scan_id)
-            if not rows:
-                await asyncio.sleep(poll_interval)
-                elapsed += poll_interval
-                continue
-
-            row = rows[0]
-            status = str(row[5] if len(row) > 5 else "UNKNOWN").upper()
+            status = await self.get_scan_status(scan_id)
             logger.info("Scan %s status: %s (%.0fs)", scan_id, status, elapsed)
 
             if status in ("FINISHED", "FINISHED-ERROR"):
