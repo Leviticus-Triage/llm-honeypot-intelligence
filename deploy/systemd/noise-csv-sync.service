@@ -1,0 +1,10 @@
+[Unit]
+Description=LLM-Honeypot: sync ML noise IP list to T-Pot Logstash
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+OnFailure=noise-csv-sync-failure.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/danii/cursor-Projekts/Sec-Systems/llm-honeypot-intelligence/scripts/sync-noise-to-tpot.sh
+# Success heartbeat: written only when ExecStart exits 0.
+ExecStartPost=/bin/sh -c 'date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > %h/.noise-csv-sync.last-success'

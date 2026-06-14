@@ -1,0 +1,9 @@
+[Unit]
+Description=LLM-Honeypot: record a noise-csv-sync failure heartbeat
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+
+[Service]
+Type=oneshot
+# Triggered via OnFailure= from noise-csv-sync.service. Leaves a durable
+# breadcrumb so the ~/.noise-csv-sync.last-* files form a success/failure ledger.
+ExecStart=/bin/sh -c 'date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > %h/.noise-csv-sync.last-failure; printf "[noise-sync %%s] ERROR: noise-csv-sync.service failed (see: journalctl --user -u noise-csv-sync.service)\n" "$(date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ)" >> %h/noise-csv-sync.log'

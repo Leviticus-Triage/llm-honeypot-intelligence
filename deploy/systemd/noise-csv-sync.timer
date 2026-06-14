@@ -1,0 +1,13 @@
+[Unit]
+Description=LLM-Honeypot: hourly sync of noise IP list to T-Pot
+Documentation=https://github.com/Leviticus-Triage/llm-honeypot-intelligence
+
+[Timer]
+OnCalendar=hourly
+# Fire once on next boot if the host was off during a scheduled run.
+Persistent=true
+RandomizedDelaySec=120
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
