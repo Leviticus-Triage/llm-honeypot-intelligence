@@ -335,7 +335,16 @@ The CVE engine injects vulnerability-specific system prompts into the LLM, makin
 
 ## Deploy your own
 
-### Prerequisites
+### Cloud (OTC) — current production path
+
+Homelab Proxmox is **retired**. Use two OTC ECS instances:
+
+1. **AI stack** — `Sec-Systems/ai-workstation-cloud/` on `ai-cloud` (see [docs/CLOUD-DEPLOYMENT.md](docs/CLOUD-DEPLOYMENT.md))
+2. **T-Pot HIVE** — [deploy/tpot-cloud/](deploy/tpot-cloud/) on a second ECS ([tpotce](https://github.com/telekom-security/tpotce))
+
+Project how-to: [KI-test-dev/docs/HOWTO-CLOUD-STACK.md](https://github.com/dgskjeuj/KI-test-dev/blob/main/docs/HOWTO-CLOUD-STACK.md)
+
+### Prerequisites (generic / on-prem)
 
 - [T-Pot](https://github.com/telekom-security/tpotce) deployed (VM or bare metal)
 - [Ollama](https://ollama.ai) running on the host with a model pulled (e.g., `llama3`)
