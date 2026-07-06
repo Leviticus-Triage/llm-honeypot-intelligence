@@ -1,0 +1,16 @@
+# Custom T-Pot overrides (llm-honeypot-intelligence production profile).
+# Copied to ~/tpotce/docker-compose.override.yml by deploy-custom.sh
+#
+# Ref: docs/OPTIMIZATION-ROADMAP.md Anhang P — ddospot + h0neytr4p port preserved.
+
+services:
+  ddospot:
+    ports:
+      - "53:53/udp"
+      - "123:123/udp"
+      - "19:19/udp"
+      - "1900:1900/udp"
+
+  h0neytr4p:
+    ports:
+      - "4443:443"

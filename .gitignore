@@ -33,6 +33,7 @@ env/
 
 # Docker
 docker-compose.override.yml
+!deploy/tpot-cloud/custom/docker-compose.override.yml
 
 # IDE
 .vscode/
