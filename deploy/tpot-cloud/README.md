@@ -2,7 +2,7 @@
 
 Deploy-Paket für die **zweite Cloud-VM**: offizielles [telekom-security/tpotce](https://github.com/telekom-security/tpotce) plus Custom-Mods aus [llm-honeypot-intelligence](https://github.com/Leviticus-Triage/llm-honeypot-intelligence).
 
-Ersetzt die verlorene Homelab-VM **400** (`192.168.2.22`). **Proxmox ist tot** — nicht mehr Teil des Plans.
+> **Hinweis 2026-07-25:** Homelab Proxmox + VM 400 (`192.168.2.22`) sind **wiederhergestellt** und wieder **primär**. Dieses Cloud-Deploy-Paket bleibt als **optionaler OTC-Standby**-Pfad.
 
 ## Zwei-Server-Architektur
 

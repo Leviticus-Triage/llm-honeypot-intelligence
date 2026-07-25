@@ -127,4 +127,4 @@ Internet → [T-Pot ECS] honeypots → ES :64297
                 └──────→ [ai-cloud] ollama-proxy :11435 → Ollama
 ```
 
-**Kein Proxmox. Kein 192.168.2.22.**
+**Homelab primär (2026-07-25):** Proxmox + `192.168.2.22` wieder live. Diese Checklist bleibt für den **optionalen OTC-Standby**-Deploy.

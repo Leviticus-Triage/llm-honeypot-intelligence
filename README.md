@@ -335,11 +335,22 @@ The CVE engine injects vulnerability-specific system prompts into the LLM, makin
 
 ## Deploy your own
 
-### Cloud (OTC) — current production path
+### Homelab (Proxmox) — current primary path
 
-Homelab Proxmox is **retired**. Use two OTC ECS instances:
+Homelab Proxmox was rebuilt **2026-07-25** after SSD failure and is again the **primary** runtime:
 
-1. **AI stack** — `Sec-Systems/ai-workstation-cloud/` on `ai-cloud` (see [docs/CLOUD-DEPLOYMENT.md](docs/CLOUD-DEPLOYMENT.md))
+| Role | Host | IP / ports |
+|------|------|------------|
+| AI / Ollama / workers | Proxmox VM **200** `ai-workspace` | `192.168.2.116` — Ollama `:11434`, proxy `:11435` |
+| T-Pot HIVE | Proxmox VM **400** `tpot-honeypot` | `192.168.2.22` — SSH `:64295`, web/ES `:64297` |
+
+LLM honeypots (Beelzebub/Galah) call `http://192.168.2.116:11435`. Blocklist/noise sync: user timers on VM 200 → `~/tpotce/custom/` on VM 400 (`ipset honeypot-ban`, 12h). Rebuild notes: `Sec-Systems/docs/TPOT-PROXMOX-REBUILD-2026-07.md`.
+
+### Cloud (OTC) — optional / standby
+
+OTC ECS (`ai-cloud` + optional T-Pot HIVE) remains a **standby / cloud path**, not the daily primary:
+
+1. **AI stack** — `Sec-Systems/ai-workstation-cloud/` (see [docs/CLOUD-DEPLOYMENT.md](docs/CLOUD-DEPLOYMENT.md))
 2. **T-Pot HIVE** — [deploy/tpot-cloud/](deploy/tpot-cloud/) on a second ECS ([tpotce](https://github.com/telekom-security/tpotce))
 
 Project how-to: [KI-test-dev/docs/HOWTO-CLOUD-STACK.md](https://github.com/dgskjeuj/KI-test-dev/blob/main/docs/HOWTO-CLOUD-STACK.md)

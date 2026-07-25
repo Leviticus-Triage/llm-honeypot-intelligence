@@ -2,7 +2,7 @@
 
 **Stand:** 2026-07-06
 
-Homelab Proxmox und VM 400 (`192.168.2.22`) sind **verloren**. Die Plattform läuft auf **zwei OTC ECS-Instanzen** in derselben VPC.
+Homelab Proxmox + VM 400 (`192.168.2.22`) sind seit **2026-07-25** wieder **primär** (siehe `Sec-Systems/docs/TPOT-PROXMOX-REBUILD-2026-07.md`). OTC bleibt **optionaler Standby**-Pfad: zwei ECS-Instanzen in derselben VPC.
 
 ## Architektur
 
